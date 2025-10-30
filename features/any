@@ -1,0 +1,25 @@
+any
+
+@type: keyword
+@author: Sime K. Yannick
+@history:
+  I remember one day, working on school project written in Java. I don't remember why exactly but I needed to convert an integer to a string.
+  In statically typed languages, we'll have to create a new string object and then add the number to it:
+  code:
+    int i = 10;
+    String s = "" + i;
+    
+  whereas in dynamically typed ones:
+  code:
+    i = 10;
+    i = "" + i
+
+  Since I want this language to be a statically typed one and still want to be abe to do such conversions sometimes (without having about to manually create a new object),
+  I decided to create this keyword, so that I'll be able to do:
+  code:
+    any i = 10;      //and then later...
+    i = "" + i;
+
+    and the compiler automatically changes i's type.
+
+I know it's kinda lame to create such thing (with all its possible consequences 😅) but I think it's gonna be really helpful.
