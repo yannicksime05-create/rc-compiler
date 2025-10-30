@@ -1,0 +1,36 @@
+if-else statements
+@type: control flow
+@author: Sime K. Yannick
+@date: 10-30-2025
+@history:
+  One day I noticed that in all C-inspired languages I have to write:
+  code:
+    if(x > 5 && x < 8) {}
+  
+  to check whether x belongs to that range. And then I remembered the mathematical notation: 
+  math:
+    5 < x < 8
+
+  much simpler to write! So in a condition:
+  code:
+    if(5 < x < 8) 
+
+  I also thought about this syntax:
+  code:
+    if(x in ]5, 8[) (french range notation)
+
+but it can be really difficult to use due to IDEs' autocompletion. So the first syntax is probably the best one.
+
+
+switch statements
+@type: control flow
+@author: Sime K. Yannick
+@date: 10-30-2025
+@history:
+  When working on the lexer file, I wanted to compare a string to a bunch of different values, but I didn't wanted to
+  write a lot of if-else if statements. So naturally, I decided to use a switch one (a great mistake 😅 because I was coding
+  in C++, and only integral types are comparable in switch statements).
+
+  But it came to me... Why can't it do such things? And I decided to add it to this compiler's features.
+  After that, I found that this kind of pattern matching is being discussed among the C++'s creators so I think this feature
+  is a real good one.
