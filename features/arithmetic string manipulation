@@ -1,0 +1,55 @@
+string manipulation
+@type:
+@author: Sime K. Yannick
+@date: 10-30-2025
+@history
+  Since it's possible to concatenate two strings using the '+' operator, I asked myself what kind of results
+  could other arithmetic operators yield to. And I found these:
+
+  minus (-) operator:  removes str2 either at the beginning, the end or both from str1.
+  syntax: str1 - str2
+  e.g.
+    " Hello World" - " "  (appears only at the beginning)
+    result: "Hello World"
+
+    "Hello World " - " "  (appears only at the beginning)
+    result: "Hello World"
+
+    " Hello World " - " "  (appears at both ends)
+    result: "Hello World"
+
+
+
+  star (*) operator:
+  syntax: str * int
+  e.g.
+    "abc" * 3
+    result: "abcabcabc" (just like in Python)
+
+
+
+  divide (/) operator:
+  syntax 1: str / int
+  acts like: str.chunk(n)
+  e.g.
+    "Hello World" / 1
+    result: ["H", "e", "l", "l", "o", " ", "W", "o", "r", "l", "d"]
+
+  syntax 2: str1 / str2
+  acts like: str.split(str)
+  e.g.
+    "Hello World" / " "
+    result: ["Hello", "World"]
+
+
+
+  subscript operator:
+  syntax: str[start, end]
+  acts like: str.substring(start, end)
+  e.g
+    "Hello World"[0, 4]
+    result: "Hello"
+
+  Omitting 'end' i.e writing 'str[start]' acts like 'str.at(start)' and returns the character at that position!
+  
+Note: The '/' operator returns an array where others return a string.
