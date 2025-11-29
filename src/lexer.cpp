@@ -458,25 +458,51 @@ const Token Lexer::getNextToken() {
             }
             break;
         case '<':
-            std::cout << "Comparaison found!" << std::endl;
             if(input.peek() == '=') {
+                std::cout << "Comparaison found!" << std::endl;
                 input.get(); ++column;
                 t.type = TT::LESS_EQUAL;
                 t.value = "<=";
             }
+            else if(input.peek() == '<') {
+                input.get(); ++column;
+                if(input.peek() == '=') {
+                    input.get(); ++column;
+                    t.type = TT::SHIFT_LEFT_EQUAL;
+                    t.value = "<<=";
+                }
+                else {
+                    t.type = TT::SHIFT_LEFT;
+                    t.value = "<<";
+                }
+            }
             else {
+                std::cout << "Comparaison found!" << std::endl;
                 t.type = TT::LESS;
                 t.value = "<";
             }
             break;
         case '>':
-            std::cout << "Comparaison found!" << std::endl;
             if(input.peek() == '=') {
+                std::cout << "Comparaison found!" << std::endl;
                 input.get(); ++column;
                 t.type = TT::GREATER_EQUAL;
                 t.value = ">=";
             }
+            else if(input.peek() == '>') {
+                input.get(); ++column;
+                if(input.peek() == '=') {
+                    input.get(); ++column;
+                    t.type = TT::SHIFT_RIGHT_EQUAL;
+                    t.value = ">>=";
+                }
+                else {
+                    t.type = TT::SHIFT_RIGHT;
+                    t.value = ">>";
+                }
+            }
             else {
+                std::cout << "Comparaison found!" << std::endl;
                 t.type = TT::GREATER;
                 t.value = ">";
             }
