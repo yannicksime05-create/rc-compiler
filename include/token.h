@@ -31,7 +31,7 @@ enum class TokenType {
     GREATER, GREATER_EQUAL, LESS, LESS_EQUAL,                           // > >= < <=
     BIT_AND, AND, BIT_OR, OR,                                           // & && | ||
     CARET, TILDE,                                                       // ^ ~
-    SHIFT_LEFT, SHIFT_RIGHT,                                            // << >>
+    SHIFT_LEFT, SHIFT_RIGHT, SHIFT_LEFT_EQUAL, SHIFT_RIGHT_EQUAL,       // << >> <<= >>=
     QUESTION, COLON,                                                    // ? :
     //ARROW, DOT, DOT_STAR, ELLIPSIS,                                   // -> . .* ...
 
