@@ -64,7 +64,7 @@ Token Lexer::handleStringLiterals() {
         if(backslash_found) backslash_found = false;
         else if(c == '\\')  backslash_found = true;
         else if(c == '"' || c == '\'') {
-            advance();
+//            advance();
             std::cout << "String found!" << std::endl;
             t.type = TT::STRING;
             break;
@@ -353,9 +353,11 @@ const Token Lexer::getNextToken() {
     //On sait que le caractère qu'on vient de lire n'est pas '\n' (ou bien un quelconque espace),
     //donc on peut incrémenter column manuellement.
     ++column;
+//    std::cout << "line = " << line << ", column = " << column << std::endl;
 
     switch(c) {
         case EOF:
+            --column;
             t.type = TT::END_OF_FILE;
             t.value = "End of file";
             break;
@@ -542,8 +544,15 @@ const Token Lexer::getNextToken() {
             }
             break;
         case '!':
-            t.type = TT::NOT;
-            t.value = "!";
+            if(input.peek() == '=') {
+                input.get(); ++column;
+                t.type = TT::NOT_EQUAL;
+                t.value = "!=";
+            }
+            else {
+                t.type = TT::NOT;
+                t.value = "!";
+            }
             break;
         case '^':
             t.type = TT::CARET;

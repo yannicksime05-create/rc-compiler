@@ -1,89 +1,6 @@
 #include "../include/parser.h"
 #include <sstream>
 
-Stmt *Parser::parseStatement() {
-    switch(current().type) {
-        case TT::LBRACE:
-            return parse_compound_statement();
-            break;
-        case TT::KW_IF:
-            return parse_if_statement();
-            break;
-        case TT::KW_FOR:
-            return parse_for_statement();
-            break;
-        default:
-            return parse_expression_statement();
-            break;
-    }
-
-    return nullptr;
-}
-
-CompoundStmt *Parser::parse_compound_statement() {
-    get();
-
-    std::vector<Stmt *> s;
-    while( !is(TT::RBRACE) && !is(TT::END_OF_FILE) )
-        s.push_back(parseStatement());
-
-    expect(TT::RBRACE, "Error: Expected '}'");
-    return new CompoundStmt(s);
-}
-
-ExprStmt *Parser::parse_expression_statement() {
-    Expr *e = parseExpression();
-    if(!e) {
-        std::cerr << "From: parse_expression_statement\nError: unable to create expression" << std::endl;
-        return nullptr;
-    }
-    expect(TT::SEMICOLON, "Error: Expected ';'");
-    return new ExprStmt(e);
-}
-
-IfStmt *Parser::parse_if_statement() {
-    get();
-
-    expect(TT::LPAREN, "Error: Expected '('");
-//    std::cout << "pos = " << pos << std::endl;
-    Expr *condition = parseExpression();
-    if(!condition) {
-        std::cout << "From: parse_if_statement\nError: unable to create desired expression" << std::endl;
-        return nullptr;
-    }
-    expect(TT::RPAREN, "Error: Expected ')'");
-//    std::cout << "pos = " << pos << std::endl;
-
-    Stmt *then_stmt = parseStatement();
-//    std::cout << "pos = " << pos << std::endl;
-    if(!then_stmt) {
-        return nullptr;
-    }
-    Stmt *else_stmt = nullptr;
-
-    if( is(TT::KW_ELSE) ) {
-        get();
-        else_stmt = parseStatement();
-    }
-
-
-    return new IfStmt(condition, then_stmt, else_stmt);
-}
-
-ForStmt *Parser::parse_for_statement() {
-    get();
-
-    expect(TT::LPAREN, "Error: Expected '('");
-    std::cout << "pos = " << pos << std::endl;
-    Expr *condition = parseExpression();
-    if(!condition) {
-        std::cout << "From: parse_if_statement\nError: unable to create desired expression" << std::endl;
-        return nullptr;
-    }
-    expect(TT::RPAREN, "Error: Expected ')'");
-    std::cout << "pos = " << pos << std::endl;
-}
-
 Expr *Parser::parseExpression() {
     return parse_assignment();
 }
@@ -98,7 +15,7 @@ Expr *Parser::parse_assignment() { //a = b
 //        Token op = get();
 //        Expr *value = parse_assignment();
 
-        return new AssignExpr(target, get().value, parse_assignment());
+        return new AssignmentExpr(target, get().value, parse_assignment());
     }
 
     return target;
@@ -219,19 +136,287 @@ Expr *Parser::parse_identifier() {
 
 
 
-//Decl *Parser::ParseDeclaration() {
-//    return var_declaration();
-//}
 
-//VarDecl *Parser::var_declaration() {
-//    std::string tn = get().value;
-//    std::string n = get().value;
-//    if(current().value == "=") {
-//        get();
-//        return new VarDecl(tn, n, binary_expression());
-//    }
-//    else return new VarDecl(tn, n, nullptr);
-//}
+
+
+
+
+Decl *Parser::parseDeclaration() {
+    return parse_function_declaration();
+}
+
+TypeSpecifier *Parser::parse_type_specifier() {
+    bool c = false;
+    if( is(TT::KW_CONST) ) {
+        get();
+        c = true;
+    }
+
+    return new TypeSpecifier(get().value, c);
+}
+
+VariableDecl *Parser::parse_variable_declaration() {
+//    std::cout << "current = " << current().value << std::endl;
+    TypeSpecifier type = *parse_type_specifier();
+
+    if( !is(TT::IDENTIFIER) ) {
+        std::cout << "Expected identifier\n";
+        return nullptr;
+    }
+    std::vector<VariableDeclarator *> decls;
+    do{
+        if( is(TT::COMMA) ) get();
+        decls.push_back( parse_variable_declarator() );
+    }while( is(TT::COMMA) );
+    expect(TT::SEMICOLON, "Error: Expected ';'");
+
+    return new VariableDecl(type, decls);
+}
+
+VariableDeclarator *Parser::parse_variable_declarator() {
+    std::string name = get().value;
+    if( is(TT::EQUAL) ) get();
+    Expr *init = parseExpression();
+
+    return new VariableDeclarator(name, init);
+}
+
+FunctionDecl *Parser::parse_function_declaration() {
+    TypeSpecifier type = *parse_type_specifier();
+
+    expect(TT::IDENTIFIER, "Error: Expected function's name");
+    std::string name = previous().value;
+
+    expect(TT::LPAREN, "Error: Expected '(' after function's name");
+    if( !is(TT::RPAREN) ) {
+        std::vector<Parameter *> parameters;
+        parameters.push_back(parse_function_parameters());
+        while( is(TT::COMMA) ) {
+            get();
+            parameters.push_back(parse_function_parameters());
+        }
+        expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+
+        Stmt *body = parseStatement();
+
+        return new FunctionDecl(type, name, body, parameters);
+    }
+    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+
+    Stmt *body = parseStatement();
+
+    return new FunctionDecl(type, name, body);
+}
+
+Parameter *Parser::parse_function_parameters() {
+    TypeSpecifier type = *parse_type_specifier();
+
+    expect(TT::IDENTIFIER, "Error: Expected parameter's name");
+    std::string name = previous().value;
+
+    if( is(TT::ASSIGN) ) {
+        get();
+        Expr *default_value = parseExpression();
+
+        return new Parameter(type, name, default_value);
+    }
+
+    return new Parameter(type, name);
+}
+
+
+
+
+
+
+
+
+Stmt *Parser::parseStatement() {
+    switch(current().type) {
+        case TT::LBRACE:    return parse_compound_statement();
+        case TT::KW_IF:     return parse_if_statement();
+        case TT::KW_SWITCH: return parse_switch_statement();
+        case TT::KW_WHILE:  return parse_while_statement();
+        case TT::KW_DO:     return parse_do_while_statement();
+        case TT::KW_FOR:    return parse_for_statement();
+        case TT::KW_RETURN: return parse_return_statement();
+
+        case TT::KW_CONST:
+        case TT::KW_AUTO:
+        case TT::KW_ANY:
+        case TT::KW_INT:
+        case TT::KW_FLOAT:
+        case TT::KW_BOOL:
+        case TT::KW_STRING:
+            return parse_declaration_statement();
+        default:
+            return parse_expression_statement();
+    }
+
+    return nullptr;
+}
+
+CompoundStmt *Parser::parse_compound_statement() {
+    get();
+//    expect(TT::LBRACE, "Error: Expected '{' to start compound statement");
+
+    std::vector<Stmt *> s;
+    while( !is(TT::RBRACE) && !is(TT::END_OF_FILE) )
+        s.push_back(parseStatement());
+
+    expect(TT::RBRACE, "Error: Expected '}'");
+    return new CompoundStmt(s);
+}
+
+ExpressionStmt *Parser::parse_expression_statement() {
+    Expr *e = parseExpression();
+    if(!e) {
+        std::cerr << "From: parse_expression_statement\nError: unable to create expression" << std::endl;
+        return nullptr;
+    }
+    expect(TT::SEMICOLON, "Error: Expected ';'");
+    return new ExpressionStmt(e);
+}
+
+DeclarationStmt *Parser::parse_declaration_statement() {
+    Decl *d = parseDeclaration();
+    if(!d) {
+        std::cerr << "From: parse_declaration_statement\nError: unable to create declaration" << std::endl;
+        return nullptr;
+    }
+
+    return new DeclarationStmt(d);
+}
+
+IfStmt *Parser::parse_if_statement() {
+    get();
+
+    expect(TT::LPAREN, "Error: Expected '('");
+    Expr *condition = parseExpression();
+    if(!condition) {
+        std::cout << "From: parse_if_statement\nError: unable to create desired expression" << std::endl;
+        return nullptr;
+    }
+    expect(TT::RPAREN, "Error: Expected ')'");
+
+    Stmt *then_stmt = parseStatement();
+    if(!then_stmt) {
+        return nullptr;
+    }
+
+    if( is(TT::KW_ELSE) ) {
+        get();
+        Stmt *else_stmt = parseStatement();
+        return new IfStmt(condition, then_stmt, else_stmt);
+    }
+
+    return new IfStmt(condition, then_stmt);
+}
+
+SwitchStmt *Parser::parse_switch_statement() {
+    get();
+    expect(TT::LPAREN, "Error: Expected '(' after 'switch'");
+    Expr *e = parseExpression();
+    if(!e) {
+        std::cerr << "couldn't create switch expression" << std::endl;
+        return nullptr;
+    }
+    expect(TT::RPAREN, "Error: Expected ')' after switch expression");
+
+    expect(TT::LBRACE, "Error: Expected '{' to start switch body");
+    std::vector<CaseClause *> cases;
+    while( !is(TT::RBRACE) && !is(TT::END_OF_FILE)  ) {
+        if( is(TT::KW_CASE) || is(TT::KW_DEFAULT) )   cases.push_back(parse_case_clause());
+        else {
+            expect(TT::KW_CASE, "Error: Expected 'case' inside of switch");
+        }
+    }
+
+    expect(TT::RBRACE, "Error: Expected '}' at the end of switch");
+    return new SwitchStmt(e, cases);
+}
+
+CaseClause *Parser::parse_case_clause() {
+    expect(TT::KW_CASE, "Error: Expected 'case'");
+    Expr *e = parseExpression();
+    if(!e) {
+        std::cerr << "couldn't create case expression" << std::endl;
+        return nullptr;
+    }
+    expect(TT::COLON, "Error: Expected ':' after case expression");
+
+//    expect(TT::LBRACE, "Error: Expected '{' after case expression");
+    CompoundStmt *body = parse_compound_statement();
+    expect(TT::RBRACE, "Error: Expected '}' at the end of case clause");
+
+    return new CaseClause(e, body);
+}
+
+WhileStmt *Parser::parse_while_statement() {
+    get();
+
+    expect(TT::LPAREN, "Error: Expected '(' after 'while'");
+    Expr *condition = parseExpression();
+    if(!condition) {
+        std::cout << "From: parse_while_statement\nError: test is null" << std::endl;
+        return nullptr;
+    }
+    expect(TT::RPAREN, "Error: Expected ')' after while expression");
+
+    Stmt *body = parseStatement();
+    if(!body) {
+        std::cout << "From: parse_while_statement\nError: statement is null" << std::endl;
+        return nullptr;
+    }
+    return new WhileStmt(condition, body);
+}
+
+DoWhileStmt *Parser::parse_do_while_statement() {
+    get();
+
+    Stmt *body = parseStatement();
+    if(!body) {
+        std::cout << "From: parse_do_while_statement\nError: statement is null" << std::endl;
+        return nullptr;
+    }
+    expect(TT::KW_WHILE, "Error: Expected 'while' after 'do'");
+    expect(TT::LPAREN, "Error: Expected '(' after 'while'");
+
+    Expr *condition = parseExpression();
+    if(!condition) {
+        std::cout << "From: parse_do_while_statement\nError: test is null" << std::endl;
+        return nullptr;
+    }
+    expect(TT::RPAREN, "Error: Expected ')' after while expression");
+    expect(TT::SEMICOLON, "Error: Expected ';' at the end of do..while");
+
+    return new DoWhileStmt(body, condition);
+}
+
+ForStmt *Parser::parse_for_statement() {
+    get();
+
+    expect(TT::LPAREN, "Error: Expected '('");
+//    std::cout << "pos = " << pos << std::endl;
+    Expr *condition = parseExpression();
+    if(!condition) {
+        std::cout << "From: parse_if_statement\nError: unable to create desired expression" << std::endl;
+        return nullptr;
+    }
+    expect(TT::RPAREN, "Error: Expected ')'");
+    std::cout << "pos = " << pos << std::endl;
+
+    return nullptr;
+}
+
+ReturnStmt *Parser::parse_return_statement() {
+    get();
+
+    Expr *e = parseExpression();
+    expect(TT::SEMICOLON, "Error: Expected ';' at the end of return statement");
+
+    return new ReturnStmt(e);
+}
 
 //double Parser::interpretBinaryExpr(BinaryExpr *e) {
 //    double l, r;

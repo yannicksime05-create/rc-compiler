@@ -5,6 +5,12 @@
 
 using TT = TokenType;
 
+class TypeTable {
+    void addType(const std::string& name) {
+
+    }
+};
+
 class Parser {
     std::vector<Token>& tokens;
     size_t pos;
@@ -18,6 +24,13 @@ class Parser {
 
     Token& current() { return tokens.at(pos); }
 
+    /**
+    *   This function is useful when:
+    *   - we need to do an expect() (so that the program stops if there is an error),
+    *   - but we also need to recover the skipped token if there were no error.
+    */
+    Token& previous() { return tokens.at(pos - 1); }
+
     Token& peek() {
         if(pos >= tokens.size()) return  tokens.back();
 
@@ -27,10 +40,11 @@ class Parser {
     void expect(TokenType t, const std::string& error_msg) {
         if( !is(t) ) {
             std::cerr << "From expect:\n" << error_msg << " found: '" << current().value << "' instead! At line: " << current().loc.line << ", Column: " << current().loc.col;
+            std::cout << std::endl;
             return;
         }
 
-        get();
+        ++pos;
     }
 
     /**
@@ -69,17 +83,28 @@ class Parser {
 
 
 
-    Stmt            *parseStatement();
-    CompoundStmt    *parse_compound_statement();
-    ExprStmt        *parse_expression_statement();
-    IfStmt          *parse_if_statement();
-    ForStmt         *parse_for_statement();
+
+    Decl                    *parseDeclaration();
+    TypeSpecifier           *parse_type_specifier();
+    VariableDecl            *parse_variable_declaration();
+    VariableDeclarator      *parse_variable_declarator();
+    FunctionDecl            *parse_function_declaration();
+    Parameter               *parse_function_parameters();
 
 
 
 
-//    Decl    *parseDeclaration();
-//    VarDecl *parse_variable_declaration();
+    Stmt                *parseStatement();
+    CompoundStmt        *parse_compound_statement();
+    ExpressionStmt      *parse_expression_statement();
+    DeclarationStmt     *parse_declaration_statement();
+    IfStmt              *parse_if_statement();
+    SwitchStmt          *parse_switch_statement();
+    CaseClause          *parse_case_clause();
+    WhileStmt           *parse_while_statement();
+    DoWhileStmt         *parse_do_while_statement();
+    ForStmt             *parse_for_statement();
+    ReturnStmt          *parse_return_statement();
 
 
 
@@ -93,24 +118,15 @@ public:
 //    }
 
     void parse() {
-//        UnaryExpr *e = nullptr;
-//        e = static_cast<UnaryExpr *>(factor_expression());
-//        BinaryExpr *e = nullptr;
-//        e = static_cast<BinaryExpr *>(binary_expression());
-//        if(!e) {
-//            std::cout << "e is null" << std::endl;
-//            return;
-//        }
-
-        IfStmt *es = parse_if_statement();
-        if(!es) {
-            std::cout << "es is null" << std::endl;
+        Stmt *s = parseStatement();
+        if(!s) {
+            std::cout << "statement is null" << std::endl;
             return;
         }
         Printer p;
-        p.print(es);
-        delete es;
-        es = nullptr;
+        p.print(s);
+        delete s;
+        s = nullptr;
 
 //        VarDecl *vd = var_declaration();
 //
