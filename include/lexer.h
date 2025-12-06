@@ -10,16 +10,25 @@
 using TT = TokenType;
 
 const std::map<std::string, TokenType> keywords = {
+    {"any", TT::KW_ANY},
+    {"auto", TT::KW_AUTO},
     {"bool", TT::KW_BOOL},
+    {"break", TT::KW_BREAK},
+    {"case", TT::KW_CASE},
     {"char", TT::KW_CHAR},
     {"const", TT::KW_CONST},
+    {"default", TT::KW_DEFAULT},
     {"do", TT::KW_DO},
     {"double", TT::KW_DOUBLE},
     {"else", TT::KW_ELSE},
     {"float", TT::KW_FLOAT},
     {"for", TT::KW_FOR},
     {"if", TT::KW_IF},
-    {"int", TT::KW_INT}
+    {"int", TT::KW_INT},
+    {"return", TT::KW_RETURN},
+    {"string", TT::KW_STRING},
+    {"switch", TT::KW_SWITCH},
+    {"while", TT::KW_WHILE}
 };
 
 //const std::pair<std::string, TokenType> keywords[] = {
