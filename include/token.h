@@ -34,6 +34,7 @@ enum class TokenType {
     CARET, TILDE,                                                       // ^ ~
     SHIFT_LEFT, SHIFT_RIGHT, SHIFT_LEFT_EQUAL, SHIFT_RIGHT_EQUAL,       // << >> <<= >>=
     QUESTION, COLON,                                                    // ? :
+    DOT,
     //ARROW, DOT, DOT_STAR, ELLIPSIS,                                   // -> . .* ...
 
     // ===== Punctuation =====

@@ -77,6 +77,9 @@ class Parser {
     Expr *parse_term();
     Expr *parse_factor();
     Expr *parse_unary();
+
+    Expr *parse_postfix();
+
     Expr *parse_primary();
     Expr *parse_literal();
     Expr *parse_identifier();
@@ -99,8 +102,11 @@ class Parser {
     ExpressionStmt      *parse_expression_statement();
     DeclarationStmt     *parse_declaration_statement();
     IfStmt              *parse_if_statement();
+
+    //FIXME!!
     SwitchStmt          *parse_switch_statement();
     CaseClause          *parse_case_clause();
+
     WhileStmt           *parse_while_statement();
     DoWhileStmt         *parse_do_while_statement();
     ForStmt             *parse_for_statement();
