@@ -1,0 +1,49 @@
+statement 					::= compound-statement
+								| expression-statement
+								| declaration-statement
+								| if-statement
+								| switch-statement
+								| while-statement
+								| do-while-statement
+								| for-statement
+								| break-statement
+								| continue-statement
+								| return-statement
+								| labeled-statement
+								
+								| empty-statement
+
+compound-statement 			::= "{" { statement } "}"
+
+expression-statement 		::= expression ";"
+
+declaration-statement		::= declaration ";"
+
+if-statement 				::= "if" "(" expression ")" statement [ "else" statement ]
+
+switch-statement       		::= "switch" "(" expression ")" "{" { case-clause } "}"
+case-clause					::= "case" expression ":" compound-statement
+
+while-statement 			::= "while" "(" expression ")" statement
+
+do-while-statement 			::= "do" statement "while" "(" expression ")" ";"
+
+
+for-statement 				::=	"for" "(" for-clause ")" statement
+for-clause 					::=	classic-for | range-for
+classic-for 				::=	[ for-init ] ";" [ expression ] ";" [ expression ]
+for-init 					::=	expression | declaration-statement
+range-for 					::=	type-specifier identifier ":" range-expression
+range-expression 			::=	"[" expression ".." expression "]"
+      							| identifier
+
+
+
+
+break-statement    			::= "break" ";"
+
+continue-statement 			::= "continue" ";"
+
+return-statement   			::= "return" [ expression ] ";"
+
+empty-statement 			::= ";"

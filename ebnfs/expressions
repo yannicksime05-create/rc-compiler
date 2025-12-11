@@ -1,0 +1,39 @@
+expression              ::= assignment
+                            | expression "," assignment
+
+assignment              ::= conditional
+                            | unary assignment-operator assignment
+
+assignment-operator     ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
+
+conditional             ::= logical-or [ "?" expression ":" conditional ]
+
+logical-or              ::= logical-and { "||" logical-and }
+
+logical-and             ::= equality { "&&" equality }
+
+equality                ::= comparaison { ( "==" | "!=" ) comparaison }
+
+comparaison             ::= term { ( "<" | "<=" | ">" | ">=" ) term }
+
+term                    ::= factor { ( "+" | "-" ) factor }
+
+factor                  ::= unary { ( "*" | "/" | "%" ) unary }
+
+unary                   ::= ( "-" | "!" | "++" | "--" ) unary
+                            | postfix
+
+postfix                 ::= primary
+                        {
+                            | "(" [ argument-list ] ")"
+                            | "[" expression "]"
+                            | "." identifier
+                            | "++"
+                            | "--"
+                        }
+
+argument-list           ::= expression { "," expression }
+
+primary                 ::= literal
+                            | identifier
+                            | "(" expression ")"
