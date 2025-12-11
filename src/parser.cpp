@@ -94,14 +94,59 @@ Expr *Parser::parse_factor() {//a * b, a / b, a % b
 }
 
 Expr *Parser::parse_unary() {
-    return parse_primary();
+    if( is(TT::MINUS) || is(TT::NOT) || is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
+        return new UnaryExpr(get().value, parse_unary());
+    }
+
+    return parse_postfix();
+}
+
+Expr *Parser::parse_postfix() {
+    Expr *primary = parse_primary();
+
+    while(true) {
+        if( is(TT::LPAREN) ) {
+            get();
+            if( is(TT::RPAREN) ) {
+                get();
+                primary = new CallExpr(primary);
+            }
+            else {
+                std::vector<Expr *> args;
+                args.push_back(parseExpression());
+                while( is(TT::COMMA) ) {
+                    get();
+                    args.push_back(parseExpression());
+                }
+                expect(TT::RPAREN, "Error: Expected ')' after argument list");
+                primary = new CallExpr(primary, args);
+            }
+        }
+        else if( is(TT::LBRACKET) ) {
+            get();
+            Expr *index = parseExpression();
+            expect(TT::RBRACKET, "Error: Expected closing ']' ");
+            primary = new SubscriptExpr(primary, index);
+        }
+        else if( is(TT::DOT) ) {
+            get();
+            expect(TT::IDENTIFIER, "Error: Expected identifier");
+            primary = new MemberAccessExpr(primary, previous().value);
+        }
+        else if( is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
+            primary = new UnaryExpr(get().value, primary, false);
+        }
+        else break;
+    }
+
+    return primary;
 }
 
 Expr *Parser::parse_primary() {
     if( is(TT::LPAREN) ) {
         get();
         Expr *e = parseExpression();
-        expect(TT::RPAREN, "Error: Expected ')'");
+        expect(TT::RPAREN, "Error: Expected closing ')' of primary expression");
         return e;
     }
 

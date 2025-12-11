@@ -14,19 +14,19 @@ class Printer {
         for(int i = 0; i < nspace; ++i) std::cout << " ";
     }
 
-    void printExpression(const Expr *e);
-    void print_literal_exprs(const Expr *e);
-    void print_two_operands_exprs(const Expr *e);
+    void printExpression(const Expr *expr);
+    void print_literal_exprs(const Expr *expr);
+    void print_two_operands_exprs(const Expr *expr);
 
 
-    void printDeclaration(const Decl *d);
+    void printDeclaration(const Decl *decl);
 
 
-    void printStatement(const Stmt *s);
+    void printStatement(const Stmt *stmt);
 
 
-    void exprs_printer_helper(Expr *e);
-    void stmts_printer_helper(Stmt *s);
+    void exprs_printer_helper(const Expr *e);
+    void stmts_printer_helper(const Stmt *s);
 
 public:
     void print(const Stmt *s) {

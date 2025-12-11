@@ -1,31 +1,71 @@
 #include "../include/printer.h"
 
-void Printer::printExpression(const Expr *e) {
-    switch(e->node_type) {
+void Printer::printExpression(const Expr *expr) {
+    switch(expr->node_type) {
         case ANT::INT_LIT_NODE:
         case ANT::STRING_LIT_NODE:
         case ANT::DECIMAL_LIT_NODE: {
-            print_literal_exprs(e);
+            print_literal_exprs(expr);
             break;
         }
         case ANT::UNARY_EXP_NODE: {
-            auto *ee = static_cast<const UnaryExpr *>(e);
+            auto *e = static_cast<const UnaryExpr *>(expr);
             indent(); std::cout << "node type: UnaryExpression,\n";
-            indent(); std::cout << "operator: \"" << ee->op << "\",\n";
+            indent(); std::cout << "operator: \"" << e->op << "\",\n";
             indent(); std::cout << "expression: {\n";
-            exprs_printer_helper(ee->expr);
+            exprs_printer_helper(e->expr);
             indent(); std::cout << "}\n";
             break;
         }
         case ANT::BINARY_EXPR_NODE:
         case ANT::ASSIGNMENT_EXPR_NODE: {
-            print_two_operands_exprs(e);
+            print_two_operands_exprs(expr);
             break;
         }
         case ANT::IDENTIFIER_EXPR_NODE: {
-            auto  *ee = static_cast<const IdentifierExpr *>(e);
+            auto *e = static_cast<const IdentifierExpr *>(expr);
             indent(); std::cout << "node type: Identifier,\n";
-            indent(); std::cout << "name: \"" << ee->name.value << "\"\n";
+            indent(); std::cout << "name: \"" << e->name.value << "\"\n";
+            break;
+        }
+        case ANT::CALL_EXPR_NODE: {
+            auto *e = static_cast<const CallExpr *>(expr);
+            indent(); std::cout << "node type: CallExpression,\n";
+            indent(); std::cout << "callee: {\n";
+            exprs_printer_helper(e->callee);
+            indent(); std::cout << "}\n";
+            indent(); std::cout << "arguments: [";
+            if( e->arguments.empty() ) {
+                std::cout << "]\n";
+            }
+            else {
+                std::cout << "\n";
+                for(const Expr *exp : e->arguments) {
+                    exprs_printer_helper(exp);
+                }
+                indent(); std::cout << "]\n";
+            }
+            break;
+        }
+        case ANT::SUBSCRIPT_EXPR_NODE: {
+            auto *e = static_cast<const SubscriptExpr *>(expr);
+            indent(); std::cout << "node type: SubscriptExpression,\n";
+            indent(); std::cout << "object: {\n";
+            exprs_printer_helper(e->object);
+            indent(); std::cout << "}\n";
+            indent(); std::cout << "index: {\n";
+            exprs_printer_helper(e->index);
+            indent(); std::cout << "}\n";
+            break;
+        }
+        case ANT::MEMBER_ACCESS_EXPR_NODE: {
+            auto *e = static_cast<const MemberAccessExpr *>(expr);
+            indent(); std::cout << "node type: MemberAccessExpression,\n";
+            indent(); std::cout << "object: {\n";
+            exprs_printer_helper(e->object);
+            indent(); std::cout << "}\n";
+            indent(); std::cout << "property: " << e->member << "\n";
+//            indent(); std::cout << "}\n";
             break;
         }
         default:
@@ -34,23 +74,23 @@ void Printer::printExpression(const Expr *e) {
     }
 }
 
-void Printer::print_literal_exprs(const Expr *e) {
+void Printer::print_literal_exprs(const Expr *expr) {
     indent(); std::cout << "node type: Literal,\n";
 
-    switch(e->node_type) {
+    switch(expr->node_type) {
         case ANT::INT_LIT_NODE: {
-            auto *ee = static_cast<const IntNumberExpr *>(e);
-            indent(); std::cout << "value: " << ee->value << "\n";
+            auto *e = static_cast<const IntNumberExpr *>(expr);
+            indent(); std::cout << "value: " << e->value << "\n";
             break;
         }
         case ANT::DECIMAL_LIT_NODE: {
-            auto *ee = static_cast<const DecimalNumberExpr *>(e);
-            indent(); std::cout << "value: " << ee->value << "\n";
+            auto *e = static_cast<const DecimalNumberExpr *>(expr);
+            indent(); std::cout << "value: " << e->value << "\n";
             break;
         }
         case ANT::STRING_LIT_NODE: {
-            auto *ee = static_cast<const StringExpr *>(e);
-            indent(); std::cout << "value: " << ee->value << "\n";
+            auto *e = static_cast<const StringExpr *>(expr);
+            indent(); std::cout << "value: " << e->value << "\n";
         }
         default:
             break;
@@ -58,34 +98,34 @@ void Printer::print_literal_exprs(const Expr *e) {
     }
 }
 
-void Printer::print_two_operands_exprs(const Expr *e) {
+void Printer::print_two_operands_exprs(const Expr *expr) {
     indent(); std::cout << "node type: ";
-    switch(e->node_type) {
+    switch(expr->node_type) {
         case ANT::ASSIGNMENT_EXPR_NODE: {
-            auto *ee = static_cast<const AssignmentExpr *>(e);
+            auto *e = static_cast<const AssignmentExpr *>(expr);
             std::cout << "AssignmentExpression,\n";
-            indent(); std::cout << "operator: \"" << ee->op << "\",\n";
+            indent(); std::cout << "operator: \"" << e->op << "\",\n";
 
             indent(); std::cout << "target: {\n";
-            exprs_printer_helper(ee->target);
+            exprs_printer_helper(e->target);
             indent(); std::cout << "},\n";
 
             indent(); std::cout << "value: {\n";
-            exprs_printer_helper(ee->value);
+            exprs_printer_helper(e->value);
             indent(); std::cout << "}\n";
             break;
         }
         case ANT::BINARY_EXPR_NODE: {
-            auto *ee = static_cast<const BinaryExpr *>(e);
+            auto *e = static_cast<const BinaryExpr *>(expr);
             std::cout << "BinaryExpression,\n";
-            indent(); std::cout << "operator: \"" << ee->op << "\",\n";
+            indent(); std::cout << "operator: \"" << e->op << "\",\n";
 
             indent(); std::cout << "left: {\n";
-            exprs_printer_helper(ee->left);
+            exprs_printer_helper(e->left);
             indent(); std::cout << "},\n";
 
             indent(); std::cout << "right: {\n";
-            exprs_printer_helper(ee->right);
+            exprs_printer_helper(e->right);
             indent(); std::cout << "}\n";
             break;
         }
@@ -94,17 +134,17 @@ void Printer::print_two_operands_exprs(const Expr *e) {
     }
 }
 
-void Printer::printDeclaration(const Decl *d) {
-    switch(d->node_type) {
+void Printer::printDeclaration(const Decl *decl) {
+    switch(decl->node_type) {
         case ANT::VAR_DECL_NODE: {
-            auto *dd = static_cast<const VariableDecl *>(d);
+            auto *d = static_cast<const VariableDecl *>(decl);
             indent(); std::cout << "node type: VariableDeclaration,\n";
-            indent(); std::cout << "type: " << dd->variable_type.type_name << ",\n";
+            indent(); std::cout << "type: " << d->variable_type.type_name << ",\n";
             indent(); std::cout << "const: ";
-            dd->variable_type.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
+            d->variable_type.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
             indent(); std::cout << "identifiers: [\n";
             nspace += tab_length;
-            for(VariableDeclarator *vd : dd->declarations) {
+            for(const VariableDeclarator *vd : d->declarations) {
                 indent(); std::cout << "name: " << vd->variable_name << ",\n";
                 indent(); std::cout << "init: ";
                 if(!vd->initializer) {
@@ -124,15 +164,15 @@ void Printer::printDeclaration(const Decl *d) {
 
         }
         case ANT::FUNC_DECL_NODE: {
-            auto *dd = static_cast<const FunctionDecl *>(d);
+            auto *d = static_cast<const FunctionDecl *>(decl);
             indent(); std::cout << "node type: FunctionDeclaration,\n";
-            indent(); std::cout << "name: " << dd->function_name << ",\n";
-            indent(); std::cout << "return type: " << dd->return_type.type_name << ",\n";
+            indent(); std::cout << "name: " << d->function_name << ",\n";
+            indent(); std::cout << "return type: " << d->return_type.type_name << ",\n";
             indent(); std::cout << "const: ";
-            dd->return_type.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
+            d->return_type.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
             indent(); std::cout << "parameters: [\n";
             nspace += tab_length;
-            for(Parameter *p : dd->parameters) {
+            for(const Parameter *p : d->parameters) {
                 indent(); std::cout << "identifier: {\n";
                 nspace += tab_length;
                 indent(); std::cout << "name: " << p->parameter_name << ",\n";
@@ -152,9 +192,9 @@ void Printer::printDeclaration(const Decl *d) {
             nspace -= tab_length;
             indent(); std::cout << "],\n";
             indent(); std::cout << "body: ";
-            if(dd->body) {
+            if(d->body) {
                 std::cout << "{\n";
-                stmts_printer_helper(dd->body);
+                stmts_printer_helper(d->body);
                 indent(); std::cout << "}\n";
             }
             else std::cout << "null\n";
@@ -165,14 +205,14 @@ void Printer::printDeclaration(const Decl *d) {
     }
 }
 
-void Printer::printStatement(const Stmt *s) {
-    switch(s->node_type) {
+void Printer::printStatement(const Stmt *stmt) {
+    switch(stmt->node_type) {
         case ANT::COMP_STMT_NODE: {
-            auto *ss = static_cast<const CompoundStmt *>(s);
+            auto *s = static_cast<const CompoundStmt *>(stmt);
             indent(); std::cout << "node type: CompoundStatement,\n";
             indent(); std::cout << "body: [\n";
             nspace += tab_length;
-            for(Stmt *st : ss->statements) {
+            for(const Stmt *st : s->statements) {
                 printStatement(st);
 //                std::cout << ",\n";
             }
@@ -182,17 +222,17 @@ void Printer::printStatement(const Stmt *s) {
             break;
         }
         case ANT::IF_STMT_NODE: {
-            auto *ss = static_cast<const IfStmt *>(s);
+            auto *s = static_cast<const IfStmt *>(stmt);
             indent(); std::cout << "node type: IfStatement,\n";
             indent(); std::cout << "test: {\n";
-            exprs_printer_helper(ss->condition);
+            exprs_printer_helper(s->condition);
             indent(); std::cout << "},\n";
             indent(); std::cout << "then: {\n";
-            stmts_printer_helper(ss->then_statement);
-            if(ss->else_statement) {
+            stmts_printer_helper(s->then_statement);
+            if(s->else_statement) {
                 indent(); std::cout << "},\n";
                 indent(); std::cout << "else: {\n";
-                stmts_printer_helper(ss->else_statement);
+                stmts_printer_helper(s->else_statement);
                 indent(); std::cout << "}\n";
             }
             else {
@@ -201,14 +241,14 @@ void Printer::printStatement(const Stmt *s) {
             break;
         }
         case ANT::SWITCH_STMT_NODE: {
-            auto *ss = static_cast<const SwitchStmt *>(s);
+            auto *s = static_cast<const SwitchStmt *>(stmt);
             indent(); std::cout << "node type: SwitchStatement,\n";
             indent(); std::cout << "pattern: {\n";
-            exprs_printer_helper(ss->pattern);
+            exprs_printer_helper(s->pattern);
             indent(); std::cout << "},\n";
             indent(); std::cout << "cases: [\n";
             nspace += tab_length;
-            for(CaseClause *c : ss->cases) {
+            for(const CaseClause *c : s->cases) {
                 indent(); std::cout << "test: {\n";
                 exprs_printer_helper(c->expression);
                 indent(); std::cout << "}\n";
@@ -221,67 +261,67 @@ void Printer::printStatement(const Stmt *s) {
             break;
         }
         case ANT::WHILE_STMT_NODE: {
-            auto *ss = static_cast<const WhileStmt *>(s);
+            auto *s = static_cast<const WhileStmt *>(stmt);
             indent(); std::cout << "node type: WhileStatement,\n";
             indent(); std::cout << "test: {\n";
-            exprs_printer_helper(ss->condition);
+            exprs_printer_helper(s->condition);
             indent(); std::cout << "},\n";
             indent(); std::cout << "body: [\n";
-            stmts_printer_helper(ss->body);
+            stmts_printer_helper(s->body);
             indent(); std::cout << "]\n";
             break;
         }
         case ANT::DO_WHILE_STMT_NODE: {
-            auto *ss = static_cast<const DoWhileStmt *>(s);
+            auto *s = static_cast<const DoWhileStmt *>(stmt);
             indent(); std::cout << "node type: DoWhileStatement,\n";
             indent(); std::cout << "body: [\n";
-            stmts_printer_helper(ss->body);
+            stmts_printer_helper(s->body);
             indent(); std::cout << "],\n";
             indent(); std::cout << "test: {\n";
-            exprs_printer_helper(ss->condition);
+            exprs_printer_helper(s->condition);
             indent(); std::cout << "}\n";
             break;
         }
         case ANT::RETURN_STMT_NODE: {
-            auto *ss = static_cast<const ReturnStmt *>(s);
+            auto *s = static_cast<const ReturnStmt *>(stmt);
             indent(); std::cout << "node type: ReturnStatement,\n";
             indent(); std::cout << "expression: ";
-            if(!ss->expression) std::cout << "null\n";
+            if(!s->expression) std::cout << "null\n";
             else {
                 std::cout << "{\n";
-                exprs_printer_helper(ss->expression);
+                exprs_printer_helper(s->expression);
                 indent(); std::cout << "}\n";
             }
             break;
         }
         case ANT::DECL_STMT_NODE: {
-            auto *ss = static_cast<const DeclarationStmt *>(s);
+            auto *s = static_cast<const DeclarationStmt *>(stmt);
             indent(); std::cout << "node type: DeclarationStatement,\n";
             indent(); std::cout << "declarations: {\n";
             nspace += tab_length;
-            printDeclaration(ss->declaration);
+            printDeclaration(s->declaration);
             nspace -= tab_length;
             indent(); std::cout << "}\n";
             break;
         }
         default: {
-            auto *ss = static_cast<const ExpressionStmt *>(s);
+            auto *s = static_cast<const ExpressionStmt *>(stmt);
             indent(); std::cout << "node type: ExpressionStatement,\n";
             indent(); std::cout << "expression: {\n";
-            exprs_printer_helper(ss->expression);
+            exprs_printer_helper(s->expression);
             indent(); std::cout << "}\n";
             break;
         }
     }
 }
 
-void Printer::exprs_printer_helper(Expr *e) {
+void Printer::exprs_printer_helper(const Expr *e) {
     nspace += tab_length;
     printExpression(e);
     nspace -= tab_length;
 }
 
-void Printer::stmts_printer_helper(Stmt *s) {
+void Printer::stmts_printer_helper(const Stmt *s) {
     nspace += tab_length;
     printStatement(s);
     nspace -= tab_length;

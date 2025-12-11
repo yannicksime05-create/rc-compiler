@@ -10,7 +10,8 @@ enum class ASTNodeType {
     INT_LIT_NODE, DECIMAL_LIT_NODE, STRING_LIT_NODE,
 
     //Expressions Nodes
-    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE,
+    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE, CALL_EXPR_NODE,
+    SUBSCRIPT_EXPR_NODE, MEMBER_ACCESS_EXPR_NODE,
 
     //Statements Nodes
     COMP_STMT_NODE, EXPR_STMT_NODE, IF_STMT_NODE, SWITCH_STMT_NODE, WHILE_STMT_NODE,
@@ -107,11 +108,11 @@ struct IdentifierExpr : Expr {
 };
 
 struct UnaryExpr : Expr {
-    bool prefix;            //true if ++a, false if a++
+    bool is_prefix;            //true if ++a, false if a++
     std::string op;
     Expr *expr = nullptr;
 
-    UnaryExpr(Expr *e, std::string& o, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), prefix(p), op(o), expr(e) {}
+    UnaryExpr(std::string& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
 
     //DO NOT REMOVE!!
     void for_dynamic_polymorphism_purpose() override {}
@@ -161,6 +162,64 @@ struct AssignmentExpr : Expr {
         delete value;
         value = nullptr;
         std::cout << "Cleaned up AssignExpr node...\n";
+    }
+};
+
+struct CallExpr : Expr {
+    Expr *callee = nullptr;
+    std::vector<Expr *> arguments;
+
+    CallExpr(Expr *c, const std::vector<Expr *>& args = std::vector<Expr *>())
+        : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {}
+
+    //DO NOT REMOVE!!
+    void for_dynamic_polymorphism_purpose() override {}
+
+    ~CallExpr() {
+        delete callee;
+        callee = nullptr;
+        for(Expr *e : arguments) {
+            delete e;
+            e = nullptr;
+        }
+
+        std::cout << "Cleaned up CallExpr node...\n";
+    }
+};
+
+struct SubscriptExpr : Expr {
+    Expr *object = nullptr;
+    Expr *index = nullptr;
+
+    SubscriptExpr(Expr *o, Expr *i) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), index(i) {}
+
+    //DO NOT REMOVE!!
+    void for_dynamic_polymorphism_purpose() override {}
+
+    ~SubscriptExpr() {
+        delete object;
+        object = nullptr;
+        delete index;
+        index = nullptr;
+
+        std::cout << "Cleaned up SubscriptExpr node...\n";
+    }
+};
+
+struct MemberAccessExpr : Expr {
+    Expr *object;
+    std::string member;
+
+    MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
+
+    //DO NOT REMOVE!!
+    void for_dynamic_polymorphism_purpose() override {}
+
+    ~MemberAccessExpr() {
+        delete object;
+        object = nullptr;
+
+        std::cout << "Cleaned up MemberAccessExpr node...\n";
     }
 };
 
@@ -287,7 +346,7 @@ struct ExpressionStmt : Stmt {
     ~ExpressionStmt() {
         delete expression;
         expression = nullptr;
-        std::cout << "Cleaned up ExprStmt node...\n";
+        std::cout << "Cleaned up ExpressionStmt node...\n";
     }
 };
 

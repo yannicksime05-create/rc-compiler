@@ -389,6 +389,10 @@ const Token Lexer::getNextToken() {
             t.type = TT::COMMA;
             t.value = ",";
             break;
+        case '.':
+            t.type = TT::DOT;
+            t.value = ".";
+            break;
         case '+':
             if(input.peek() == '+') {
                 input.get(); ++column;
