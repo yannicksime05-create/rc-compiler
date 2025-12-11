@@ -1,0 +1,54 @@
+ 	 ├── VariableDeclaration 																		//ok
+	 ├── FunctionDeclaration
+	 ├── ParameterDeclaration
+	 ├── ClassDeclaration
+	 ├── StructDeclaration
+	 ├── EnumDeclaration
+	 ├── NamespaceDeclaration
+	 ├── TypedefDeclaration / UsingDeclaration
+	 ├── TemplateDeclaration
+	 ├── ConceptDeclaration
+	 ├── ImportDeclaration
+	 ├── ExportDeclaration
+	 ├── FriendDeclaration
+	 └── StaticAssertDeclaration
+
+declaration 			::= variable-declaration
+							| function-declaration
+							| class-declaration
+							| struct-declaration
+							| enum-declaration
+							| alias-declaration
+
+variable-declaration 	::= type-specifier variable-declarator { "," variable-declarator } ";"
+
+type-specifier        	::= [ type-qualifier ] ( base-type | identifier )
+
+type-qualifier        	::= "const"
+
+base-type             	::= "int"
+	                        | "short"
+	                        | "long"
+	                        | "float"
+	                        | "double"
+	                        | "string"
+	                        | "char"
+	                        | "void"
+	                        | "bool"
+	                        | "number"
+	                        | "any"
+	                        | "auto"
+
+variable-declarator   ::= identifier [ "=" expression ] ;
+
+
+
+
+function-declaration 	::= type-specifier identifier "(" [ parameter-list ] ")" [ function-body ]
+parameter-list       	::= parameter { "," parameter }
+parameter            	::= type-specifier identifier [ "=" expression ]
+function-body        	::= compound-statement
+
+
+class-declaration		::= "class" identifier [] class-body
+class-body				::= compound-statement
