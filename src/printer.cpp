@@ -8,6 +8,12 @@ void Printer::printExpression(const Expr *expr) {
             print_literal_exprs(expr);
             break;
         }
+        case ANT::IDENTIFIER_EXPR_NODE: {
+            auto *e = static_cast<const IdentifierExpr *>(expr);
+            indent(); std::cout << "node type: Identifier,\n";
+            indent(); std::cout << "name: \"" << e->name.value << "\"\n";
+            break;
+        }
         case ANT::UNARY_EXP_NODE: {
             auto *e = static_cast<const UnaryExpr *>(expr);
             indent(); std::cout << "node type: UnaryExpression,\n";
@@ -22,10 +28,18 @@ void Printer::printExpression(const Expr *expr) {
             print_two_operands_exprs(expr);
             break;
         }
-        case ANT::IDENTIFIER_EXPR_NODE: {
-            auto *e = static_cast<const IdentifierExpr *>(expr);
-            indent(); std::cout << "node type: Identifier,\n";
-            indent(); std::cout << "name: \"" << e->name.value << "\"\n";
+        case ANT::CONDITIONAL_EXPR_NODE: {
+            auto *e = static_cast<const ConditionalExpr *>(expr);
+            indent(); std::cout << "node type: ConditionalExpression,\n";
+            indent(); std::cout << "condition: {\n";
+            exprs_printer_helper(e->condition);
+            indent(); std::cout << "},\n";
+            indent(); std::cout << "then: {\n";
+            exprs_printer_helper(e->if_true);
+            indent(); std::cout << "},\n";
+            indent(); std::cout << "else: {\n";
+            exprs_printer_helper(e->if_false);
+            indent(); std::cout << "}\n";
             break;
         }
         case ANT::CALL_EXPR_NODE: {
@@ -210,15 +224,15 @@ void Printer::printStatement(const Stmt *stmt) {
         case ANT::COMP_STMT_NODE: {
             auto *s = static_cast<const CompoundStmt *>(stmt);
             indent(); std::cout << "node type: CompoundStatement,\n";
-            indent(); std::cout << "body: [\n";
-            nspace += tab_length;
-            for(const Stmt *st : s->statements) {
-                printStatement(st);
-//                std::cout << ",\n";
-            }
+            indent(); std::cout << "body: ";
+            if(s->statements.empty()) std::cout << "[]\n";
+            else {
+                std::cout << "[\n";
+                for(const Stmt *st : s->statements)
+                    stmts_printer_helper(st);
 
-            nspace -= tab_length;
-            indent(); std::cout << "]\n";
+                indent(); std::cout << "]\n";
+            }
             break;
         }
         case ANT::IF_STMT_NODE: {
@@ -254,7 +268,7 @@ void Printer::printStatement(const Stmt *stmt) {
                 indent(); std::cout << "}\n";
                 indent(); std::cout << "then: {\n";
                 stmts_printer_helper(c->body);
-                indent(); std::cout << "}\n,";
+                indent(); std::cout << "},\n";
             }
             nspace -= tab_length;
             indent(); std::cout << "]\n";

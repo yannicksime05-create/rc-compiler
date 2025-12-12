@@ -2,6 +2,13 @@
 #include <sstream>
 
 Expr *Parser::parseExpression() {
+//    Expr *e = parse_assignment();
+//    while( is(TT::COMMA) ) {
+//        e = new CommaExpr();
+//    }
+//
+//    return e;
+
     return parse_assignment();
 }
 
@@ -19,6 +26,18 @@ Expr *Parser::parse_assignment() { //a = b
     }
 
     return target;
+}
+
+Expr *Parser::parse_conditional() {
+    Expr *condition = parse_logical_or();
+    if( is(TT::QUESTION) ) {
+        get();
+        Expr *e = parseExpression();
+        expect(TT::COLON, "Error: Expected ':' in conditional operator!");
+        return new ConditionalExpr(condition, e, parse_conditional());
+    }
+
+    return condition;
 }
 
 Expr *Parser::parse_logical_or() { //a || b
@@ -125,12 +144,12 @@ Expr *Parser::parse_postfix() {
         else if( is(TT::LBRACKET) ) {
             get();
             Expr *index = parseExpression();
-            expect(TT::RBRACKET, "Error: Expected closing ']' ");
+            expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
             primary = new SubscriptExpr(primary, index);
         }
         else if( is(TT::DOT) ) {
             get();
-            expect(TT::IDENTIFIER, "Error: Expected identifier");
+            expect(TT::IDENTIFIER, "Error: Expected identifier for member expressions");
             primary = new MemberAccessExpr(primary, previous().value);
         }
         else if( is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
@@ -256,7 +275,7 @@ FunctionDecl *Parser::parse_function_declaration() {
 Parameter *Parser::parse_function_parameters() {
     TypeSpecifier type = *parse_type_specifier();
 
-    expect(TT::IDENTIFIER, "Error: Expected parameter's name");
+    expect(TT::IDENTIFIER, "Error: Expected parameter's name in function declaration");
     std::string name = previous().value;
 
     if( is(TT::ASSIGN) ) {
@@ -302,14 +321,14 @@ Stmt *Parser::parseStatement() {
 }
 
 CompoundStmt *Parser::parse_compound_statement() {
-    get();
-//    expect(TT::LBRACE, "Error: Expected '{' to start compound statement");
+//    get();
+    expect(TT::LBRACE, "Error: Expected '{' to start compound statement");
 
     std::vector<Stmt *> s;
     while( !is(TT::RBRACE) && !is(TT::END_OF_FILE) )
         s.push_back(parseStatement());
 
-    expect(TT::RBRACE, "Error: Expected '}'");
+    expect(TT::RBRACE, "Error: Expected '}' to end compound statement");
     return new CompoundStmt(s);
 }
 
@@ -336,13 +355,13 @@ DeclarationStmt *Parser::parse_declaration_statement() {
 IfStmt *Parser::parse_if_statement() {
     get();
 
-    expect(TT::LPAREN, "Error: Expected '('");
+    expect(TT::LPAREN, "Error: Expected '(' after keyword if");
     Expr *condition = parseExpression();
     if(!condition) {
         std::cout << "From: parse_if_statement\nError: unable to create desired expression" << std::endl;
         return nullptr;
     }
-    expect(TT::RPAREN, "Error: Expected ')'");
+    expect(TT::RPAREN, "Error: Expected closing ')' for if-statement");
 
     Stmt *then_stmt = parseStatement();
     if(!then_stmt) {
@@ -373,7 +392,7 @@ SwitchStmt *Parser::parse_switch_statement() {
     while( !is(TT::RBRACE) && !is(TT::END_OF_FILE)  ) {
         if( is(TT::KW_CASE) || is(TT::KW_DEFAULT) )   cases.push_back(parse_case_clause());
         else {
-            expect(TT::KW_CASE, "Error: Expected 'case' inside of switch");
+            expect(TT::KW_CASE, "Error: Expected 'case' inside switch");
         }
     }
 
@@ -390,9 +409,7 @@ CaseClause *Parser::parse_case_clause() {
     }
     expect(TT::COLON, "Error: Expected ':' after case expression");
 
-//    expect(TT::LBRACE, "Error: Expected '{' after case expression");
     CompoundStmt *body = parse_compound_statement();
-    expect(TT::RBRACE, "Error: Expected '}' at the end of case clause");
 
     return new CaseClause(e, body);
 }
