@@ -31,10 +31,10 @@ class Parser {
     */
     Token& previous() { return tokens.at(pos - 1); }
 
-    Token& peek() {
-        if(pos >= tokens.size()) return  tokens.back();
+    Token& peek(size_t n = 1) {
+        if(pos + n >= tokens.size()) return  tokens.back();
 
-        return tokens[pos + 1];
+        return tokens[pos + n];
     }
 
     void expect(TokenType t, const std::string& error_msg) {
@@ -70,6 +70,7 @@ class Parser {
 
     Expr *parseExpression();
     Expr *parse_assignment();
+    Expr *parse_conditional();
     Expr *parse_logical_or();
     Expr *parse_logical_and();
     Expr *parse_equality();
@@ -109,7 +110,9 @@ class Parser {
 
     WhileStmt           *parse_while_statement();
     DoWhileStmt         *parse_do_while_statement();
+
     ForStmt             *parse_for_statement();
+
     ReturnStmt          *parse_return_statement();
 
 
@@ -133,17 +136,6 @@ public:
         p.print(s);
         delete s;
         s = nullptr;
-
-//        VarDecl *vd = var_declaration();
-//
-//        if(!vd) {
-//            std::cout << "e is null" << std::endl;
-//            return;
-//        }
-//        DeclPrinter::print(vd);
-//        std::cout << "\n\nResult = " << interpretBinaryExpr(e) << std::endl;
-//        delete vd;
-//        vd = nullptr;
     }
 
     double interpretBinaryExpr(BinaryExpr *e);
