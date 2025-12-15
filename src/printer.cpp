@@ -18,6 +18,8 @@ void Printer::printExpression(const Expr *expr) {
             auto *e = static_cast<const UnaryExpr *>(expr);
             indent(); std::cout << "node type: UnaryExpression,\n";
             indent(); std::cout << "operator: \"" << e->op << "\",\n";
+            indent(); std::cout << "prefix: ";
+            e->is_prefix ? (std::cout << "true,\n") : (std::cout << "false,\n");
             indent(); std::cout << "expression: {\n";
             exprs_printer_helper(e->expr);
             indent(); std::cout << "}\n";
@@ -294,6 +296,23 @@ void Printer::printStatement(const Stmt *stmt) {
             indent(); std::cout << "test: {\n";
             exprs_printer_helper(s->condition);
             indent(); std::cout << "}\n";
+            break;
+        }
+        case ANT::FOR_STMT_NODE: {
+            auto *s = static_cast<const ForStmt *>(stmt);
+            indent(); std::cout << "node type: ForStatement,\n";
+            indent(); std::cout << "initialization: {\n";
+            stmts_printer_helper(s->initialization);
+            indent(); std::cout << "},\n";
+            indent(); std::cout << "condition: {\n";
+            exprs_printer_helper(s->condition);
+            indent(); std::cout << "},\n";
+            indent(); std::cout << "increment: {\n";
+            exprs_printer_helper(s->increment);
+            indent(); std::cout << "},\n";
+            indent(); std::cout << "body: [\n";
+            stmts_printer_helper(s->body);
+            indent(); std::cout << "]\n";
             break;
         }
         case ANT::RETURN_STMT_NODE: {
