@@ -393,6 +393,10 @@ const Token Lexer::getNextToken() {
             t.type = TT::DOT;
             t.value = ".";
             break;
+        case '?':
+            t.type = TT::QUESTION;
+            t.value = "?";
+            break;
         case '+':
             if(input.peek() == '+') {
                 input.get(); ++column;
@@ -443,7 +447,7 @@ const Token Lexer::getNextToken() {
             if(input.peek() == '=') {
                 input.get(); ++column;
                 t.type = TT::MOD_EQUAL;
-                t.value = "%";
+                t.value = "%=";
             }
             else {
                 t.type = TT::MOD;
