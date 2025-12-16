@@ -13,14 +13,12 @@ Expr *Parser::parseExpression() {
 }
 
 Expr *Parser::parse_assignment() { //a = b
-    Expr *target = parse_logical_or();
+    Expr *target = parse_conditional();
     if(!target) {
         std::cout << "target is null" << std::endl;
         return nullptr;
     }
     if( is_assignment_operator() ) {
-//        Token op = get();
-//        Expr *value = parse_assignment();
 
         return new AssignmentExpr(target, get().value, parse_assignment());
     }
@@ -206,7 +204,12 @@ Expr *Parser::parse_identifier() {
 
 
 Decl *Parser::parseDeclaration() {
-    return parse_function_declaration();
+    if( peek().is(TT::IDENTIFIER) && peek(2).is(TT::LPAREN) )
+        return parse_function_declaration();
+    else if( peek().is(TT::IDENTIFIER) )
+        return parse_variable_declaration();
+
+    return nullptr;
 }
 
 TypeSpecifier *Parser::parse_type_specifier() {
@@ -224,7 +227,7 @@ VariableDecl *Parser::parse_variable_declaration() {
     TypeSpecifier type = *parse_type_specifier();
 
     if( !is(TT::IDENTIFIER) ) {
-        std::cout << "Expected identifier\n";
+        std::cout << "Expected identifier after type name\n";
         return nullptr;
     }
     std::vector<VariableDeclarator *> decls;
@@ -239,10 +242,14 @@ VariableDecl *Parser::parse_variable_declaration() {
 
 VariableDeclarator *Parser::parse_variable_declarator() {
     std::string name = get().value;
-    if( is(TT::EQUAL) ) get();
-    Expr *init = parseExpression();
+    if( is(TT::ASSIGN) ) {
+        get();
+        Expr *init = parseExpression();
 
-    return new VariableDeclarator(name, init);
+        return new VariableDeclarator(name, init);
+    }
+
+    return new VariableDeclarator(name);
 }
 
 FunctionDecl *Parser::parse_function_declaration() {
@@ -458,17 +465,24 @@ DoWhileStmt *Parser::parse_do_while_statement() {
 ForStmt *Parser::parse_for_statement() {
     get();
 
-    expect(TT::LPAREN, "Error: Expected '('");
-//    std::cout << "pos = " << pos << std::endl;
+    expect(TT::LPAREN, "Error: Expected '(' after keyword 'for'");
+    Stmt *init = parseStatement();
+//    expect(TT::SEMICOLON, "Error: Expected ';' after for-loop initialization");
+
     Expr *condition = parseExpression();
     if(!condition) {
-        std::cout << "From: parse_if_statement\nError: unable to create desired expression" << std::endl;
-        return nullptr;
+        std::cout << "From: parse_for_statement\nError: unable to create desired expression" << std::endl;
+//        return nullptr;
     }
-    expect(TT::RPAREN, "Error: Expected ')'");
-    std::cout << "pos = " << pos << std::endl;
+    expect(TT::SEMICOLON, "Error: Expected ';' after for-loop condition");
 
-    return nullptr;
+    Expr *incr = parseExpression();
+    expect(TT::RPAREN, "Error: Expected ')' after for-loop increment");
+
+    Stmt *body = parseStatement();
+//    std::cout << "pos = " << pos << std::endl;
+
+    return new ForStmt(init, condition, incr, body);
 }
 
 ReturnStmt *Parser::parse_return_statement() {
