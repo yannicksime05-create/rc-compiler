@@ -2,14 +2,17 @@
 #include <sstream>
 
 Expr *Parser::parseExpression() {
-//    Expr *e = parse_assignment();
-//    while( is(TT::COMMA) ) {
-//        e = new CommaExpr();
-//    }
-//
-//    return e;
+    Expr *e = parse_assignment();
+    if( !is(TT::COMMA) ) return e;
 
-    return parse_assignment();
+    std::vector<Expr *> exprs;
+    exprs.push_back(e);
+    while( is(TT::COMMA) ) {
+        get();
+        exprs.push_back(parse_assignment());
+    }
+
+    return new SequenceExpr(exprs);
 }
 
 Expr *Parser::parse_assignment() { //a = b
@@ -19,7 +22,8 @@ Expr *Parser::parse_assignment() { //a = b
         return nullptr;
     }
     if( is_assignment_operator() ) {
-
+//        Token op = get();
+//        Expr *value = parse_assignment();
         return new AssignmentExpr(target, get().value, parse_assignment());
     }
 

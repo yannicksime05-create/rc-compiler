@@ -50,12 +50,12 @@ void Printer::printExpression(const Expr *expr) {
             indent(); std::cout << "callee: {\n";
             exprs_printer_helper(e->callee);
             indent(); std::cout << "}\n";
-            indent(); std::cout << "arguments: [";
+            indent(); std::cout << "arguments: ";
             if( e->arguments.empty() ) {
-                std::cout << "]\n";
+                std::cout << "[]\n";
             }
             else {
-                std::cout << "\n";
+                std::cout << "[\n";
                 for(const Expr *exp : e->arguments) {
                     exprs_printer_helper(exp);
                 }
@@ -82,6 +82,20 @@ void Printer::printExpression(const Expr *expr) {
             indent(); std::cout << "}\n";
             indent(); std::cout << "property: " << e->member << "\n";
 //            indent(); std::cout << "}\n";
+            break;
+        }
+        case ANT::SEQUENCE_EXPR_NODE: {
+            auto *e = static_cast<const SequenceExpr *>(expr);
+            indent(); std::cout << "node type: SequenceExpression,\n";
+            indent(); std::cout << "expressions: ";
+            if(e->expressions.empty())  std::cout << "[]\n";
+            else {
+                std::cout << "[\n";
+                for(const Expr *exp : e->expressions) {
+                    exprs_printer_helper(exp);
+                }
+                indent(); std::cout << "]\n";
+            }
             break;
         }
         default:

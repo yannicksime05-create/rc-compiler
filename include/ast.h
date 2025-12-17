@@ -10,8 +10,9 @@ enum class ASTNodeType {
     INT_LIT_NODE, DECIMAL_LIT_NODE, STRING_LIT_NODE,
 
     //Expressions Nodes
-    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE, CALL_EXPR_NODE,
-    SUBSCRIPT_EXPR_NODE, MEMBER_ACCESS_EXPR_NODE,
+    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE,
+    CONDITIONAL_EXPR_NODE, CALL_EXPR_NODE, MEMBER_ACCESS_EXPR_NODE, SUBSCRIPT_EXPR_NODE,
+    SEQUENCE_EXPR_NODE,
 
     //Statements Nodes
     COMP_STMT_NODE, EXPR_STMT_NODE, IF_STMT_NODE, SWITCH_STMT_NODE, WHILE_STMT_NODE,
@@ -107,23 +108,6 @@ struct IdentifierExpr : Expr {
     }
 };
 
-struct UnaryExpr : Expr {
-    bool is_prefix;            //true if ++a, false if a++
-    std::string op;
-    Expr *expr = nullptr;
-
-    UnaryExpr(std::string& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
-    ~UnaryExpr() {
-        delete expr;
-        expr = nullptr;
-        std::cout << "Cleaned up UnaryExpr node...\n";
-    }
-};
-
 struct BinaryExpr : Expr {
     Expr* left = nullptr;
     std::string op;
@@ -146,6 +130,23 @@ struct BinaryExpr : Expr {
     }
 };
 
+struct UnaryExpr : Expr {
+    bool is_prefix;            //true if ++a, false if a++
+    std::string op;
+    Expr *expr = nullptr;
+
+    UnaryExpr(std::string& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
+
+    //DO NOT REMOVE!!
+    void for_dynamic_polymorphism_purpose() override {}
+
+    ~UnaryExpr() {
+        delete expr;
+        expr = nullptr;
+        std::cout << "Cleaned up UnaryExpr node...\n";
+    }
+};
+
 struct AssignmentExpr : Expr {
     Expr* target = nullptr;        // usually a VariableExpr
     std::string op;                // "=" or "+=", "-=", etc.
@@ -165,6 +166,29 @@ struct AssignmentExpr : Expr {
     }
 };
 
+struct ConditionalExpr : Expr {
+    Expr *condition = nullptr;
+    Expr *if_true = nullptr;
+    Expr *if_false = nullptr;
+
+    ConditionalExpr(Expr *c, Expr *t, Expr *f)
+        : Expr(ASTNodeType::CONDITIONAL_EXPR_NODE), condition(c), if_true(t), if_false(f) {}
+
+    //DO NOT REMOVE!!
+    void for_dynamic_polymorphism_purpose() override {}
+
+    ~ConditionalExpr() {
+        delete condition;
+        condition = nullptr;
+        delete if_true;
+        if_true = nullptr;
+        delete if_false;
+        if_false = nullptr;
+
+        std::cout << "Cleaned up ConditionalExpr node...\n";
+    }
+};
+
 struct CallExpr : Expr {
     Expr *callee = nullptr;
     std::vector<Expr *> arguments;
@@ -178,12 +202,29 @@ struct CallExpr : Expr {
     ~CallExpr() {
         delete callee;
         callee = nullptr;
-        for(Expr *e : arguments) {
+        for(const Expr *e : arguments) {
             delete e;
             e = nullptr;
         }
 
         std::cout << "Cleaned up CallExpr node...\n";
+    }
+};
+
+struct MemberAccessExpr : Expr {
+    Expr *object = nullptr;
+    std::string member;
+
+    MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
+
+    //DO NOT REMOVE!!
+    void for_dynamic_polymorphism_purpose() override {}
+
+    ~MemberAccessExpr() {
+        delete object;
+        object = nullptr;
+
+        std::cout << "Cleaned up MemberAccessExpr node...\n";
     }
 };
 
@@ -206,20 +247,21 @@ struct SubscriptExpr : Expr {
     }
 };
 
-struct MemberAccessExpr : Expr {
-    Expr *object;
-    std::string member;
+struct SequenceExpr : Expr {
+    std::vector<Expr *> expressions;
 
-    MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
+    SequenceExpr(const std::vector<Expr *>& exprs) : Expr(ASTNodeType::SEQUENCE_EXPR_NODE), expressions(exprs) {}
 
     //DO NOT REMOVE!!
     void for_dynamic_polymorphism_purpose() override {}
 
-    ~MemberAccessExpr() {
-        delete object;
-        object = nullptr;
+    ~SequenceExpr() {
+        for(const Expr *e : expressions) {
+            delete e;
+            e = nullptr;
+        }
 
-        std::cout << "Cleaned up MemberAccessExpr node...\n";
+        std::cout << "Cleaned up SequenceExpr node...\n";
     }
 };
 
@@ -265,7 +307,7 @@ struct VariableDecl : Decl {
     void for_dynamic_polymorphism_purpose() override {}
 
     ~VariableDecl() {
-        for(VariableDeclarator *vd : declarations) {
+        for(const VariableDeclarator *vd : declarations) {
             delete vd;
             vd = nullptr;
         }
@@ -305,6 +347,10 @@ struct FunctionDecl : Decl {
     ~FunctionDecl() {
         delete body;
         body = nullptr;
+        for(const Parameter *p : parameters) {
+            delete p;
+            p = nullptr;
+        }
 
         std::cout << "Cleaned up FunctionDecl...\n";
     }
@@ -326,7 +372,7 @@ struct CompoundStmt : Stmt {
     void for_dynamic_polymorphism_purpose() override {}
 
     ~CompoundStmt() {
-        for(Stmt *s : statements) {
+        for(const Stmt *s : statements) {
             delete s;
             s = nullptr;
         }
@@ -346,6 +392,7 @@ struct ExpressionStmt : Stmt {
     ~ExpressionStmt() {
         delete expression;
         expression = nullptr;
+
         std::cout << "Cleaned up ExpressionStmt node...\n";
     }
 };
@@ -417,7 +464,7 @@ struct SwitchStmt : Stmt {
     ~SwitchStmt() {
         delete pattern;
         pattern = nullptr;
-        for(CaseClause *c : cases) {
+        for(const CaseClause *c : cases) {
             delete c;
             c = nullptr;
         }
