@@ -369,14 +369,14 @@ IfStmt *Parser::parse_if_statement() {
     expect(TT::LPAREN, "Error: Expected '(' after keyword if");
     Expr *condition = parseExpression();
     if(!condition) {
-        std::cout << "From: parse_if_statement\nError: unable to create desired expression" << std::endl;
+        std::cerr << "Error: Expected primary expression for if-statement" << std::endl;
         return nullptr;
     }
     expect(TT::RPAREN, "Error: Expected closing ')' for if-statement");
 
     Stmt *then_stmt = parseStatement();
     if(!then_stmt) {
-        return nullptr;
+        return new IfStmt(c);
     }
 
     if( is(TT::KW_ELSE) ) {
