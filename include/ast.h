@@ -418,7 +418,7 @@ struct IfStmt : Stmt {
     Stmt *then_statement = nullptr;
     Stmt *else_statement = nullptr;
 
-    IfStmt(Expr *c, Stmt *t, Stmt *e = nullptr)
+    IfStmt(Expr *c, Stmt *t = nullptr, Stmt *e = nullptr)
         : Stmt(ASTNodeType::IF_STMT_NODE), condition(c), then_statement(t), else_statement(e) {}
 
     //DO NOT REMOVE!!
