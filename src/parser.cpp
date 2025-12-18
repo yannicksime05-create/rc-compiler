@@ -231,7 +231,7 @@ VariableDecl *Parser::parse_variable_declaration() {
     TypeSpecifier type = *parse_type_specifier();
 
     if( !is(TT::IDENTIFIER) ) {
-        std::cout << "Expected identifier after type name\n";
+        std::cerr << "Expected identifier after type name\n";
         return nullptr;
     }
     std::vector<VariableDeclarator *> decls;
@@ -239,7 +239,7 @@ VariableDecl *Parser::parse_variable_declaration() {
         if( is(TT::COMMA) ) get();
         decls.push_back( parse_variable_declarator() );
     }while( is(TT::COMMA) );
-    expect(TT::SEMICOLON, "Error: Expected ';'");
+    expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
 }
@@ -349,7 +349,7 @@ ExpressionStmt *Parser::parse_expression_statement() {
         std::cerr << "From: parse_expression_statement\nError: unable to create expression" << std::endl;
         return nullptr;
     }
-    expect(TT::SEMICOLON, "Error: Expected ';'");
+    expect(TT::SEMICOLON, "Error: Expected ';' at the end of expression");
     return new ExpressionStmt(e);
 }
 
