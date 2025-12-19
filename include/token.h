@@ -14,8 +14,8 @@ enum class TokenType {
 
     // -- Keywords
     KW_ANY, KW_AUTO, KW_BOOL, KW_BREAK, KW_CASE, KW_CHAR, KW_CONST, KW_DEFAULT,
-    KW_DO, KW_DOUBLE, KW_ELSE, KW_FLOAT, KW_FOR, KW_IF, KW_INT, KW_RETURN,
-    KW_STRING, KW_SWITCH, KW_WHILE,
+    KW_DO, KW_DOUBLE, KW_ELSE, KW_FALSE, KW_FLOAT, KW_FOR, KW_IF, KW_INT, KW_RETURN,
+    KW_STRING, KW_SWITCH, KW_TRUE, KW_WHILE,
 
     // ===== Literals =====
     INTEGER,                                                             // 42, 0xFF, 010, 0b1010, etc.

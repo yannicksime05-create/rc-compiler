@@ -21,6 +21,7 @@ const std::map<std::string, TokenType> keywords = {
     {"do", TT::KW_DO},
     {"double", TT::KW_DOUBLE},
     {"else", TT::KW_ELSE},
+    {"false", TT::KW_FALSE},
     {"float", TT::KW_FLOAT},
     {"for", TT::KW_FOR},
     {"if", TT::KW_IF},
@@ -28,6 +29,7 @@ const std::map<std::string, TokenType> keywords = {
     {"return", TT::KW_RETURN},
     {"string", TT::KW_STRING},
     {"switch", TT::KW_SWITCH},
+    {"true", TT::KW_TRUE},
     {"while", TT::KW_WHILE}
 };
 
