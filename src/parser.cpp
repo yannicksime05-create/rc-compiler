@@ -227,28 +227,35 @@ TypeSpecifier *Parser::parse_type_specifier() {
 }
 
 VariableDecl *Parser::parse_variable_declaration() {
-//    std::cout << "current = " << current().value << std::endl;
     TypeSpecifier type = *parse_type_specifier();
 
-    if( !is(TT::IDENTIFIER) ) {
-        std::cerr << "Expected identifier after type name\n";
-        return nullptr;
-    }
+    expect(TT::IDENTIFIER, "Expected identifier after type name");
+
+    /** If the previous token was actually an identifier, we need to take it back */
+    --pos;
+
     std::vector<VariableDeclarator *> decls;
-    do{
-        if( is(TT::COMMA) ) get();
-        decls.push_back( parse_variable_declarator() );
-    }while( is(TT::COMMA) );
+    decls.push_back(parse_variable_declarator(type.type_name));
+    while( is(TT::COMMA) ) {
+        get();
+        decls.push_back(parse_variable_declarator(type.type_name));
+    }
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
 }
 
-VariableDeclarator *Parser::parse_variable_declarator() {
+VariableDeclarator *Parser::parse_variable_declarator(const std::string& tn) {
     std::string name = get().value;
+
+    if(tn == "auto" || tn == "any" || tn == "number") {
+        expect(TT::ASSIGN, "Missing initialization for deduced types!");
+        --pos;
+    }
+
     if( is(TT::ASSIGN) ) {
         get();
-        Expr *init = parseExpression();
+        Expr *init = parse_assignment();
 
         return new VariableDeclarator(name, init);
     }
@@ -376,7 +383,7 @@ IfStmt *Parser::parse_if_statement() {
 
     Stmt *then_stmt = parseStatement();
     if(!then_stmt) {
-        return new IfStmt(c);
+        return new IfStmt(condition);
     }
 
     if( is(TT::KW_ELSE) ) {
