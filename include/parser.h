@@ -104,7 +104,7 @@ class Parser {
     Decl                    *parseDeclaration();
     TypeSpecifier           *parse_type_specifier();
     VariableDecl            *parse_variable_declaration();
-    VariableDeclarator      *parse_variable_declarator();
+    VariableDeclarator      *parse_variable_declarator(const std::string& tn);
     FunctionDecl            *parse_function_declaration();
     Parameter               *parse_function_parameters();
 
