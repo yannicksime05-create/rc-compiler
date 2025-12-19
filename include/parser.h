@@ -1,6 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdexcept>
+#include <sstream>
 #include "printer.h"
 
 using TT = TokenType;
@@ -9,6 +11,17 @@ class TypeTable {
     void addType(const std::string& name) {
 
     }
+};
+
+class ParseError : public std::logic_error {
+
+public:
+    ParseError(const std::string& error_msg) : std::logic_error(error_msg) {}
+
+    const char *what() {
+        return std::logic_error::what();
+    }
+
 };
 
 class Parser {
@@ -32,16 +45,16 @@ class Parser {
     Token& previous() { return tokens.at(pos - 1); }
 
     Token& peek(size_t n = 1) {
-        if(pos + n >= tokens.size()) return  tokens.back();
+        if(pos + n >= tokens.size()) return tokens.back();
 
         return tokens[pos + n];
     }
 
     void expect(TokenType t, const std::string& error_msg) {
         if( !is(t) ) {
-            std::cerr << "From expect:\n" << error_msg << " found: '" << current().value << "' instead! At line: " << current().loc.line << ", Column: " << current().loc.col;
-            std::cout << std::endl;
-            return;
+            std::stringstream s;
+            s << error_msg << " found: '" << current().value << "' instead! At line: " << current().loc.line << ", Column: " << current().loc.col;
+            throw ParseError(s.str());
         }
 
         ++pos;
@@ -103,8 +116,6 @@ class Parser {
     ExpressionStmt      *parse_expression_statement();
     DeclarationStmt     *parse_declaration_statement();
     IfStmt              *parse_if_statement();
-
-    //FIXME!!
     SwitchStmt          *parse_switch_statement();
     CaseClause          *parse_case_clause();
 
