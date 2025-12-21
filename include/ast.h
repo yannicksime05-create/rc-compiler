@@ -26,7 +26,7 @@ enum class ASTNodeType {
 
 // Base node type — every node inherits from this
 struct ASTNode {
-    virtual void for_dynamic_polymorphism_purpose() = 0;
+    ASTNodeType node_type;
     virtual ~ASTNode() = default;
 };
 
@@ -36,21 +36,24 @@ struct ASTNode {
 */
 
 struct Expr : ASTNode {
-    ASTNodeType node_type;
 
-    Expr(ASTNodeType t) : node_type(t) {}
+    Expr(ASTNodeType t) { node_type = t; }
+
+    virtual ~Expr() = default;
 };
 
 struct Decl : ASTNode {
-    ASTNodeType node_type;
 
-    Decl(ASTNodeType t) : node_type(t) {}
+    Decl(ASTNodeType t) { node_type = t; }
+
+    virtual ~Decl() = default;
 };
 
 struct Stmt : ASTNode {
-    ASTNodeType node_type;
 
-    Stmt(ASTNodeType t) : node_type(t) {}
+    Stmt(ASTNodeType t) { node_type = t; }
+
+    virtual ~Stmt() = default;
 };
 
 
@@ -60,9 +63,6 @@ struct IntNumberExpr : Expr {
     int value;
 
     IntNumberExpr(int v) : Expr(ASTNodeType::INT_LIT_NODE), value(v) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~IntNumberExpr() {
         std::cout << "Cleaning up IntNumberExpr node...\n";
@@ -74,9 +74,6 @@ struct DecimalNumberExpr : Expr {
 
     DecimalNumberExpr(double v) : Expr(ASTNodeType::DECIMAL_LIT_NODE), value(v) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~DecimalNumberExpr() {
         std::cout << "Cleaning up DecimalNumberExpr node...\n";
     }
@@ -87,9 +84,6 @@ struct StringExpr : Expr {
 
     StringExpr(std::string& v) : Expr(ASTNodeType::STRING_LIT_NODE), value(std::move(v)) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~StringExpr() {
         std::cout << "Cleaning up StringExpr node...\n";
     }
@@ -99,9 +93,6 @@ struct IdentifierExpr : Expr {
     Token name;
 
     IdentifierExpr(const Token& n) : Expr(ASTNodeType::IDENTIFIER_EXPR_NODE), name(n) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~IdentifierExpr() {
         std::cout << "Cleaning up IdentifierExpr node...\n";
@@ -115,11 +106,6 @@ struct BinaryExpr : Expr {
 
     BinaryExpr(Expr* l, const std::string& o, Expr* r)
         : Expr(ASTNodeType::BINARY_EXPR_NODE), left(l), op(std::move(o)), right(r) {}
-
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
 
     ~BinaryExpr() {
         delete left;
@@ -137,9 +123,6 @@ struct UnaryExpr : Expr {
 
     UnaryExpr(std::string& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~UnaryExpr() {
         delete expr;
         expr = nullptr;
@@ -153,9 +136,6 @@ struct AssignmentExpr : Expr {
     Expr* value = nullptr;         // the right-hand side expression
 
     AssignmentExpr(Expr* t, const std::string& o, Expr* v) : Expr(ASTNodeType::ASSIGNMENT_EXPR_NODE), target(t), op(o), value(v) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~AssignmentExpr() {
         delete target;
@@ -173,9 +153,6 @@ struct ConditionalExpr : Expr {
 
     ConditionalExpr(Expr *c, Expr *t, Expr *f)
         : Expr(ASTNodeType::CONDITIONAL_EXPR_NODE), condition(c), if_true(t), if_false(f) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~ConditionalExpr() {
         delete condition;
@@ -196,9 +173,6 @@ struct CallExpr : Expr {
     CallExpr(Expr *c, const std::vector<Expr *>& args = std::vector<Expr *>())
         : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~CallExpr() {
         delete callee;
         callee = nullptr;
@@ -217,9 +191,6 @@ struct MemberAccessExpr : Expr {
 
     MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~MemberAccessExpr() {
         delete object;
         object = nullptr;
@@ -233,9 +204,6 @@ struct SubscriptExpr : Expr {
     Expr *index = nullptr;
 
     SubscriptExpr(Expr *o, Expr *i) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), index(i) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~SubscriptExpr() {
         delete object;
@@ -251,9 +219,6 @@ struct SequenceExpr : Expr {
     std::vector<Expr *> expressions;
 
     SequenceExpr(const std::vector<Expr *>& exprs) : Expr(ASTNodeType::SEQUENCE_EXPR_NODE), expressions(exprs) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~SequenceExpr() {
         for(const Expr *e : expressions) {
@@ -303,9 +268,6 @@ struct VariableDecl : Decl {
     VariableDecl(const TypeSpecifier& t, const std::vector<VariableDeclarator *>& decls)
         : Decl(ASTNodeType::VAR_DECL_NODE), variable_type(t), declarations(decls) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~VariableDecl() {
         for(const VariableDeclarator *vd : declarations) {
             delete vd;
@@ -341,9 +303,6 @@ struct FunctionDecl : Decl {
     FunctionDecl(const TypeSpecifier& rt, const std::string& n, Stmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
         : Decl(ASTNodeType::FUNC_DECL_NODE), return_type(rt), function_name(n), parameters(std::move(p)), body(std::move(b)) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~FunctionDecl() {
         delete body;
         body = nullptr;
@@ -368,9 +327,6 @@ struct CompoundStmt : Stmt {
 
     CompoundStmt(const std::vector<Stmt *>& s) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~CompoundStmt() {
         for(const Stmt *s : statements) {
             delete s;
@@ -386,9 +342,6 @@ struct ExpressionStmt : Stmt {
 
     ExpressionStmt(Expr *e) : Stmt(ASTNodeType::EXPR_STMT_NODE), expression(e) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~ExpressionStmt() {
         delete expression;
         expression = nullptr;
@@ -401,9 +354,6 @@ struct DeclarationStmt : Stmt {
     Decl *declaration = nullptr;
 
     DeclarationStmt(Decl *d) : Stmt(ASTNodeType::DECL_STMT_NODE), declaration(d) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~DeclarationStmt() {
         delete declaration;
@@ -420,9 +370,6 @@ struct IfStmt : Stmt {
 
     IfStmt(Expr *c, Stmt *t = nullptr, Stmt *e = nullptr)
         : Stmt(ASTNodeType::IF_STMT_NODE), condition(c), then_statement(t), else_statement(e) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~IfStmt() {
         delete condition;
@@ -458,9 +405,6 @@ struct SwitchStmt : Stmt {
 
     SwitchStmt(Expr *p, const std::vector<CaseClause *>& c) : Stmt(ASTNodeType::SWITCH_STMT_NODE), pattern(p), cases(c) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~SwitchStmt() {
         delete pattern;
         pattern = nullptr;
@@ -479,9 +423,6 @@ struct WhileStmt : Stmt {
 
     WhileStmt(Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), condition(c), body(b) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~WhileStmt() {
         delete condition;
         condition = nullptr;
@@ -497,9 +438,6 @@ struct DoWhileStmt : Stmt {
     Expr *condition = nullptr;
 
     DoWhileStmt(Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), body(b), condition(c) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~DoWhileStmt() {
         delete body;
@@ -520,9 +458,6 @@ struct ForStmt : Stmt {
     ForStmt(Stmt *init, Expr *c, Expr *incr, Stmt *b)
         : Stmt(ASTNodeType::FOR_STMT_NODE), initialization(init), condition(c), increment(incr), body(b) {}
 
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
-
     ~ForStmt() {
         delete initialization;
         initialization = nullptr;
@@ -541,9 +476,6 @@ struct ReturnStmt : Stmt {
     Expr *expression = nullptr;
 
     ReturnStmt(Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), expression(e) {}
-
-    //DO NOT REMOVE!!
-    void for_dynamic_polymorphism_purpose() override {}
 
     ~ReturnStmt() {
         delete expression;
