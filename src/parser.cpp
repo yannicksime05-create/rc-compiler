@@ -208,9 +208,21 @@ Expr *Parser::parse_identifier() {
 
 
 Decl *Parser::parseDeclaration() {
-    if( peek().is(TT::IDENTIFIER) && peek(2).is(TT::LPAREN) )
+    size_t n = 1;
+    /**
+    *   We loop until we find an identifier.
+    *   This helps parsing such declarations:
+    *   - int x;
+    *   - const int x;
+    *   - const int square(...) {...}
+    *   - const int *x;
+    *   even if there are no pointers (yet).
+    */
+    while( !peek(n).is(TT::IDENTIFIER) ) ++n;
+
+    if( peek(n+1).is(TT::LPAREN) )
         return parse_function_declaration();
-    else if( peek().is(TT::IDENTIFIER) )
+    else
         return parse_variable_declaration();
 
     return nullptr;
