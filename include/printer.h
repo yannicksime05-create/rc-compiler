@@ -29,6 +29,19 @@ class Printer {
     void stmts_printer_helper(const Stmt *s);
 
 public:
+    void print(const std::vector<Stmt *>& statements) {
+        indent(); std::cout << "Program: {\n";
+        nspace += tab_length;
+        indent(); std::cout << "body: [\n";
+        for(const Stmt *s : statements) {
+            stmts_printer_helper(s);
+        }
+        indent(); std::cout << "]\n";
+        nspace -= tab_length;
+        indent(); std::cout << "}\n";
+    }
+
+
     void print(const Stmt *s) {
         indent(); std::cout << "Program: {\n";
         nspace += tab_length;
