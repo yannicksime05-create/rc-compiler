@@ -208,22 +208,35 @@ Expr *Parser::parse_identifier() {
 
 
 Decl *Parser::parseDeclaration() {
-    size_t n = 1;
-    /**
-    *   We loop until we find an identifier.
-    *   This helps parsing such declarations:
-    *   - int x;
-    *   - const int x;
-    *   - const int square(...) {...}
-    *   - const int *x;
-    *   even if there are no pointers (yet).
-    */
-    while( !peek(n).is(TT::IDENTIFIER) ) ++n;
+//    size_t n = 1;
+//    /**
+//    *   We loop until we find an identifier.
+//    *   This helps parsing such declarations:
+//    *   - int x;
+//    *   - const int x;
+//    *   - const int square(...) {...}
+//    *   - const int *x;
+//    *   even if there are no pointers (yet).
+//    */
+//    while( !peek(n).is(TT::IDENTIFIER) ) ++n;
 
-    if( peek(n+1).is(TT::LPAREN) )
-        return parse_function_declaration();
+
+    TypeSpecifier *type = parse_type_specifier();
+    expect(TT::IDENTIFIER, "Expected identifier");
+
+    /** If the previous token was actually an identifier, we need to take it back */
+    --pos;
+
+    if( peek().is(TT::LPAREN) )
+        return parse_function_declaration(*type);
     else
-        return parse_variable_declaration();
+        return parse_variable_declaration(*type);
+//
+//
+//    if( peek(n+1).is(TT::LPAREN) )
+//        return parse_function_declaration();
+//    else
+//        return parse_variable_declaration();
 
     return nullptr;
 }
@@ -238,13 +251,13 @@ TypeSpecifier *Parser::parse_type_specifier() {
     return new TypeSpecifier(get().value, c);
 }
 
-VariableDecl *Parser::parse_variable_declaration() {
-    TypeSpecifier type = *parse_type_specifier();
+VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
+//    TypeSpecifier type = *parse_type_specifier();
 
-    expect(TT::IDENTIFIER, "Expected identifier after type name");
-
-    /** If the previous token was actually an identifier, we need to take it back */
-    --pos;
+//    expect(TT::IDENTIFIER, "Expected identifier after type name");
+//
+//    /** If the previous token was actually an identifier, we need to take it back */
+//    --pos;
 
     std::vector<VariableDeclarator *> decls;
     decls.push_back(parse_variable_declarator(type.type_name));
@@ -275,11 +288,11 @@ VariableDeclarator *Parser::parse_variable_declarator(const std::string& tn) {
     return new VariableDeclarator(name);
 }
 
-FunctionDecl *Parser::parse_function_declaration() {
-    TypeSpecifier type = *parse_type_specifier();
-
-    expect(TT::IDENTIFIER, "Error: Expected function's name");
-    std::string name = previous().value;
+FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
+//    TypeSpecifier type = *parse_type_specifier();
+//
+//    expect(TT::IDENTIFIER, "Error: Expected function's name");
+    std::string name = get().value;
 
     expect(TT::LPAREN, "Error: Expected '(' after function's name");
     if( !is(TT::RPAREN) ) {
