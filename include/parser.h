@@ -103,9 +103,9 @@ class Parser {
 
     Decl                    *parseDeclaration();
     TypeSpecifier           *parse_type_specifier();
-    VariableDecl            *parse_variable_declaration();
+    VariableDecl            *parse_variable_declaration(const TypeSpecifier& type);
     VariableDeclarator      *parse_variable_declarator(const std::string& tn);
-    FunctionDecl            *parse_function_declaration();
+    FunctionDecl            *parse_function_declaration(const TypeSpecifier& type);
     Parameter               *parse_function_parameters();
 
 
@@ -138,15 +138,28 @@ public:
 //    }
 
     void parse() {
-        Stmt *s = parseStatement();
-        if(!s) {
-            std::cout << "statement is null" << std::endl;
-            return;
-        }
+        std::vector<Stmt *> statements;
+        do{
+            statements.push_back(parseStatement());
+        }while( !is(TT::END_OF_FILE) );
+
         Printer p;
-        p.print(s);
-        delete s;
-        s = nullptr;
+        p.print(statements);
+        for(const Stmt *s : statements) {
+            delete s;
+            s = nullptr;
+        }
+
+
+//        Stmt *s = parseStatement();
+//        if(!s) {
+//            std::cout << "statement is null" << std::endl;
+//            return;
+//        }
+//        Printer p;
+//        p.print(s);
+//        delete s;
+//        s = nullptr;
     }
 
     double interpretBinaryExpr(BinaryExpr *e);
