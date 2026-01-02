@@ -1,0 +1,7 @@
+const int xyz;
+
+a
+_a
+a2
+a_2
+a!

@@ -1,0 +1,4 @@
+""
+"\"this is a good string\""
+'A'
+"and this is a bad string
