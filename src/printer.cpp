@@ -187,6 +187,7 @@ void Printer::printDeclaration(const Decl *decl) {
                     nspace -= tab_length;
                     indent(); std::cout << "}\n";
                 }
+                std::cout << "\n";
             }
             nspace -= tab_length;
             indent(); std::cout << "]\n";
@@ -200,27 +201,33 @@ void Printer::printDeclaration(const Decl *decl) {
             indent(); std::cout << "return type: " << d->return_type.type_name << ",\n";
             indent(); std::cout << "const: ";
             d->return_type.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
-            indent(); std::cout << "parameters: [\n";
-            nspace += tab_length;
-            for(const Parameter *p : d->parameters) {
-                indent(); std::cout << "identifier: {\n";
-                nspace += tab_length;
-                indent(); std::cout << "name: " << p->parameter_name << ",\n";
-                indent(); std::cout << "type: " << p->type_name.type_name<< ",\n";
-                indent(); std::cout << "const: ";
-                p->type_name.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
-                indent(); std::cout << "default value: ";
-                if(p->default_value) {
-                    std::cout << "{\n";
-                    exprs_printer_helper(p->default_value);
-                    indent(); std::cout << "}\n";
-                }
-                else std::cout << "null\n";
-                nspace -= tab_length;
-                indent(); std::cout << "},\n";
+            indent(); std::cout << "parameters: ";
+            if(d->parameters.empty()) {
+                std::cout << "[],\n";
             }
-            nspace -= tab_length;
-            indent(); std::cout << "],\n";
+            else {
+                std::cout << "[\n";
+                nspace += tab_length;
+                for(const Parameter *p : d->parameters) {
+                    indent(); std::cout << "identifier: {\n";
+                    nspace += tab_length;
+                    indent(); std::cout << "name: " << p->parameter_name << ",\n";
+                    indent(); std::cout << "type: " << p->type_name.type_name<< ",\n";
+                    indent(); std::cout << "const: ";
+                    p->type_name.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
+                    indent(); std::cout << "default value: ";
+                    if(p->default_value) {
+                        std::cout << "{\n";
+                        exprs_printer_helper(p->default_value);
+                        indent(); std::cout << "}\n";
+                    }
+                    else std::cout << "null\n";
+                    nspace -= tab_length;
+                    indent(); std::cout << "},\n";
+                }
+                nspace -= tab_length;
+                indent(); std::cout << "],\n";
+            }
             indent(); std::cout << "body: ";
             if(d->body) {
                 std::cout << "{\n";
@@ -343,12 +350,12 @@ void Printer::printStatement(const Stmt *stmt) {
         }
         case ANT::DECL_STMT_NODE: {
             auto *s = static_cast<const DeclarationStmt *>(stmt);
-            indent(); std::cout << "node type: DeclarationStatement,\n";
-            indent(); std::cout << "declarations: {\n";
-            nspace += tab_length;
+//            indent(); std::cout << "node type: DeclarationStatement,\n";
+//            indent(); std::cout << "declarations: {\n";
+//            nspace += tab_length;
             printDeclaration(s->declaration);
-            nspace -= tab_length;
-            indent(); std::cout << "}\n";
+//            nspace -= tab_length;
+//            indent(); std::cout << "}\n";
             break;
         }
         default: {
