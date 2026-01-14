@@ -171,7 +171,7 @@ void Printer::printDeclaration(const Decl *decl) {
             indent(); std::cout << "node type: VariableDeclaration,\n";
             indent(); std::cout << "type: " << d->variable_type.type_name << ",\n";
             indent(); std::cout << "const: ";
-            d->variable_type.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
+            d->variable_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
             indent(); std::cout << "identifiers: [\n";
             nspace += tab_length;
             for(const VariableDeclarator *vd : d->declarations) {
@@ -200,7 +200,7 @@ void Printer::printDeclaration(const Decl *decl) {
             indent(); std::cout << "name: " << d->function_name << ",\n";
             indent(); std::cout << "return type: " << d->return_type.type_name << ",\n";
             indent(); std::cout << "const: ";
-            d->return_type.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
+            d->return_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
             indent(); std::cout << "parameters: ";
             if(d->parameters.empty()) {
                 std::cout << "[],\n";
@@ -214,7 +214,7 @@ void Printer::printDeclaration(const Decl *decl) {
                     indent(); std::cout << "name: " << p->parameter_name << ",\n";
                     indent(); std::cout << "type: " << p->type_name.type_name<< ",\n";
                     indent(); std::cout << "const: ";
-                    p->type_name.has_const ? (std::cout << "true,\n") : (std::cout << "false,\n");
+                    p->type_name.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
                     indent(); std::cout << "default value: ";
                     if(p->default_value) {
                         std::cout << "{\n";
