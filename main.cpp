@@ -1,5 +1,6 @@
 #include "include/lexer.h"
 #include "include/parser.h"
+#include "include/printer.h"
 #include <fstream>
 
 int main(int argc, char *argv[]) {
@@ -17,9 +18,12 @@ int main(int argc, char *argv[]) {
     Lexer lexer(f);
     std::vector<Token>& tokens = lexer.lex();
     f.close();
-    std::cout << "AST:" << std::endl;
+
     Parser parser(tokens);
-    parser.parse();
+    Program p = *parser.parse();
+
+    Printer printer;
+    printer.print(p.statements);
 
     return 0;
 }
