@@ -6,6 +6,7 @@
 #include "token.h"
 
 enum class ASTNodeType {
+    PROGRAM,
 
     INT_LIT_NODE, DECIMAL_LIT_NODE, STRING_LIT_NODE,
 
@@ -54,6 +55,25 @@ struct Stmt : ASTNode {
     Stmt(ASTNodeType t) { node_type = t; }
 
     virtual ~Stmt() = default;
+};
+
+
+
+struct Program : ASTNode {
+    std::vector<Stmt *> statements;
+
+    Program(const std::vector<Stmt *>& s) : statements(s) {
+        node_type = ASTNodeType::PROGRAM;
+    }
+
+    ~Program() {
+        for(const Stmt *s : statements) {
+            delete s;
+            s = nullptr;
+        }
+
+        std::cout << "Cleaned up Program node...\n";
+    }
 };
 
 
@@ -240,11 +260,11 @@ struct SequenceExpr : Expr {
 // ---- Declarations -----
 struct TypeSpecifier {
     std::string type_name;
-    bool has_const;
+    bool is_constant;
 
     TypeSpecifier() {}
 
-    TypeSpecifier(const std::string& t, bool c) : type_name(t), has_const(c) {}
+    TypeSpecifier(const std::string& t, bool c) : type_name(t), is_constant(c) {}
 };
 
 struct VariableDeclarator {
