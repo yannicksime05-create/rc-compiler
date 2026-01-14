@@ -3,15 +3,9 @@
 
 #include <stdexcept>
 #include <sstream>
-#include "printer.h"
+#include "ast.h"
 
 using TT = TokenType;
-
-class TypeTable {
-    void addType(const std::string& name) {
-
-    }
-};
 
 class ParseError : public std::logic_error {
 
@@ -131,39 +125,28 @@ class Parser {
 public:
     Parser(std::vector<Token>& tokens) : tokens(tokens), pos(0) {}
 
-//    std::vector<Stmt *> parse() {
-//        std::vector<Stmt *> statements;
-//
-//        return statements;
-//    }
-
-    void parse() {
+    Program *parse() {
         std::vector<Stmt *> statements;
         do{
             statements.push_back(parseStatement());
         }while( !is(TT::END_OF_FILE) );
 
-        Printer p;
-        p.print(statements);
-        for(const Stmt *s : statements) {
-            delete s;
-            s = nullptr;
-        }
-
-
-//        Stmt *s = parseStatement();
-//        if(!s) {
-//            std::cout << "statement is null" << std::endl;
-//            return;
-//        }
-//        Printer p;
-//        p.print(s);
-//        delete s;
-//        s = nullptr;
+        return new Program(statements);
     }
 
-    double interpretBinaryExpr(BinaryExpr *e);
-//    double evalBinary(BinaryExpr *be);
+//    void parse() {
+//        std::vector<Stmt *> statements;
+//        do{
+//            statements.push_back(parseStatement());
+//        }while( !is(TT::END_OF_FILE) );
+//
+//        Printer p;
+//        p.print(statements);
+//        for(const Stmt *s : statements) {
+//            delete s;
+//            s = nullptr;
+//        }
+//    }
 
 };
 
