@@ -1,7 +1,8 @@
-//
+const int x, y;
+
 int main() {
 	int a = 2, b = 5;
-	a < b ? printf("a is lesser than b") : printf("Hello World");
+	print(a, b);
 	return 0;
 }
 
