@@ -19,8 +19,7 @@ In the project's hierarchy, you'll see:
 > 1. g++ include/\*.h src/*.cpp main.cpp -o rc.exe  
 > 2. rc.exe tests/program.txt
 > 
-
-> If you want to execute any file other than program.txt, please comment line 20-22 in main.cpp and then compile and run.  
+> If you want to execute any file other than program.txt, please comment line 22-26 in main.cpp and then compile and run.  
 > If you don't, the program will enter an infinite loop because the parser will try to do something he can't.
 
 
