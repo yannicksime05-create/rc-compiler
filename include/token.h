@@ -26,13 +26,19 @@ enum class TokenType {
     // ===== Operators =====
     PLUS, MINUS, STAR, SLASH, MOD,                                      // + - * / %
     PLUS_PLUS, MINUS_MINUS,                                             // ++ --
-    ASSIGN, EQUAL,                                                      // = ==
-    PLUS_EQUAL, MINUS_EQUAL, STAR_EQUAL, SLASH_EQUAL, MOD_EQUAL,        //+= -= *= /= %=
-    NOT, NOT_EQUAL,                                                     // ! !=
+
+    ASSIGN,                                                             // =
+    PLUS_ASSIGN, MINUS_ASSIGN, STAR_ASSIGN, SLASH_ASSIGN, MOD_ASSIGN,   // += -= *= /= %=
+    BIT_AND_ASSIGN, BIT_OR_ASSIGN,
+    BIT_XOR_ASSIGN,                                                     // ^=
+    SHIFT_LEFT_ASSIGN, SHIFT_RIGHT_ASSIGN,                              // <<= >>=
+
+    EQUAL, NOT, NOT_EQUAL,                                              // == ! !=
     GREATER, GREATER_EQUAL, LESS, LESS_EQUAL,                           // > >= < <=
+
     BIT_AND, AND, BIT_OR, OR,                                           // & && | ||
-    CARET, TILDE,                                                       // ^ ~
-    SHIFT_LEFT, SHIFT_RIGHT, SHIFT_LEFT_EQUAL, SHIFT_RIGHT_EQUAL,       // << >> <<= >>=
+    XOR, TILDE,                                                         // ^ ~
+    SHIFT_LEFT, SHIFT_RIGHT,                                            // << >>
     QUESTION, COLON,                                                    // ? :
     DOT,
     //ARROW, DOT, DOT_STAR, ELLIPSIS,                                   // -> . .* ...
@@ -42,7 +48,7 @@ enum class TokenType {
     LBRACE, RBRACE,                                                     // { }
     LBRACKET, RBRACKET,                                                 // [ ]
     COMMA, SEMICOLON,                                                   // , ;
-    HASH                                                                // #
+//    HASH                                                                // #
 };
 
 struct Location {
@@ -53,6 +59,8 @@ struct Location {
 struct Token {
     TokenType type;
     std::string value;
+//    Location start;
+//    Location end;
     Location loc;
 
     bool is(TokenType t) {
