@@ -30,6 +30,7 @@ class Printer {
 
 public:
     void print(const std::vector<Stmt *>& statements) {
+        std::cout << "AST:" << std::endl;
         indent(); std::cout << "Program: {\n";
         nspace += tab_length;
         indent(); std::cout << "body: [\n";

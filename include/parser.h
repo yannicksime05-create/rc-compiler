@@ -66,7 +66,8 @@ class Parser {
 
     bool is_assignment_operator() {
         return
-        is(TT::ASSIGN) || is(TT::PLUS_EQUAL) || is(TT::MINUS_EQUAL) || is(TT::STAR_EQUAL) || is(TT::SLASH_EQUAL) || is(TT::MOD_EQUAL);
+        is(TT::ASSIGN) || is(TT::PLUS_ASSIGN) || is(TT::MINUS_ASSIGN) || is(TT::STAR_ASSIGN) || is(TT::SLASH_ASSIGN) || is(TT::MOD_ASSIGN) ||
+        is(TT::BIT_AND_ASSIGN) || is(TT::BIT_OR_ASSIGN) || is(TT::BIT_XOR_ASSIGN) || is(TT::SHIFT_LEFT_ASSIGN) || is(TT::SHIFT_RIGHT_ASSIGN);
     }
 
     bool is_literal() {
@@ -85,12 +86,8 @@ class Parser {
     Expr *parse_term();
     Expr *parse_factor();
     Expr *parse_unary();
-
     Expr *parse_postfix();
-
     Expr *parse_primary();
-    Expr *parse_literal();
-    Expr *parse_identifier();
 
 
 
@@ -133,20 +130,6 @@ public:
 
         return new Program(statements);
     }
-
-//    void parse() {
-//        std::vector<Stmt *> statements;
-//        do{
-//            statements.push_back(parseStatement());
-//        }while( !is(TT::END_OF_FILE) );
-//
-//        Printer p;
-//        p.print(statements);
-//        for(const Stmt *s : statements) {
-//            delete s;
-//            s = nullptr;
-//        }
-//    }
 
 };
 

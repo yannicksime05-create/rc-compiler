@@ -164,24 +164,7 @@ Expr *Parser::parse_postfix() {
 }
 
 Expr *Parser::parse_primary() {
-    if( is(TT::LPAREN) ) {
-        get();
-        Expr *e = parseExpression();
-        expect(TT::RPAREN, "Error: Expected closing ')' of primary expression");
-        return e;
-    }
-
-    if( is(TT::IDENTIFIER) )    return parse_identifier();
-
-    if( is_literal() )    return parse_literal();
-
-    std::cerr << "Unknow primary expression, at line: " << current().loc.line << ", column: " << current().loc.col << std::endl;
-    return nullptr;
-}
-
-Expr *Parser::parse_literal() {
     Token t = get();
-
     switch(t.type) {
         case TT::INTEGER:
             return new IntNumberExpr(std::stoi(t.value));
@@ -189,15 +172,20 @@ Expr *Parser::parse_literal() {
             return new DecimalNumberExpr(std::stod(t.value));
         case TT::STRING:
             return new StringExpr(t.value);
+        case TT::IDENTIFIER:
+            return new IdentifierExpr(t);
+        case TT::LPAREN: {
+            get();
+            Expr *e = parseExpression();
+            expect(TT::RPAREN, "Error: Expected closing ')' of primary expression");
+            return e;
+        }
         default:
-            break;
+            std::cerr << "Error: Unknow primary Expression!" << std::endl;
+            return nullptr;
     }
 
     return nullptr;
-}
-
-Expr *Parser::parse_identifier() {
-    return new IdentifierExpr(get());
 }
 
 

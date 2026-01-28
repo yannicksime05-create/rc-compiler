@@ -43,7 +43,7 @@ Token Lexer::handleCommentsOrSlash() {
     }
     else if(input.peek() == '=') {
         input.get(); ++column;
-        t.type = TT::SLASH_EQUAL;
+        t.type = TT::SLASH_ASSIGN;
         t.value = "/=";
     }
     else {
@@ -405,7 +405,7 @@ const Token Lexer::getNextToken() {
             }
             else if(input.peek() == '=') {
                 input.get(); ++column;
-                t.type = TT::PLUS_EQUAL;
+                t.type = TT::PLUS_ASSIGN;
                 t.value = "+=";
             }
             else {
@@ -421,7 +421,7 @@ const Token Lexer::getNextToken() {
             }
             else if(input.peek() == '=') {
                 input.get(); ++column;
-                t.type = TT::MINUS_EQUAL;
+                t.type = TT::MINUS_ASSIGN;
                 t.value = "-=";
             }
             else {
@@ -432,7 +432,7 @@ const Token Lexer::getNextToken() {
         case '*':
             if(input.peek() == '=') {
                 input.get(); ++column;
-                t.type = TT::STAR_EQUAL;
+                t.type = TT::STAR_ASSIGN;
                 t.value = "*=";
             }
             else {
@@ -446,7 +446,7 @@ const Token Lexer::getNextToken() {
         case '%':
             if(input.peek() == '=') {
                 input.get(); ++column;
-                t.type = TT::MOD_EQUAL;
+                t.type = TT::MOD_ASSIGN;
                 t.value = "%=";
             }
             else {
@@ -478,7 +478,7 @@ const Token Lexer::getNextToken() {
                 input.get(); ++column;
                 if(input.peek() == '=') {
                     input.get(); ++column;
-                    t.type = TT::SHIFT_LEFT_EQUAL;
+                    t.type = TT::SHIFT_LEFT_ASSIGN;
                     t.value = "<<=";
                 }
                 else {
@@ -503,7 +503,7 @@ const Token Lexer::getNextToken() {
                 input.get(); ++column;
                 if(input.peek() == '=') {
                     input.get(); ++column;
-                    t.type = TT::SHIFT_RIGHT_EQUAL;
+                    t.type = TT::SHIFT_RIGHT_ASSIGN;
                     t.value = ">>=";
                 }
                 else {
@@ -563,7 +563,7 @@ const Token Lexer::getNextToken() {
             }
             break;
         case '^':
-            t.type = TT::CARET;
+            t.type = TT::XOR;
             t.value = "^";
             break;
         default:

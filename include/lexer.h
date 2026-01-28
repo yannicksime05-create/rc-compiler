@@ -33,20 +33,6 @@ const std::map<std::string, TokenType> keywords = {
     {"while", TT::KW_WHILE}
 };
 
-//const std::pair<std::string, TokenType> keywords[] = {
-//    {"bool", TokenType::KW_BOOL},
-//    {"char", TokenType::KW_CHAR},
-//    {"const", TokenType::KW_CONST},
-//    {"do", TokenType::KW_DO},
-//    {"double", TokenType::KW_DOUBLE},
-//    {"else", TokenType::KW_ELSE},
-//    {"float", TokenType::KW_FLOAT},
-//    {"for", TokenType::KW_FOR},
-//    {"if", TokenType::KW_IF},
-//    {"int", TokenType::KW_INT}
-//};
-
-
 
 
 class Lexer {
