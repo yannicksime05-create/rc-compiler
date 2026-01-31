@@ -613,7 +613,7 @@ void Printer::visit(DeclarationStmt& d) {
 //            indent(); std::cout << "declarations: {\n";
 //            nspace += tab_length;
 
-    d.accept(*this);
+    d.declaration->accept(*this);
 //    printDeclaration(d.declaration);
 
 //            nspace -= tab_length;
