@@ -25,9 +25,13 @@ enum class ASTNodeType {
 };
 
 
+class Visitor;
+
+
 // Base node type — every node inherits from this
 struct ASTNode {
     ASTNodeType node_type;
+    virtual void accept(Visitor& v) = 0;
     virtual ~ASTNode() = default;
 };
 
@@ -66,6 +70,8 @@ struct Program : ASTNode {
         node_type = ASTNodeType::PROGRAM;
     }
 
+    void accept(Visitor& v) override;
+
     ~Program() {
         for(const Stmt *s : statements) {
             delete s;
@@ -84,6 +90,8 @@ struct IntNumberExpr : Expr {
 
     IntNumberExpr(int v) : Expr(ASTNodeType::INT_LIT_NODE), value(v) {}
 
+    void accept(Visitor& v) override;
+
     ~IntNumberExpr() {
         std::cout << "Cleaning up IntNumberExpr node...\n";
     }
@@ -93,6 +101,8 @@ struct DecimalNumberExpr : Expr {
     double value;
 
     DecimalNumberExpr(double v) : Expr(ASTNodeType::DECIMAL_LIT_NODE), value(v) {}
+
+    void accept(Visitor& v) override;
 
     ~DecimalNumberExpr() {
         std::cout << "Cleaning up DecimalNumberExpr node...\n";
@@ -104,6 +114,8 @@ struct StringExpr : Expr {
 
     StringExpr(std::string& v) : Expr(ASTNodeType::STRING_LIT_NODE), value(std::move(v)) {}
 
+    void accept(Visitor& v) override;
+
     ~StringExpr() {
         std::cout << "Cleaning up StringExpr node...\n";
     }
@@ -113,6 +125,8 @@ struct IdentifierExpr : Expr {
     Token name;
 
     IdentifierExpr(const Token& n) : Expr(ASTNodeType::IDENTIFIER_EXPR_NODE), name(n) {}
+
+    void accept(Visitor& v) override;
 
     ~IdentifierExpr() {
         std::cout << "Cleaning up IdentifierExpr node...\n";
@@ -126,6 +140,8 @@ struct BinaryExpr : Expr {
 
     BinaryExpr(Expr* l, const std::string& o, Expr* r)
         : Expr(ASTNodeType::BINARY_EXPR_NODE), left(l), op(std::move(o)), right(r) {}
+
+    void accept(Visitor& v) override;
 
     ~BinaryExpr() {
         delete left;
@@ -143,6 +159,8 @@ struct UnaryExpr : Expr {
 
     UnaryExpr(std::string& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
 
+    void accept(Visitor& v) override;
+
     ~UnaryExpr() {
         delete expr;
         expr = nullptr;
@@ -156,6 +174,8 @@ struct AssignmentExpr : Expr {
     Expr* value = nullptr;         // the right-hand side expression
 
     AssignmentExpr(Expr* t, const std::string& o, Expr* v) : Expr(ASTNodeType::ASSIGNMENT_EXPR_NODE), target(t), op(o), value(v) {}
+
+    void accept(Visitor& v) override;
 
     ~AssignmentExpr() {
         delete target;
@@ -173,6 +193,8 @@ struct ConditionalExpr : Expr {
 
     ConditionalExpr(Expr *c, Expr *t, Expr *f)
         : Expr(ASTNodeType::CONDITIONAL_EXPR_NODE), condition(c), if_true(t), if_false(f) {}
+
+    void accept(Visitor& v) override;
 
     ~ConditionalExpr() {
         delete condition;
@@ -193,6 +215,8 @@ struct CallExpr : Expr {
     CallExpr(Expr *c, const std::vector<Expr *>& args = std::vector<Expr *>())
         : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {}
 
+    void accept(Visitor& v) override;
+
     ~CallExpr() {
         delete callee;
         callee = nullptr;
@@ -211,6 +235,8 @@ struct MemberAccessExpr : Expr {
 
     MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
 
+    void accept(Visitor& v) override;
+
     ~MemberAccessExpr() {
         delete object;
         object = nullptr;
@@ -224,6 +250,8 @@ struct SubscriptExpr : Expr {
     Expr *index = nullptr;
 
     SubscriptExpr(Expr *o, Expr *i) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), index(i) {}
+
+    void accept(Visitor& v) override;
 
     ~SubscriptExpr() {
         delete object;
@@ -239,6 +267,8 @@ struct SequenceExpr : Expr {
     std::vector<Expr *> expressions;
 
     SequenceExpr(const std::vector<Expr *>& exprs) : Expr(ASTNodeType::SEQUENCE_EXPR_NODE), expressions(exprs) {}
+
+    void accept(Visitor& v) override;
 
     ~SequenceExpr() {
         for(const Expr *e : expressions) {
@@ -288,6 +318,8 @@ struct VariableDecl : Decl {
     VariableDecl(const TypeSpecifier& t, const std::vector<VariableDeclarator *>& decls)
         : Decl(ASTNodeType::VAR_DECL_NODE), variable_type(t), declarations(decls) {}
 
+    void accept(Visitor& v) override;
+
     ~VariableDecl() {
         for(const VariableDeclarator *vd : declarations) {
             delete vd;
@@ -323,6 +355,8 @@ struct FunctionDecl : Decl {
     FunctionDecl(const TypeSpecifier& rt, const std::string& n, Stmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
         : Decl(ASTNodeType::FUNC_DECL_NODE), return_type(rt), function_name(n), parameters(std::move(p)), body(std::move(b)) {}
 
+    void accept(Visitor& v) override;
+
     ~FunctionDecl() {
         delete body;
         body = nullptr;
@@ -347,6 +381,8 @@ struct CompoundStmt : Stmt {
 
     CompoundStmt(const std::vector<Stmt *>& s) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {}
 
+    void accept(Visitor& v) override;
+
     ~CompoundStmt() {
         for(const Stmt *s : statements) {
             delete s;
@@ -362,6 +398,8 @@ struct ExpressionStmt : Stmt {
 
     ExpressionStmt(Expr *e) : Stmt(ASTNodeType::EXPR_STMT_NODE), expression(e) {}
 
+    void accept(Visitor& v) override;
+
     ~ExpressionStmt() {
         delete expression;
         expression = nullptr;
@@ -374,6 +412,8 @@ struct DeclarationStmt : Stmt {
     Decl *declaration = nullptr;
 
     DeclarationStmt(Decl *d) : Stmt(ASTNodeType::DECL_STMT_NODE), declaration(d) {}
+
+    void accept(Visitor& v) override;
 
     ~DeclarationStmt() {
         delete declaration;
@@ -390,6 +430,8 @@ struct IfStmt : Stmt {
 
     IfStmt(Expr *c, Stmt *t = nullptr, Stmt *e = nullptr)
         : Stmt(ASTNodeType::IF_STMT_NODE), condition(c), then_statement(t), else_statement(e) {}
+
+    void accept(Visitor& v) override;
 
     ~IfStmt() {
         delete condition;
@@ -425,6 +467,8 @@ struct SwitchStmt : Stmt {
 
     SwitchStmt(Expr *p, const std::vector<CaseClause *>& c) : Stmt(ASTNodeType::SWITCH_STMT_NODE), pattern(p), cases(c) {}
 
+    void accept(Visitor& v) override;
+
     ~SwitchStmt() {
         delete pattern;
         pattern = nullptr;
@@ -443,6 +487,8 @@ struct WhileStmt : Stmt {
 
     WhileStmt(Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), condition(c), body(b) {}
 
+    void accept(Visitor& v) override;
+
     ~WhileStmt() {
         delete condition;
         condition = nullptr;
@@ -458,6 +504,8 @@ struct DoWhileStmt : Stmt {
     Expr *condition = nullptr;
 
     DoWhileStmt(Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), body(b), condition(c) {}
+
+    void accept(Visitor& v) override;
 
     ~DoWhileStmt() {
         delete body;
@@ -478,6 +526,8 @@ struct ForStmt : Stmt {
     ForStmt(Stmt *init, Expr *c, Expr *incr, Stmt *b)
         : Stmt(ASTNodeType::FOR_STMT_NODE), initialization(init), condition(c), increment(incr), body(b) {}
 
+    void accept(Visitor& v) override;
+
     ~ForStmt() {
         delete initialization;
         initialization = nullptr;
@@ -497,12 +547,46 @@ struct ReturnStmt : Stmt {
 
     ReturnStmt(Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), expression(e) {}
 
+    void accept(Visitor& v) override;
+
     ~ReturnStmt() {
         delete expression;
         expression = nullptr;
 
         std::cout << "Cleaned up ReturnStmt node...\n";
     }
+};
+
+class Visitor {
+public:
+    virtual void visit(Program& p) = 0;
+
+    virtual void visit(IntNumberExpr& e) = 0;
+    virtual void visit(DecimalNumberExpr& e) = 0;
+    virtual void visit(StringExpr& e) = 0;
+    virtual void visit(IdentifierExpr& e) = 0;
+    virtual void visit(BinaryExpr& e) = 0;
+    virtual void visit(UnaryExpr& e) = 0;
+    virtual void visit(AssignmentExpr& e) = 0;
+    virtual void visit(ConditionalExpr& e) = 0;
+    virtual void visit(CallExpr& e) = 0;
+    virtual void visit(MemberAccessExpr& e) = 0;
+    virtual void visit(SubscriptExpr& e) = 0;
+    virtual void visit(SequenceExpr& e) = 0;
+
+    virtual void visit(VariableDecl& d) = 0;
+    virtual void visit(FunctionDecl& d) = 0;
+
+    virtual void visit(CompoundStmt& c) = 0;
+    virtual void visit(ExpressionStmt& e) = 0;
+    virtual void visit(DeclarationStmt& d) = 0;
+    virtual void visit(IfStmt& i) = 0;
+    virtual void visit(SwitchStmt& s) = 0;
+    virtual void visit(WhileStmt& w) = 0;
+    virtual void visit(DoWhileStmt& dw) = 0;
+    virtual void visit(ForStmt& f) = 0;
+    virtual void visit(ReturnStmt& r) = 0;
+
 };
 
 #endif // AST_H
