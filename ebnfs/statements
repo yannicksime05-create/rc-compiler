@@ -6,6 +6,7 @@ statement 					::= compound-statement
 								| while-statement
 								| do-while-statement
 								| for-statement
+								| range-for-statement
 								| break-statement
 								| continue-statement
 								| return-statement
@@ -29,13 +30,16 @@ while-statement 			::= "while" "(" expression ")" statement
 do-while-statement 			::= "do" statement "while" "(" expression ")" ";"
 
 
-for-statement 				::=	"for" "(" for-clause ")" statement
-for-clause 					::=	classic-for | range-for
-classic-for 				::=	[ for-init ] ";" [ expression ] ";" [ expression ]
-for-init 					::=	expression | declaration-statement
-range-for 					::=	type-specifier identifier ":" range-expression
-range-expression 			::=	"[" expression ".." expression "]"
-      							| identifier
+for-statement 				::=	"for" "(" [ init ] ";" [ expression ] ";" [ expression ] ")" statement
+init 						::=	expression | declaration-statement
+
+for-statement 				::= "for" "(" init ":" container [ ";" increment ] ")" statement
+
+
+range-for-statement			::= "for" "(" init ":" container ")" statement
+container					::= "[" expression "..." expression "]"
+								| identifier
+increment					::= expression
 
 
 
@@ -47,3 +51,56 @@ continue-statement 			::= "continue" ";"
 return-statement   			::= "return" [ expression ] ";"
 
 empty-statement 			::= ";"
+
+
+switch() {
+	case expr: {
+
+	}
+}
+
+class Foo {
+	+:
+		Foo() {}
+	
+	-:
+		int x;
+	
+	#:
+}
+
+class Foo {
+	public:
+		Foo() {}
+
+	private:
+		int x;
+
+	protected:
+}
+
+
+for(int i : ]1..100[] )
+
+for(int i : ]1..100[)
+
+for(int i : [))
+
+	1..100
+	>1..100
+	>1..100<
+
+for(int i : <1..100)		for(int i = 1; i < 100; i++)
+for(int i : <1..100>)		for(int i = 1; i <= 100; i++)
+
+
+for(int i = 1; i < 100; i++)
+
+for(int i : [1..99])
+
+for(int i : [1...99])
+
+for(char c : ['a'...'z'])
+
+args..
+args...
