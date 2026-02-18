@@ -64,15 +64,15 @@ public:
     void visit(VariableDecl& d) override;
     void visit(FunctionDecl& d) override;
 
-    void visit(CompoundStmt& c) override;
-    void visit(ExpressionStmt& e) override;
-    void visit(DeclarationStmt& d) override;
-    void visit(IfStmt& i) override;
+    void visit(CompoundStmt& s) override;
+    void visit(ExpressionStmt& s) override;
+    void visit(DeclarationStmt& s) override;
+    void visit(IfStmt& s) override;
     void visit(SwitchStmt& s) override;
-    void visit(WhileStmt& w) override;
-    void visit(DoWhileStmt& dw) override;
-    void visit(ForStmt& f) override;
-    void visit(ReturnStmt& r) override;
+    void visit(WhileStmt& s) override;
+    void visit(DoWhileStmt& s) override;
+    void visit(ForStmt& s) override;
+    void visit(ReturnStmt& s) override;
 
 };
 

@@ -413,6 +413,7 @@ SwitchStmt *Parser::parse_switch_statement() {
     expect(TT::LPAREN, "Error: Expected '(' after 'switch'");
     Expr *e = parseExpression();
     if(!e) {
+//        throw ParseError("Expected primary-expression after '('");
         std::cerr << "couldn't create switch expression" << std::endl;
         return nullptr;
     }

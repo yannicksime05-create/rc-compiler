@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include "token.h"
+#include "symbol.h"
 
 enum class ASTNodeType {
     PROGRAM,
@@ -41,6 +42,7 @@ struct ASTNode {
 */
 
 struct Expr : ASTNode {
+    Type *resolved_type = nullptr;
 
     Expr(ASTNodeType t) { node_type = t; }
 
@@ -123,6 +125,7 @@ struct StringExpr : Expr {
 
 struct IdentifierExpr : Expr {
     Token name;
+    Symbol *symbol = nullptr;
 
     IdentifierExpr(const Token& n) : Expr(ASTNodeType::IDENTIFIER_EXPR_NODE), name(n) {}
 
@@ -211,6 +214,7 @@ struct ConditionalExpr : Expr {
 struct CallExpr : Expr {
     Expr *callee = nullptr;
     std::vector<Expr *> arguments;
+    Symbol *symbol = nullptr;
 
     CallExpr(Expr *c, const std::vector<Expr *>& args = std::vector<Expr *>())
         : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {}
@@ -232,6 +236,7 @@ struct CallExpr : Expr {
 struct MemberAccessExpr : Expr {
     Expr *object = nullptr;
     std::string member;
+    Symbol *symbol = nullptr;
 
     MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
 
@@ -248,6 +253,7 @@ struct MemberAccessExpr : Expr {
 struct SubscriptExpr : Expr {
     Expr *object = nullptr;
     Expr *index = nullptr;
+    Symbol *symbol = nullptr;
 
     SubscriptExpr(Expr *o, Expr *i) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), index(i) {}
 
@@ -292,14 +298,13 @@ struct TypeSpecifier {
     std::string type_name;
     bool is_constant;
 
-    TypeSpecifier() {}
-
     TypeSpecifier(const std::string& t, bool c) : type_name(t), is_constant(c) {}
 };
 
 struct VariableDeclarator {
     std::string variable_name;
     Expr *initializer = nullptr;
+    Symbol *symbol = nullptr;
 
     VariableDeclarator(const std::string& n, Expr *i = nullptr) : variable_name(n), initializer(i) {}
 
@@ -312,11 +317,11 @@ struct VariableDeclarator {
 };
 
 struct VariableDecl : Decl {
-    TypeSpecifier variable_type;
+    TypeSpecifier declared_type;
     std::vector<VariableDeclarator *> declarations;
 
     VariableDecl(const TypeSpecifier& t, const std::vector<VariableDeclarator *>& decls)
-        : Decl(ASTNodeType::VAR_DECL_NODE), variable_type(t), declarations(decls) {}
+        : Decl(ASTNodeType::VAR_DECL_NODE), declared_type(t), declarations(decls) {}
 
     void accept(Visitor& v) override;
 
@@ -335,7 +340,7 @@ struct Parameter {
     std::string parameter_name;
     Expr *default_value = nullptr;
 
-    Parameter(const TypeSpecifier& t, const std::string& n, Expr *df = nullptr) : type_name(t), parameter_name(n), default_value(df) {}
+    Parameter(const TypeSpecifier& t, const std::string& n, Expr *dv = nullptr) : type_name(t), parameter_name(n), default_value(dv) {}
 
     ~Parameter() {
         delete default_value;
@@ -351,6 +356,7 @@ struct FunctionDecl : Decl {
     std::string function_name;
     std::vector<Parameter *> parameters;
     Stmt *body = nullptr;
+    Symbol *symbol = nullptr;
 
     FunctionDecl(const TypeSpecifier& rt, const std::string& n, Stmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
         : Decl(ASTNodeType::FUNC_DECL_NODE), return_type(rt), function_name(n), parameters(std::move(p)), body(std::move(b)) {}
@@ -577,15 +583,15 @@ public:
     virtual void visit(VariableDecl& d) = 0;
     virtual void visit(FunctionDecl& d) = 0;
 
-    virtual void visit(CompoundStmt& c) = 0;
-    virtual void visit(ExpressionStmt& e) = 0;
-    virtual void visit(DeclarationStmt& d) = 0;
-    virtual void visit(IfStmt& i) = 0;
+    virtual void visit(CompoundStmt& s) = 0;
+    virtual void visit(ExpressionStmt& s) = 0;
+    virtual void visit(DeclarationStmt& s) = 0;
+    virtual void visit(IfStmt& s) = 0;
     virtual void visit(SwitchStmt& s) = 0;
-    virtual void visit(WhileStmt& w) = 0;
-    virtual void visit(DoWhileStmt& dw) = 0;
-    virtual void visit(ForStmt& f) = 0;
-    virtual void visit(ReturnStmt& r) = 0;
+    virtual void visit(WhileStmt& s) = 0;
+    virtual void visit(DoWhileStmt& s) = 0;
+    virtual void visit(ForStmt& s) = 0;
+    virtual void visit(ReturnStmt& s) = 0;
 
 };
 
