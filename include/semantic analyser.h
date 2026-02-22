@@ -4,9 +4,11 @@
 #include <stdexcept>
 #include <optional>
 #include "scope.h"
+#include "ast.h"
+//#include "symbol.h"           //symbol.h already comes in with scope.h and ast.h
 
-using SCT = ScopeType;
-using SYT = SymbolType;
+//using SCT = ScopeType;
+//using SYT = SymbolType;
 
 class SemanticError : public std::logic_error {
 
@@ -32,11 +34,7 @@ public:
     SemanticAnalyser(Program& p) : program(p) {}
 
     void analyze() {
-        manager.enter(SCT::GLOBAL);
-//        for(Stmt *s : program.statements) {
-//
-//        }
-        manager.exit();
+        visit(program);
     }
 
     void visit(Program& p) override;

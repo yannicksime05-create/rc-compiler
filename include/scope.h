@@ -2,7 +2,9 @@
 #define SCOPE_H
 
 #include <unordered_map>
-#include "ast.h"
+#include <string>
+#include <vector>
+#include "symbol.h"
 
 enum class ScopeType {
     GLOBAL,

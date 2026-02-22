@@ -292,13 +292,13 @@ FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
         }
         expect(TT::RPAREN, "Error: Expected ')' after parameter list");
 
-        Stmt *body = parseStatement();
+        CompoundStmt *body = parse_compound_statement();
 
         return new FunctionDecl(type, name, body, parameters);
     }
     expect(TT::RPAREN, "Error: Expected ')' after parameter list");
 
-    Stmt *body = parseStatement();
+    CompoundStmt *body = parse_compound_statement();
 
     return new FunctionDecl(type, name, body);
 }

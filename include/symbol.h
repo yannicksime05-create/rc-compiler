@@ -2,6 +2,7 @@
 #define SYMBOL_H
 
 #include <string>
+#include "ast base.h"
 
 enum class TypeKind {
     BUILTIN,

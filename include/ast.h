@@ -4,37 +4,38 @@
 #include <iostream>
 #include <vector>
 #include "token.h"
+//#include "ast base.h"         //ast base.h already comes in with symbol.h so we probably don't need this.
 #include "symbol.h"
 
-enum class ASTNodeType {
-    PROGRAM,
-
-    INT_LIT_NODE, DECIMAL_LIT_NODE, STRING_LIT_NODE,
-
-    //Expressions Nodes
-    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE,
-    CONDITIONAL_EXPR_NODE, CALL_EXPR_NODE, MEMBER_ACCESS_EXPR_NODE, SUBSCRIPT_EXPR_NODE,
-    SEQUENCE_EXPR_NODE,
-
-    //Statements Nodes
-    COMP_STMT_NODE, EXPR_STMT_NODE, IF_STMT_NODE, SWITCH_STMT_NODE, WHILE_STMT_NODE,
-    DO_WHILE_STMT_NODE, FOR_STMT_NODE, RETURN_STMT_NODE, DECL_STMT_NODE,
-
-    //Declarations Nodes
-    VAR_DECL_NODE, FUNC_DECL_NODE
-
-};
-
-
-class Visitor;
+//enum class ASTNodeType {
+//    PROGRAM,
+//
+//    INT_LIT_NODE, DECIMAL_LIT_NODE, STRING_LIT_NODE,
+//
+//    //Expressions Nodes
+//    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE,
+//    CONDITIONAL_EXPR_NODE, CALL_EXPR_NODE, MEMBER_ACCESS_EXPR_NODE, SUBSCRIPT_EXPR_NODE,
+//    SEQUENCE_EXPR_NODE,
+//
+//    //Statements Nodes
+//    COMP_STMT_NODE, EXPR_STMT_NODE, IF_STMT_NODE, SWITCH_STMT_NODE, WHILE_STMT_NODE,
+//    DO_WHILE_STMT_NODE, FOR_STMT_NODE, RETURN_STMT_NODE, DECL_STMT_NODE,
+//
+//    //Declarations Nodes
+//    VAR_DECL_NODE, FUNC_DECL_NODE
+//
+//};
+//
+//
+//class Visitor;
 
 
 // Base node type — every node inherits from this
-struct ASTNode {
-    ASTNodeType node_type;
-    virtual void accept(Visitor& v) = 0;
-    virtual ~ASTNode() = default;
-};
+//struct ASTNode {
+//    ASTNodeType node_type;
+//    virtual void accept(Visitor& v) = 0;
+//    virtual ~ASTNode() = default;
+//};
 
 /**
 *   We need Stmt inside FunctionDecl, and Decl inside DeclarationStmt,
@@ -335,6 +336,26 @@ struct VariableDecl : Decl {
     }
 };
 
+/**
+*   FunctionDecl needs to be aware of this, so that's why it's here instead of in the Stmts section.
+*/
+struct CompoundStmt : Stmt {
+    std::vector<Stmt *> statements;
+
+    CompoundStmt(const std::vector<Stmt *>& s) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {}
+
+    void accept(Visitor& v) override;
+
+    ~CompoundStmt() {
+        for(const Stmt *s : statements) {
+            delete s;
+            s = nullptr;
+        }
+
+        std::cout << "Cleaned up CompoundStmt node...\n";
+    }
+};
+
 struct Parameter {
     TypeSpecifier type_name;
     std::string parameter_name;
@@ -355,10 +376,10 @@ struct FunctionDecl : Decl {
     TypeSpecifier return_type;
     std::string function_name;
     std::vector<Parameter *> parameters;
-    Stmt *body = nullptr;
+    CompoundStmt *body = nullptr;
     Symbol *symbol = nullptr;
 
-    FunctionDecl(const TypeSpecifier& rt, const std::string& n, Stmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
+    FunctionDecl(const TypeSpecifier& rt, const std::string& n, CompoundStmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
         : Decl(ASTNodeType::FUNC_DECL_NODE), return_type(rt), function_name(n), parameters(std::move(p)), body(std::move(b)) {}
 
     void accept(Visitor& v) override;
@@ -382,23 +403,6 @@ struct FunctionDecl : Decl {
 
 
 // --- Statements ---
-struct CompoundStmt : Stmt {
-    std::vector<Stmt *> statements;
-
-    CompoundStmt(const std::vector<Stmt *>& s) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {}
-
-    void accept(Visitor& v) override;
-
-    ~CompoundStmt() {
-        for(const Stmt *s : statements) {
-            delete s;
-            s = nullptr;
-        }
-
-        std::cout << "Cleaned up CompoundStmt node...\n";
-    }
-};
-
 struct ExpressionStmt : Stmt {
     Expr *expression = nullptr;
 
