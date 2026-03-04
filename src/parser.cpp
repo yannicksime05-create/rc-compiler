@@ -134,10 +134,10 @@ Expr *Parser::parse_postfix() {
             }
             else {
                 std::vector<Expr *> args;
-                args.push_back(parseExpression());
+                args.push_back(parse_assignment());
                 while( is(TT::COMMA) ) {
                     get();
-                    args.push_back(parseExpression());
+                    args.push_back(parse_assignment());
                 }
                 expect(TT::RPAREN, "Error: Expected ')' after argument list");
                 primary = new CallExpr(primary, args);

@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     Program p = *parser.parse();
 
     Printer printer;
-    printer.print(p.statements);
+    printer.print(p);
 
     return 0;
 }
