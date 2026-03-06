@@ -29,7 +29,7 @@ enum class TokenType {
 
     ASSIGN,                                                             // =
     PLUS_ASSIGN, MINUS_ASSIGN, STAR_ASSIGN, SLASH_ASSIGN, MOD_ASSIGN,   // += -= *= /= %=
-    BIT_AND_ASSIGN, BIT_OR_ASSIGN,
+    BIT_AND_ASSIGN, BIT_OR_ASSIGN,                                      // &= |=
     BIT_XOR_ASSIGN,                                                     // ^=
     SHIFT_LEFT_ASSIGN, SHIFT_RIGHT_ASSIGN,                              // <<= >>=
 
@@ -37,7 +37,7 @@ enum class TokenType {
     GREATER, GREATER_EQUAL, LESS, LESS_EQUAL,                           // > >= < <=
 
     BIT_AND, AND, BIT_OR, OR,                                           // & && | ||
-    XOR, TILDE,                                                         // ^ ~
+    XOR, BIT_NOT,                                                       // ^ ~
     SHIFT_LEFT, SHIFT_RIGHT,                                            // << >>
     QUESTION, COLON,                                                    // ? :
     DOT,

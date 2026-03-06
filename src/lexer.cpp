@@ -532,6 +532,12 @@ const Token Lexer::getNextToken() {
                 t.type = TT::AND;
                 t.value = "&&";
             }
+            else if(input.peek() == '=') {
+                input.get(); ++column;
+                std::cout << "Bitwise and assignment found!" << std::endl;
+                t.type = TT::BIT_AND_ASSIGN;
+                t.value = "&=";
+            }
             else {
                 std::cout << "Bitwise and found!\n" << std::endl;
                 t.type = TT::BIT_AND;
@@ -544,6 +550,12 @@ const Token Lexer::getNextToken() {
                 std::cout << "Logic or found!" << std::endl;
                 t.type = TT::OR;
                 t.value = "||";
+            }
+            else if(input.peek() == '=') {
+                input.get(); ++column;
+                std::cout << "Bitwise or assignment found!" << std::endl;
+                t.type = TT::BIT_OR_ASSIGN;
+                t.value = "|=";
             }
             else {
                 std::cout << "Bitwise or found!" << std::endl;
@@ -562,9 +574,20 @@ const Token Lexer::getNextToken() {
                 t.value = "!";
             }
             break;
+        case '~':
+            t.type = TT::BIT_NOT;
+            t.value = "~";
+            break;
         case '^':
-            t.type = TT::XOR;
-            t.value = "^";
+            if(input.peek() == '=') {
+                input.get(); ++column;
+                t.type = TT::BIT_XOR_ASSIGN;
+                t.value = "^=";
+            }
+            else {
+                t.type = TT::XOR;
+                t.value = "^";
+            }
             break;
         default:
             //=============== STRING LITERALS ===============
