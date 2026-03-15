@@ -6,11 +6,12 @@ Token Lexer::handleCommentsOrSlash() {
     if(input.peek() == '/') {
         do{
             input.get(); ++column;
-        }while(input.peek() != '\n');
+        }while(input.peek() != '\n' && !input.eof());
         std::cout << "Single-line comment." << std::endl;
         t.type = TT::USELESS;
     }
     else if(input.peek() == '*') {
+        bool ended = false;
         //on saute le premier * de '/*'
         input.get(); ++column;
         //Cette boucle peut être réécrite avec une boucle do...while en gardant exactement les
@@ -18,11 +19,9 @@ Token Lexer::handleCommentsOrSlash() {
         //et qu'on teste le cas /* (et après la fin du fichier), la boucle do...while
         //récupèrera le EOF avant d'échouer sur la condition. Du coup pour éviter que EOF ne soit lu
         //inutilement, il vaut mieux utiliser une boucle while.
-        while(input.peek() != EOF) {
+        while(!input.eof()) {
             input.get(c);
             advance();
-//                    std::cout << "line = " << line << ", column = " << column << std::endl;
-
             //On vérifie que le caractère qu'on vient de lire est '*'
             if(c == '*') {
                 //Si tel est le cas, on vérifie si le caractère suivant est '/',
@@ -33,11 +32,12 @@ Token Lexer::handleCommentsOrSlash() {
 //                            std::cout << "Multi-lines comment." << column << std::endl;
                     std::cout << "Multi-lines comment." << std::endl;
                     t.type = TT::USELESS;
+                    ended = true;
                     break;
                 }
             }
         }
-        if(input.peek() == EOF) {
+        if(!ended) {
             std::cerr << "Error: unterminated comment! at line: " << line << ", column: " << column << std::endl;
         }
     }
