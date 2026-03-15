@@ -23,6 +23,25 @@ enum Precedence {
     PREC_POSTFIX            = 11       // () [] . ++ --
 };
 
+//enum Precedence {
+//    PREC_NONE = 0,
+//    PREC_COMMA,          // ,
+//    PREC_ASSIGNMENT,     // = += -= *= ...
+//    PREC_CONDITIONAL,    // ?:
+//    PREC_LOGICAL_OR,     // ||
+//    PREC_LOGICAL_AND,    // &&
+//    PREC_BIT_OR,         // |
+//    PREC_BIT_XOR,        // ^
+//    PREC_BIT_AND,        // &
+//    PREC_EQUALITY,       // == !=
+//    PREC_COMPARISON,     // < <= > >=
+//    PREC_SHIFT,          // << >>
+//    PREC_TERM,           // + -
+//    PREC_FACTOR,         // * / %
+//    PREC_PREFIX,         // ! ~ - ++ --
+//    PREC_POSTFIX         // () [] . ++ --
+//};
+
 class ParseError : public std::logic_error {
 
 public:
