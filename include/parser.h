@@ -7,6 +7,41 @@
 
 using TT = TokenType;
 
+enum Precedence {
+    PREC_NONE = 0,
+
+    PREC_COMMA              = 1,         // ,
+    PREC_ASSIGNMENT         = 2,       // = += -= ...
+    PREC_CONDITIONAL        = 3,       // ?:
+    PREC_LOGICAL_OR         = 4,       // ||
+    PREC_LOGICAL_AND        = 5,       // &&
+    PREC_EQUALITY           = 6,       // == !=
+    PREC_COMPARISON         = 7,       // < <= > >=
+    PREC_TERM               = 8,       // + -
+    PREC_FACTOR             = 9,       // * / %
+    PREC_PREFIX             = 10,      // - ! ++ --
+    PREC_POSTFIX            = 11       // () [] . ++ --
+};
+
+//enum Precedence {
+//    PREC_NONE = 0,
+//    PREC_COMMA,          // ,
+//    PREC_ASSIGNMENT,     // = += -= *= ...
+//    PREC_CONDITIONAL,    // ?:
+//    PREC_LOGICAL_OR,     // ||
+//    PREC_LOGICAL_AND,    // &&
+//    PREC_BIT_OR,         // |
+//    PREC_BIT_XOR,        // ^
+//    PREC_BIT_AND,        // &
+//    PREC_EQUALITY,       // == !=
+//    PREC_COMPARISON,     // < <= > >=
+//    PREC_SHIFT,          // << >>
+//    PREC_TERM,           // + -
+//    PREC_FACTOR,         // * / %
+//    PREC_PREFIX,         // ! ~ - ++ --
+//    PREC_POSTFIX         // () [] . ++ --
+//};
+
 class ParseError : public std::logic_error {
 
 public:
@@ -74,20 +109,24 @@ class Parser {
         return is(TT::INTEGER) || is(TT::FLOAT) || is(TT::STRING);
     }
 
+    bool is_right_associative(TokenType t);
+    bool is_postfix_operator(TokenType t);
 
 
-    Expr *parseExpression();
-    Expr *parse_assignment();
-    Expr *parse_conditional();
-    Expr *parse_logical_or();
-    Expr *parse_logical_and();
-    Expr *parse_equality();
-    Expr *parse_comparaison();
-    Expr *parse_term();
-    Expr *parse_factor();
-    Expr *parse_unary();
-    Expr *parse_postfix();
-    Expr *parse_primary();
+    Precedence get_precedence(TokenType t);
+    Expr *parseExpression(Precedence min_prec = Precedence::PREC_NONE);
+//    Expr *parse_assignment();
+//    Expr *parse_conditional();
+//    Expr *parse_logical_or();
+//    Expr *parse_logical_and();
+//    Expr *parse_equality();
+//    Expr *parse_comparaison();
+//    Expr *parse_term();
+//    Expr *parse_factor();
+//    Expr *parse_unary();
+//    Expr *parse_postfix();
+    Expr *parse_prefix();
+    Expr *parse_postfix(Expr *lhs);
 
 
 
