@@ -102,7 +102,6 @@ Expr *Parser::parseExpression(Precedence min_prec) {
 
     while( min_prec < get_precedence(current().type) ) {
         TokenType t = current().type;
-        std::cout << "current().value = " << current().value << std::endl;
 
         if(is_postfix_operator(t)) {
             lhs = parse_postfix(lhs);
@@ -110,7 +109,6 @@ Expr *Parser::parseExpression(Precedence min_prec) {
         }
 
         Precedence p = get_precedence(t);
-//        if(p < min_prec) break;
 
         if(t == TT::QUESTION) {
             get();
@@ -137,47 +135,6 @@ Expr *Parser::parseExpression(Precedence min_prec) {
 
     return lhs;
 }
-
-//Expr *Parser::parseExpression(Precedence min_prec) {
-//    Expr *lhs = parse_prefix();
-//    if(!lhs)    return nullptr;
-//
-//    while( true ) {
-//        TokenType t = current().type;
-//
-//        if(is_postfix_operator(t)) {
-//            lhs = parse_postfix(lhs);
-//            continue;
-//        }
-//
-//        Precedence p = get_precedence(t);
-//        if(min_prec < p) break;
-//
-//        if(t == TT::QUESTION) {
-//            get();
-//            Expr *if_true = parseExpression(Precedence::PREC_CONDITIONAL);
-//            expect(TT::COLON, "Error: Expected ':' in conditional expression!");
-//            Expr *if_false = parseExpression(Precedence::PREC_CONDITIONAL);
-//            lhs = new ConditionalExpr(lhs, if_true, if_false);
-//            continue;
-//        }
-//
-//        Token op = get();
-//        Precedence next_prec = static_cast<Precedence>( p + ( is_right_associative(current().type) ? 0 : 1) );
-//        Expr *rhs = parseExpression(next_prec);
-//        if(!rhs) return nullptr;
-//
-//        if(p == Precedence::PREC_ASSIGNMENT)
-//            lhs = new AssignmentExpr(lhs, op.value, rhs);
-//        else if(p == Precedence::PREC_COMMA) {
-//
-//        }
-//        else
-//            lhs = new BinaryExpr(lhs, op.value, rhs);
-//    }
-//
-//    return lhs;
-//}
 
 Expr *Parser::parse_prefix() {
     Token t = get();
@@ -248,194 +205,6 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
     return lhs;
 }
-
-
-//Expr *Parser::parseExpression() {
-//    Expr *e = parse_assignment();
-//    if( !is(TT::COMMA) ) return e;
-//
-//    std::vector<Expr *> exprs;
-//    exprs.push_back(e);
-//    while( is(TT::COMMA) ) {
-//        get();
-//        exprs.push_back(parse_assignment());
-//    }
-//
-//    return new SequenceExpr(exprs);
-//}
-//
-//Expr *Parser::parse_assignment() { //a = b
-//    Expr *target = parse_conditional();
-//    if(!target) {
-//        std::cout << "target is null" << std::endl;
-//        return nullptr;
-//    }
-//    if( is_assignment_operator() ) {
-////        Token op = get();
-////        Expr *value = parse_assignment();
-//        return new AssignmentExpr(target, get().value, parse_assignment());
-//    }
-//
-//    return target;
-//}
-//
-//Expr *Parser::parse_conditional() {
-//    Expr *condition = parse_logical_or();
-//    if( is(TT::QUESTION) ) {
-//        get();
-//        Expr *e = parseExpression();
-//        expect(TT::COLON, "Error: Expected ':' in conditional operator!");
-//        return new ConditionalExpr(condition, e, parse_conditional());
-//    }
-//
-//    return condition;
-//}
-//
-//Expr *Parser::parse_logical_or() { //a || b
-//    Expr *left = parse_logical_and();
-//    while( is(TT::OR) ) {
-////        Token op = get();
-////        Expr *right = parse_logical_and();
-//
-//        left = new BinaryExpr(left, get().value, parse_logical_and());
-//    }
-//
-//    return left;
-//}
-//
-//Expr *Parser::parse_logical_and() {
-//    Expr *left = parse_equality();
-//    while( is(TT::AND) ) {
-////        Token op = get();
-////        Expr *right = parse_equality();
-//
-//        left = new BinaryExpr(left, get().value, parse_equality());
-//    }
-//
-//    return left;
-//}
-//
-//Expr *Parser::parse_equality() { //a == b, a != b
-//    Expr *left = parse_comparaison();
-//    while( is(TT::EQUAL) || is(TT::NOT_EQUAL) ) {
-////        Token op = get();
-////        Expr *right = parse_comparaison();
-//
-//        left = new BinaryExpr(left, get().value, parse_comparaison());
-//    }
-//
-//    return left;
-//}
-//
-//Expr *Parser::parse_comparaison() {// a < b, a <= b, a > b, a >= b
-//    Expr *left = parse_term();
-//    while( is(TT::LESS) || is(TT::LESS_EQUAL) || is(TT::GREATER) || is(TT::GREATER_EQUAL) ) {
-////        Token op = get();
-////        Expr *right = parse_term();
-//
-//        left = new BinaryExpr(left, get().value, parse_term());
-//    }
-//
-//    return left;
-//}
-//
-//Expr *Parser::parse_term() {//a + b, a - b
-//    Expr *left = parse_factor();
-//    while( is(TT::PLUS) || is(TT::MINUS) ) {
-////        Token op = get();
-////        Expr *right = parse_factor();
-//
-//        left = new BinaryExpr(left, get().value, parse_factor());
-//    }
-//
-//    return left;
-//}
-//
-//Expr *Parser::parse_factor() {//a * b, a / b, a % b
-//    Expr *left = parse_unary();
-//    while( is(TT::STAR) || is(TT::SLASH) || is(TT::MOD) ) {
-////        Token op = get();
-////        Expr *right = parse_unary();
-//
-//        left = new BinaryExpr(left, get().value, parse_unary());
-//    }
-//
-//    return left;
-//}
-//
-//Expr *Parser::parse_unary() {
-//    if( is(TT::MINUS) || is(TT::NOT) || is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
-//        return new UnaryExpr(get().value, parse_unary());
-//    }
-//
-//    return parse_postfix();
-//}
-//
-//Expr *Parser::parse_postfix() {
-//    Expr *primary = parse_primary();
-//
-//    while(true) {
-//        if( is(TT::LPAREN) ) {
-//            get();
-//            if( is(TT::RPAREN) ) {
-//                get();
-//                primary = new CallExpr(primary);
-//            }
-//            else {
-//                std::vector<Expr *> args;
-//                args.push_back(parse_assignment());
-//                while( is(TT::COMMA) ) {
-//                    get();
-//                    args.push_back(parse_assignment());
-//                }
-//                expect(TT::RPAREN, "Error: Expected ')' after argument list");
-//                primary = new CallExpr(primary, args);
-//            }
-//        }
-//        else if( is(TT::LBRACKET) ) {
-//            get();
-//            Expr *index = parseExpression();
-//            expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
-//            primary = new SubscriptExpr(primary, index);
-//        }
-//        else if( is(TT::DOT) ) {
-//            get();
-//            expect(TT::IDENTIFIER, "Error: Expected identifier for member expressions");
-//            primary = new MemberAccessExpr(primary, previous().value);
-//        }
-//        else if( is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
-//            primary = new UnaryExpr(get().value, primary, false);
-//        }
-//        else break;
-//    }
-//
-//    return primary;
-//}
-//
-//Expr *Parser::parse_primary() {
-//    Token t = get();
-//    switch(t.type) {
-//        case TT::INTEGER:
-//            return new IntNumberExpr(std::stoi(t.value));
-//        case TT::FLOAT:
-//            return new DecimalNumberExpr(std::stod(t.value));
-//        case TT::STRING:
-//            return new StringExpr(t.value);
-//        case TT::IDENTIFIER:
-//            return new IdentifierExpr(t);
-//        case TT::LPAREN: {
-//            get();
-//            Expr *e = parseExpression();
-//            expect(TT::RPAREN, "Error: Expected closing ')' of primary expression");
-//            return e;
-//        }
-//        default:
-//            std::cerr << "Error: Unknow primary Expression!" << std::endl;
-//            return nullptr;
-//    }
-//
-//    return nullptr;
-//}
 
 
 
@@ -598,8 +367,6 @@ Stmt *Parser::parseStatement() {
     }
 
     return nullptr;
-
-//    return parse_expression_statement();
 }
 
 CompoundStmt *Parser::parse_compound_statement() {
@@ -747,7 +514,7 @@ ForStmt *Parser::parse_for_statement() {
 
     Expr *condition = parseExpression();
     if(!condition) {
-        std::cout << "From: parse_for_statement\nError: unable to create desired expression" << std::endl;
+        std::cerr << "From: parse_for_statement\nError: unable to create desired expression" << std::endl;
 //        return nullptr;
     }
     expect(TT::SEMICOLON, "Error: Expected ';' after for-loop condition");

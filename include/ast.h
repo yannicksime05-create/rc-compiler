@@ -7,36 +7,6 @@
 #include "ast base.h"
 #include "symbol.h"
 
-//enum class ASTNodeType {
-//    PROGRAM,
-//
-//    INT_LIT_NODE, DECIMAL_LIT_NODE, STRING_LIT_NODE,
-//
-//    //Expressions Nodes
-//    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE,
-//    CONDITIONAL_EXPR_NODE, CALL_EXPR_NODE, MEMBER_ACCESS_EXPR_NODE, SUBSCRIPT_EXPR_NODE,
-//    SEQUENCE_EXPR_NODE,
-//
-//    //Statements Nodes
-//    COMP_STMT_NODE, EXPR_STMT_NODE, IF_STMT_NODE, SWITCH_STMT_NODE, WHILE_STMT_NODE,
-//    DO_WHILE_STMT_NODE, FOR_STMT_NODE, RETURN_STMT_NODE, DECL_STMT_NODE,
-//
-//    //Declarations Nodes
-//    VAR_DECL_NODE, FUNC_DECL_NODE
-//
-//};
-//
-//
-//class Visitor;
-
-
-// Base node type — every node inherits from this
-//struct ASTNode {
-//    ASTNodeType node_type;
-//    virtual void accept(Visitor& v) = 0;
-//    virtual ~ASTNode() = default;
-//};
-
 /**
 *   We need Stmt inside FunctionDecl, and Decl inside DeclarationStmt,
 *   so we create all the roots here, so that we can nest them in any way we want.
