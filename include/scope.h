@@ -51,9 +51,7 @@ class ScopeManager {
     std::vector<Scope*> scopes;
 
 public:
-    ScopeManager() {
-        enter(ScopeType::GLOBAL);
-    }
+    ScopeManager() {}
 
     Scope *current() const {
         if(!scopes.empty()) return scopes.back();

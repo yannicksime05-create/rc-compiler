@@ -20,40 +20,40 @@ void SemanticAnalyser::visit(Program& p) {
     manager.exit();
 }
 
-void SemanticAnalyser::visit(VariableDecl& d) {
-    Type t = resolve(d.declared_type);
+//void SemanticAnalyser::visit(VariableDecl& d) {
+//    Type t = resolve(d.declared_type);
+//
+//    for(VariableDeclarator *vd : d.declarations) {
+//        Symbol *s = new Symbol(vd->variable_name, SymbolType::VARIABLE, t.is_constant, &t, vd);
+//        if( !manager.current()->insert(s) )
+//            throw SemanticError("Error: Redefinition of variable ''");
+//
+//        vd->symbol = s;
+//    }
+//}
 
-    for(VariableDeclarator *vd : d.declarations) {
-        Symbol *s = new Symbol(vd->variable_name, SymbolType::VARIABLE, t.is_constant, &t, vd);
-        if( !manager.current()->insert(s) )
-            throw SemanticError("Error: Redefinition of variable ''");
-
-        vd->symbol = s;
-    }
-}
-
-void SemanticAnalyser::visit(FunctionDecl& d) {
-    Type t = resolve(d.return_type);
-    Symbol *f = new Symbol(d.function_name, SymbolType::FUNCTION, t.is_constant, &t, &d);
-    if( !manager.current()->insert(f) )
-        throw SemanticError("Error: Redefinition of function ''");
-
-    d.symbol = f;
-    manager.enter(ScopeType::FUNCTION);
-    for(Parameter *p : d.parameters) {
-        Type pt = resolve(p->type_name);
-        Symbol *s = new Symbol(p->parameter_name, SymbolType::PARAMETER, pt.is_constant, &pt, p);
-        if( !manager.current()->insert(s) )
-            throw SemanticError("Error: Redefinition of parameter ''");
-
-        p->symbol = s;
-    }
-
-    if(d.body)
-        d.body->accept(*this);
-
-    manager.exit();
-}
+//void SemanticAnalyser::visit(FunctionDecl& d) {
+//    Type t = resolve(d.return_type);
+//    Symbol *f = new Symbol(d.function_name, SymbolType::FUNCTION, t.is_constant, &t, &d);
+//    if( !manager.current()->insert(f) )
+//        throw SemanticError("Error: Redefinition of function ''");
+//
+//    d.symbol = f;
+//    manager.enter(ScopeType::FUNCTION);
+//    for(Parameter *p : d.parameters) {
+//        Type pt = resolve(p->type_name);
+//        Symbol *s = new Symbol(p->parameter_name, SymbolType::PARAMETER, pt.is_constant, &pt, p);
+//        if( !manager.current()->insert(s) )
+//            throw SemanticError("Error: Redefinition of parameter ''");
+//
+//        p->symbol = s;
+//    }
+//
+//    if(d.body)
+//        d.body->accept(*this);
+//
+//    manager.exit();
+//}
 
 void SemanticAnalyser::visit(CompoundStmt& s) {
     manager.enter(ScopeType::BLOCK);

@@ -7,8 +7,6 @@
 #include "ast.h"
 //#include "symbol.h"           //symbol.h already comes in with scope.h and ast.h
 
-//using SCT = ScopeType;
-//using SYT = SymbolType;
 
 class SemanticError : public std::logic_error {
 

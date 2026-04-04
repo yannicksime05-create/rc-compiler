@@ -703,6 +703,27 @@ void Printer::visit(ForStmt& s) {
     indent(); std::cout << "]\n";
 }
 
+//void Printer::visit(RangeForStmt& s) {
+//    indent(); std::cout << "node type: RangeForStatement,\n";
+//    indent(); std::cout << "initialization: ";
+//    if(!s.item) std::cout << "null,\n";
+//    else {
+//        std::cout << "{\n";
+//        s.item->accept(*this);
+//        indent(); std::cout << "},\n";
+//    }
+//    indent(); std::cout << "range: ";
+//    if(!s.range_initializer) std::cout << "null,\n";
+//    else {
+//        std::cout << "{\n";
+//        exprs_printer_helper(s.range_initializer);
+//        indent(); std::cout << "},\n";
+//    }
+//    indent(); std::cout << "body: [\n";
+//    stmts_printer_helper(s.body);
+//    indent(); std::cout << "]\n";
+//}
+
 void Printer::visit(ReturnStmt& s) {
     indent(); std::cout << "node type: ReturnStatement,\n";
     indent(); std::cout << "expression: ";

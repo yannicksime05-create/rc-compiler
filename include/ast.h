@@ -522,6 +522,28 @@ struct ForStmt : Stmt {
     }
 };
 
+//struct RangeForStmt : Stmt {
+//    VariableDecl *item = nullptr;
+//    Expr *range_initializer = nullptr;
+//    Stmt *body = nullptr;
+//
+//    RangeForStmt(VariableDecl *i, Expr *ri, Stmt *b)
+//        : Stmt(ASTNodeType::RANGE_FOR_STMT_NODE), item(i), range_initializer(ri), body(b) {}
+//
+//    void accept(Visitor& v) override;
+//
+//    ~RangeForStmt() {
+//        delete item;
+//        item = nullptr;
+//        delete range_initializer;
+//        range_initializer = nullptr;
+//        delete body;
+//        body = nullptr;
+//
+//        std::cout << "Cleaned up RangeForStmt node...\n";
+//    }
+//};
+
 struct ReturnStmt : Stmt {
     Expr *expression = nullptr;
 
@@ -565,6 +587,7 @@ public:
     virtual void visit(WhileStmt& s) = 0;
     virtual void visit(DoWhileStmt& s) = 0;
     virtual void visit(ForStmt& s) = 0;
+//    virtual void visit(RangeForStmt& s) = 0;
     virtual void visit(ReturnStmt& s) = 0;
 
 };

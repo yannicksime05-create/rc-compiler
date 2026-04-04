@@ -124,13 +124,9 @@ Expr *Parser::parseExpression(Precedence min_prec) {
         Expr *rhs = parseExpression(next_prec);
         if(!rhs) return nullptr;
 
-        if(p == Precedence::PREC_ASSIGNMENT)
-            lhs = new AssignmentExpr(lhs, op.value, rhs);
-        else if(p == Precedence::PREC_COMMA) {
-
-        }
-        else
-            lhs = new BinaryExpr(lhs, op.value, rhs);
+        if(p == Precedence::PREC_ASSIGNMENT)    lhs = new AssignmentExpr(lhs, op.value, rhs);
+        else if(p == Precedence::PREC_COMMA)    lhs = new SequenceExpr( {lhs, rhs} );
+        else                                    lhs = new BinaryExpr(lhs, op.value, rhs);
     }
 
     return lhs;
@@ -214,19 +210,6 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
 
 Decl *Parser::parseDeclaration() {
-//    size_t n = 1;
-//    /**
-//    *   We loop until we find an identifier.
-//    *   This helps parsing such declarations:
-//    *   - int x;
-//    *   - const int x;
-//    *   - const int square(...) {...}
-//    *   - const int *x;
-//    *   even if there are no pointers (yet).
-//    */
-//    while( !peek(n).is(TT::IDENTIFIER) ) ++n;
-
-
     TypeSpecifier *type = parse_type_specifier();
     expect(TT::IDENTIFIER, "Expected identifier");
 
@@ -237,12 +220,6 @@ Decl *Parser::parseDeclaration() {
         return parse_function_declaration(*type);
     else
         return parse_variable_declaration(*type);
-//
-//
-//    if( peek(n+1).is(TT::LPAREN) )
-//        return parse_function_declaration();
-//    else
-//        return parse_variable_declaration();
 
     return nullptr;
 }
@@ -295,9 +272,6 @@ VariableDeclarator *Parser::parse_variable_declarator(const std::string& tn) {
 }
 
 FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
-//    TypeSpecifier type = *parse_type_specifier();
-//
-//    expect(TT::IDENTIFIER, "Error: Expected function's name");
     std::string name = get().value;
 
     expect(TT::LPAREN, "Error: Expected '(' after function's name");
@@ -310,15 +284,11 @@ FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
         }
         expect(TT::RPAREN, "Error: Expected ')' after parameter list");
 
-        CompoundStmt *body = parse_compound_statement();
-
-        return new FunctionDecl(type, name, body, parameters);
+        return new FunctionDecl(type, name, parse_compound_statement(), parameters);
     }
     expect(TT::RPAREN, "Error: Expected ')' after parameter list");
 
-    CompoundStmt *body = parse_compound_statement();
-
-    return new FunctionDecl(type, name, body);
+    return new FunctionDecl(type, name, parse_compound_statement());
 }
 
 Parameter *Parser::parse_function_parameters() {
@@ -505,10 +475,22 @@ DoWhileStmt *Parser::parse_do_while_statement() {
     return new DoWhileStmt(body, condition);
 }
 
-ForStmt *Parser::parse_for_statement() {
-    get();
+//for(int n : v)
+//for(int n = 0; ...)
+//bool Parser::is_rangefor_pattern() {
+//
+//}
 
+Stmt *Parser::dispatch_for_statements() {
+    get();
     expect(TT::LPAREN, "Error: Expected '(' after keyword 'for'");
+
+//    if(is_rangefor_pattern()) return parse_rangefor_statement();
+
+    return parse_for_statement();
+}
+
+ForStmt *Parser::parse_for_statement() {
     Stmt *init = parseStatement();
 //    expect(TT::SEMICOLON, "Error: Expected ';' after for-loop initialization");
 
@@ -523,10 +505,16 @@ ForStmt *Parser::parse_for_statement() {
     expect(TT::RPAREN, "Error: Expected ')' after for-loop increment");
 
     Stmt *body = parseStatement();
-//    std::cout << "pos = " << pos << std::endl;
 
     return new ForStmt(init, condition, incr, body);
 }
+
+//RangeForStmt *Parser::parse_rangefor_statement(VariableDecl *v) {
+//    expect(TT::COLON, "");
+//    Expr *range = parseExpression();
+//    expect(TT::RPAREN, "Error: Expected ')' after for-loop");
+//    return new RangeForStmt(v, range, parseStatement());
+//}
 
 ReturnStmt *Parser::parse_return_statement() {
     get();

@@ -115,16 +115,6 @@ class Parser {
 
     Precedence get_precedence(TokenType t);
     Expr *parseExpression(Precedence min_prec = Precedence::PREC_NONE);
-//    Expr *parse_assignment();
-//    Expr *parse_conditional();
-//    Expr *parse_logical_or();
-//    Expr *parse_logical_and();
-//    Expr *parse_equality();
-//    Expr *parse_comparaison();
-//    Expr *parse_term();
-//    Expr *parse_factor();
-//    Expr *parse_unary();
-//    Expr *parse_postfix();
     Expr *parse_prefix();
     Expr *parse_postfix(Expr *lhs);
 
@@ -152,7 +142,9 @@ class Parser {
     WhileStmt           *parse_while_statement();
     DoWhileStmt         *parse_do_while_statement();
 
+    Stmt                *dispatch_for_statements();
     ForStmt             *parse_for_statement();
+//    RangeForStmt        *parse_rangefor_statement(VariableDecl *v);
 
     ReturnStmt          *parse_return_statement();
 
