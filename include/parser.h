@@ -8,9 +8,11 @@
 using TT = TokenType;
 
 enum Precedence {
-    PREC_NONE = 0,
+    PREC_NONE               = -1,
 
-    PREC_COMMA              = 1,         // ,
+    PREC_DEFAULT            = 0,
+
+    PREC_COMMA              = 1,        // ,
     PREC_ASSIGNMENT         = 2,       // = += -= ...
     PREC_CONDITIONAL        = 3,       // ?:
     PREC_LOGICAL_OR         = 4,       // ||
@@ -58,26 +60,30 @@ class Parser {
     size_t pos;
 
 
-    Token& get() {
-        if(pos >= tokens.size()) return tokens.back();
+//    Token& get() {
+//        if(pos >= tokens.size()) return tokens.back();
+//
+//        return tokens.at(pos++);
+//    }
 
-        return tokens.at(pos++);
-    }
+    Token& get() { return (pos >= tokens.size()) ? tokens.back() : tokens.at(pos++); }
 
     Token& current() { return tokens.at(pos); }
 
     /**
     *   This function is useful when:
     *   - we need to do an expect() (so that the program stops if there is an error),
-    *   - but we also need to recover the skipped token if there were no error.
+    *   - but we also need to recover the skipped token if there were no errors.
     */
     Token& previous() { return tokens.at(pos - 1); }
 
-    Token& peek(size_t n = 1) {
-        if(pos + n >= tokens.size()) return tokens.back();
+//    Token& peek(size_t n = 1) {
+//        if(pos + n >= tokens.size()) return tokens.back();
+//
+//        return tokens[pos + n];
+//    }
 
-        return tokens[pos + n];
-    }
+    Token& peek(size_t n = 1) { return (pos + n >= tokens.size()) ? tokens.back() : tokens[pos + n]; }
 
     void expect(TokenType t, const std::string& error_msg) {
         if( !is(t) ) {
@@ -87,6 +93,14 @@ class Parser {
         }
 
         ++pos;
+    }
+
+    size_t next_token_with_binding_power() {
+        size_t index = pos;
+
+        while( is(TT::IDENTIFIER) && index < tokens.size() ) ++index;
+
+        return index;
     }
 
     /**
@@ -114,8 +128,8 @@ class Parser {
 
 
     Precedence get_precedence(TokenType t);
-    Expr *parseExpression(Precedence min_prec = Precedence::PREC_NONE);
-    Expr *parse_prefix();
+    Expr *parseExpression(Precedence mbp = Precedence::PREC_DEFAULT);
+    Expr *parse_primary();
     Expr *parse_postfix(Expr *lhs);
 
 

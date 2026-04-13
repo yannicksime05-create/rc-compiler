@@ -3,22 +3,8 @@
 
 Precedence Parser::get_precedence(TokenType t) {
     switch(t) {
-        case TT::PLUS:
-        case TT::MINUS:
-            return Precedence::PREC_TERM;
-
-        case TT::MOD:
-        case TT::STAR:
-        case TT::SLASH:
-            return Precedence::PREC_FACTOR;
-
-        case TT::DOT:
-        case TT::LPAREN:
-        case TT::LBRACKET:
-        case TT::PLUS_PLUS:
-        case TT::MINUS_MINUS:
-            return Precedence::PREC_POSTFIX;
-
+        default:                            return Precedence::PREC_NONE;
+        case TT::COMMA:                     return Precedence::PREC_COMMA;
 
         case TT::ASSIGN:
         case TT::MOD_ASSIGN:
@@ -30,35 +16,34 @@ Precedence Parser::get_precedence(TokenType t) {
         case TT::BIT_AND_ASSIGN:
         case TT::BIT_XOR_ASSIGN:
         case TT::SHIFT_LEFT_ASSIGN:
-        case TT::SHIFT_RIGHT_ASSIGN:
-            return Precedence::PREC_ASSIGNMENT;
+        case TT::SHIFT_RIGHT_ASSIGN:        return Precedence::PREC_ASSIGNMENT;
 
+        case TT::QUESTION:                  return Precedence::PREC_CONDITIONAL;
+        case TT::OR:                        return Precedence::PREC_LOGICAL_OR;
+        case TT::AND:                       return Precedence::PREC_LOGICAL_AND;
 
         case TT::EQUAL:
-        case TT::NOT_EQUAL:
-            return Precedence::PREC_EQUALITY;
+        case TT::NOT_EQUAL:                 return Precedence::PREC_EQUALITY;
 
         case TT::LESS:
         case TT::GREATER:
         case TT::LESS_EQUAL:
-        case TT::GREATER_EQUAL:
-            return Precedence::PREC_COMPARISON;
+        case TT::GREATER_EQUAL:             return Precedence::PREC_COMPARISON;
 
+        case TT::PLUS:
+        case TT::MINUS:                     return Precedence::PREC_TERM;
 
-        case TT::OR:               return Precedence::PREC_LOGICAL_OR;
-        case TT::AND:              return Precedence::PREC_LOGICAL_AND;
+        case TT::MOD:
+        case TT::STAR:
+        case TT::SLASH:                     return Precedence::PREC_FACTOR;
 
-        case TT::BIT_NOT:           return Precedence::PREC_PREFIX;
+        case TT::BIT_NOT:                   return Precedence::PREC_PREFIX;
 
-
-        case TT::COLON:
-        case TT::QUESTION:
-            return Precedence::PREC_CONDITIONAL;
-
-        case TT::COMMA:            return Precedence::PREC_COMMA;
-
-        default:
-            return Precedence::PREC_NONE;
+        case TT::DOT:
+        case TT::LPAREN:
+        case TT::LBRACKET:
+        case TT::PLUS_PLUS:
+        case TT::MINUS_MINUS:               return Precedence::PREC_POSTFIX;
     }
 }
 
@@ -96,63 +81,68 @@ bool Parser::is_postfix_operator(TokenType t) {
     }
 }
 
-Expr *Parser::parseExpression(Precedence min_prec) {
-    Expr *lhs = parse_prefix();
-    if(!lhs)    return nullptr;
+Expr *Parser::parseExpression(Precedence mbp) {
+    Expr *lhs = parse_primary();
+    if(!lhs) return nullptr;
 
-    while( min_prec < get_precedence(current().type) ) {
+    while(true) {
         TokenType t = current().type;
+        Precedence lbp = get_precedence(t);
+        if(lbp < mbp) break;
 
-        if(is_postfix_operator(t)) {
+        Precedence rbp = static_cast<Precedence>( lbp + (is_right_associative(t) ? -1 : 1) );
+        std::cout << "op: " << current().value << " lbp: " << lbp << ", rbp: " << rbp << ", min_bp: " << mbp  << std::endl;
+
+        if( is_postfix_operator(t) ) {
             lhs = parse_postfix(lhs);
             continue;
         }
 
-        Precedence p = get_precedence(t);
-
         if(t == TT::QUESTION) {
             get();
-            Expr *if_true = parseExpression(Precedence::PREC_CONDITIONAL);
-            expect(TT::COLON, "Error: Expected ':' in conditional expression!");
-            Expr *if_false = parseExpression(Precedence::PREC_CONDITIONAL);
-            lhs = new ConditionalExpr(lhs, if_true, if_false);
+            Expr *then_expr = parseExpression();
+            expect(TT::COLON, "Error: Expected ':' in ternary operator!");
+            Expr *else_expr = parseExpression();
+            lhs = new ConditionalExpr(lhs, then_expr, else_expr);
             continue;
         }
 
         Token op = get();
-        Precedence next_prec = static_cast<Precedence>( p + (is_right_associative(current().type) ? 0 : 1) );
-        Expr *rhs = parseExpression(next_prec);
+
+        Expr *rhs = parseExpression(rbp);
         if(!rhs) return nullptr;
 
-        if(p == Precedence::PREC_ASSIGNMENT)    lhs = new AssignmentExpr(lhs, op.value, rhs);
-        else if(p == Precedence::PREC_COMMA)    lhs = new SequenceExpr( {lhs, rhs} );
-        else                                    lhs = new BinaryExpr(lhs, op.value, rhs);
+        if(lbp == Precedence::PREC_ASSIGNMENT)    lhs = new AssignmentExpr(lhs, op.value, rhs);
+        else if(lbp == Precedence::PREC_COMMA)    lhs = new SequenceExpr( {lhs, rhs} );
+        else                                      lhs = new BinaryExpr(lhs, op.value, rhs);
+
     }
 
     return lhs;
 }
 
-Expr *Parser::parse_prefix() {
-    Token t = get();
-    switch(t.type) {
+//NUD
+Expr *Parser::parse_primary() {
+    switch(current().type) {
         case TT::IDENTIFIER:
-            return new IdentifierExpr(t);
+            return new IdentifierExpr( get() );
         case TT::INTEGER:
-            return new IntNumberExpr(std::stod(t.value));
+            return new IntNumberExpr( std::stod(get().value) );
         case TT::FLOAT:
-            return new DecimalNumberExpr(std::stof(t.value));
+            return new DecimalNumberExpr( std::stof(get().value) );
         case TT::STRING:
-            return new StringExpr(t.value);
+            return new StringExpr( get().value );
 
         case TT::MINUS:
         case TT::NOT:
         case TT::BIT_NOT:
         case TT::PLUS_PLUS:
         case TT::MINUS_MINUS:
-            return new UnaryExpr(t.value, parseExpression(Precedence::PREC_PREFIX));
+            return new UnaryExpr(get().value, parseExpression(Precedence::PREC_PREFIX));
 
         case TT::LPAREN: {
-            Expr *e = parseExpression(Precedence::PREC_NONE);
+            get();
+            Expr *e = parseExpression();
             expect(TT::RPAREN, "Error: Expected closing ')' after expression!");
             return e;
         }
@@ -168,10 +158,10 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
         if( !is(TT::RPAREN) ) {
             std::vector<Expr *> args;
-            args.push_back(parseExpression());
+            args.push_back(parseExpression(Precedence::PREC_POSTFIX));
             while( is(TT::COMMA) ) {
                 get();
-                args.push_back(parseExpression());
+                args.push_back(parseExpression(Precedence::PREC_POSTFIX));
             }
             expect(TT::RPAREN, "Error: Expected ')' after argument list");
 
@@ -184,7 +174,7 @@ Expr *Parser::parse_postfix(Expr *lhs) {
     }
     else if( is(TT::LBRACKET) ) {
         get();
-        Expr *index = parseExpression();
+        Expr *index = parseExpression(Precedence::PREC_POSTFIX);
         expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
 
         lhs = new SubscriptExpr(lhs, index);

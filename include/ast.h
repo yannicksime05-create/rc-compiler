@@ -156,7 +156,7 @@ struct AssignmentExpr : Expr {
         target = nullptr;
         delete value;
         value = nullptr;
-        std::cout << "Cleaned up AssignExpr node...\n";
+        std::cout << "Cleaned up AssignmentExpr node...\n";
     }
 };
 
