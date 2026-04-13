@@ -7,42 +7,43 @@
 
 using TT = TokenType;
 
-enum Precedence {
-    PREC_NONE               = -1,
-
-    PREC_DEFAULT            = 0,
-
-    PREC_COMMA              = 1,        // ,
-    PREC_ASSIGNMENT         = 2,       // = += -= ...
-    PREC_CONDITIONAL        = 3,       // ?:
-    PREC_LOGICAL_OR         = 4,       // ||
-    PREC_LOGICAL_AND        = 5,       // &&
-    PREC_EQUALITY           = 6,       // == !=
-    PREC_COMPARISON         = 7,       // < <= > >=
-    PREC_TERM               = 8,       // + -
-    PREC_FACTOR             = 9,       // * / %
-    PREC_PREFIX             = 10,      // - ! ++ --
-    PREC_POSTFIX            = 11       // () [] . ++ --
-};
-
 //enum Precedence {
-//    PREC_NONE = 0,
-//    PREC_COMMA,          // ,
-//    PREC_ASSIGNMENT,     // = += -= *= ...
-//    PREC_CONDITIONAL,    // ?:
-//    PREC_LOGICAL_OR,     // ||
-//    PREC_LOGICAL_AND,    // &&
-//    PREC_BIT_OR,         // |
-//    PREC_BIT_XOR,        // ^
-//    PREC_BIT_AND,        // &
-//    PREC_EQUALITY,       // == !=
-//    PREC_COMPARISON,     // < <= > >=
-//    PREC_SHIFT,          // << >>
-//    PREC_TERM,           // + -
-//    PREC_FACTOR,         // * / %
-//    PREC_PREFIX,         // ! ~ - ++ --
-//    PREC_POSTFIX         // () [] . ++ --
+//    PREC_NONE               = -1,
+//
+//    PREC_DEFAULT            = 0,
+//
+//    PREC_COMMA              = 1,        // ,
+//    PREC_ASSIGNMENT         = 2,       // = += -= ...
+//    PREC_CONDITIONAL        = 3,       // ?:
+//    PREC_LOGICAL_OR         = 4,       // ||
+//    PREC_LOGICAL_AND        = 5,       // &&
+//    PREC_EQUALITY           = 6,       // == !=
+//    PREC_COMPARISON         = 7,       // < <= > >=
+//    PREC_TERM               = 8,       // + -
+//    PREC_FACTOR             = 9,       // * / %
+//    PREC_PREFIX             = 10,      // - ! ++ --
+//    PREC_POSTFIX            = 11       // () [] . ++ --
 //};
+
+enum Precedence {
+    PREC_NONE = -1,
+    PREC_DEFAULT,
+    PREC_COMMA,          // ,
+    PREC_ASSIGNMENT,     // = += -= *= ...
+    PREC_CONDITIONAL,    // ?:
+    PREC_LOGICAL_OR,     // ||
+    PREC_LOGICAL_AND,    // &&
+    PREC_BIT_OR,         // |
+    PREC_BIT_XOR,        // ^
+    PREC_BIT_AND,        // &
+    PREC_EQUALITY,       // == !=
+    PREC_COMPARISON,     // < <= > >=
+    PREC_SHIFT,          // << >>
+    PREC_TERM,           // + -
+    PREC_FACTOR,         // * / %
+    PREC_PREFIX,         // ! ~ - ++ --
+    PREC_POSTFIX         // () [] . ++ --
+};
 
 class ParseError : public std::logic_error {
 
@@ -60,11 +61,7 @@ class Parser {
     size_t pos;
 
 
-//    Token& get() {
-//        if(pos >= tokens.size()) return tokens.back();
-//
-//        return tokens.at(pos++);
-//    }
+    Token& peek(size_t n = 1) { return (pos + n >= tokens.size()) ? tokens.back() : tokens[pos + n]; }
 
     Token& get() { return (pos >= tokens.size()) ? tokens.back() : tokens.at(pos++); }
 
@@ -77,14 +74,6 @@ class Parser {
     */
     Token& previous() { return tokens.at(pos - 1); }
 
-//    Token& peek(size_t n = 1) {
-//        if(pos + n >= tokens.size()) return tokens.back();
-//
-//        return tokens[pos + n];
-//    }
-
-    Token& peek(size_t n = 1) { return (pos + n >= tokens.size()) ? tokens.back() : tokens[pos + n]; }
-
     void expect(TokenType t, const std::string& error_msg) {
         if( !is(t) ) {
             std::stringstream s;
@@ -93,14 +82,6 @@ class Parser {
         }
 
         ++pos;
-    }
-
-    size_t next_token_with_binding_power() {
-        size_t index = pos;
-
-        while( is(TT::IDENTIFIER) && index < tokens.size() ) ++index;
-
-        return index;
     }
 
     /**
@@ -116,7 +97,7 @@ class Parser {
     bool is_assignment_operator() {
         return
         is(TT::ASSIGN) || is(TT::PLUS_ASSIGN) || is(TT::MINUS_ASSIGN) || is(TT::STAR_ASSIGN) || is(TT::SLASH_ASSIGN) || is(TT::MOD_ASSIGN) ||
-        is(TT::BIT_AND_ASSIGN) || is(TT::BIT_OR_ASSIGN) || is(TT::BIT_XOR_ASSIGN) || is(TT::SHIFT_LEFT_ASSIGN) || is(TT::SHIFT_RIGHT_ASSIGN);
+        is(TT::BIT_AND_ASSIGN) || is(TT::BIT_OR_ASSIGN) || is(TT::BIT_XOR_ASSIGN) || is(TT::LEFT_SHIFT_ASSIGN) || is(TT::RIGHT_SHIFT_ASSIGN);
     }
 
     bool is_literal() {

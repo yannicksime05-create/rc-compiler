@@ -1,0 +1,62 @@
+/**
+ * Tue, Apr 14 2026.
+ *
+ * This file contains a list of (basic) expressions the compiler can already handle.
+ * Uncomment one or more of them to see the result.
+ * Feel free to add your own set of expressions and submit them to the compiler. If any error arises, please let me know in
+ * the repo issues.
+ *
+ *	Sime K. Yannick
+*/
+
+
+//Binary Expressions
+//a + b + c;
+//a + b * c;
+//(a + b) * c;
+//a & b;
+
+
+//Unary Expressions
+//prefix:
+//++a;
+//-a;
+//!a;
+//~a;
+//postfix:
+//a++;
+
+
+//Assignment Expressions
+//a = b;
+//a = b = c;
+
+
+//Conditional Expressions
+//b ? 0 : 1;
+//a ? b : c ? d : e;
+
+
+//Call Expressions
+//print(a, b);
+
+
+//Member Access Expressions
+//obj.method;
+
+
+//Subscript Expressions
+//a[i];
+
+
+//Sequence Expressions
+//a, b;
+
+
+//More complex examples
+//a()[3]++;
+//++a.b()[i];
+//a()[3].x++;
+//foo()(1)[2];
+//obj.field.method()(x);
+//a = b ? c & d : e;

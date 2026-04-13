@@ -478,11 +478,11 @@ const Token Lexer::getNextToken() {
                 input.get(); ++column;
                 if(input.peek() == '=') {
                     input.get(); ++column;
-                    t.type = TT::SHIFT_LEFT_ASSIGN;
+                    t.type = TT::LEFT_SHIFT_ASSIGN;
                     t.value = "<<=";
                 }
                 else {
-                    t.type = TT::SHIFT_LEFT;
+                    t.type = TT::LEFT_SHIFT;
                     t.value = "<<";
                 }
             }
@@ -503,11 +503,11 @@ const Token Lexer::getNextToken() {
                 input.get(); ++column;
                 if(input.peek() == '=') {
                     input.get(); ++column;
-                    t.type = TT::SHIFT_RIGHT_ASSIGN;
+                    t.type = TT::RIGHT_SHIFT_ASSIGN;
                     t.value = ">>=";
                 }
                 else {
-                    t.type = TT::SHIFT_RIGHT;
+                    t.type = TT::RIGHT_SHIFT;
                     t.value = ">>";
                 }
             }
@@ -585,7 +585,7 @@ const Token Lexer::getNextToken() {
                 t.value = "^=";
             }
             else {
-                t.type = TT::XOR;
+                t.type = TT::BIT_XOR;
                 t.value = "^";
             }
             break;

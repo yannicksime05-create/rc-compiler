@@ -15,12 +15,16 @@ Precedence Parser::get_precedence(TokenType t) {
         case TT::BIT_OR_ASSIGN:
         case TT::BIT_AND_ASSIGN:
         case TT::BIT_XOR_ASSIGN:
-        case TT::SHIFT_LEFT_ASSIGN:
-        case TT::SHIFT_RIGHT_ASSIGN:        return Precedence::PREC_ASSIGNMENT;
+        case TT::LEFT_SHIFT_ASSIGN:
+        case TT::RIGHT_SHIFT_ASSIGN:        return Precedence::PREC_ASSIGNMENT;
 
         case TT::QUESTION:                  return Precedence::PREC_CONDITIONAL;
         case TT::OR:                        return Precedence::PREC_LOGICAL_OR;
         case TT::AND:                       return Precedence::PREC_LOGICAL_AND;
+
+        case TT::BIT_OR:                    return Precedence::PREC_BIT_OR;
+        case TT::BIT_XOR:                   return Precedence::PREC_BIT_XOR;
+        case TT::BIT_AND:                   return Precedence::PREC_BIT_AND;
 
         case TT::EQUAL:
         case TT::NOT_EQUAL:                 return Precedence::PREC_EQUALITY;
@@ -29,6 +33,9 @@ Precedence Parser::get_precedence(TokenType t) {
         case TT::GREATER:
         case TT::LESS_EQUAL:
         case TT::GREATER_EQUAL:             return Precedence::PREC_COMPARISON;
+
+        case TT::LEFT_SHIFT:
+        case TT::RIGHT_SHIFT:               return Precedence::PREC_SHIFT;
 
         case TT::PLUS:
         case TT::MINUS:                     return Precedence::PREC_TERM;
@@ -48,7 +55,7 @@ Precedence Parser::get_precedence(TokenType t) {
 }
 
 bool Parser::is_right_associative(TokenType t) {
-    switch (t) {
+    switch(t) {
         case TT::ASSIGN:
         case TT::MOD_ASSIGN:
         case TT::STAR_ASSIGN:
@@ -58,8 +65,8 @@ bool Parser::is_right_associative(TokenType t) {
         case TT::BIT_OR_ASSIGN:
         case TT::BIT_AND_ASSIGN:
         case TT::BIT_XOR_ASSIGN:
-        case TT::SHIFT_LEFT_ASSIGN:
-        case TT::SHIFT_RIGHT_ASSIGN:
+        case TT::LEFT_SHIFT_ASSIGN:
+        case TT::RIGHT_SHIFT_ASSIGN:
         case TT::QUESTION: // conditional
             return true;
 
@@ -91,7 +98,7 @@ Expr *Parser::parseExpression(Precedence mbp) {
         if(lbp < mbp) break;
 
         Precedence rbp = static_cast<Precedence>( lbp + (is_right_associative(t) ? -1 : 1) );
-        std::cout << "op: " << current().value << " lbp: " << lbp << ", rbp: " << rbp << ", min_bp: " << mbp  << std::endl;
+//        std::cout << "op: " << current().value << " lbp: " << lbp << ", rbp: " << rbp << ", min_bp: " << mbp  << std::endl;
 
         if( is_postfix_operator(t) ) {
             lhs = parse_postfix(lhs);
