@@ -4,36 +4,8 @@
 #include <iostream>
 #include <vector>
 #include "token.h"
-
-enum class ASTNodeType {
-    PROGRAM,
-
-    INT_LIT_NODE, DECIMAL_LIT_NODE, STRING_LIT_NODE,
-
-    //Expressions Nodes
-    IDENTIFIER_EXPR_NODE, BINARY_EXPR_NODE, UNARY_EXP_NODE, ASSIGNMENT_EXPR_NODE,
-    CONDITIONAL_EXPR_NODE, CALL_EXPR_NODE, MEMBER_ACCESS_EXPR_NODE, SUBSCRIPT_EXPR_NODE,
-    SEQUENCE_EXPR_NODE,
-
-    //Statements Nodes
-    COMP_STMT_NODE, EXPR_STMT_NODE, IF_STMT_NODE, SWITCH_STMT_NODE, WHILE_STMT_NODE,
-    DO_WHILE_STMT_NODE, FOR_STMT_NODE, RETURN_STMT_NODE, DECL_STMT_NODE,
-
-    //Declarations Nodes
-    VAR_DECL_NODE, FUNC_DECL_NODE
-
-};
-
-
-class Visitor;
-
-
-// Base node type — every node inherits from this
-struct ASTNode {
-    ASTNodeType node_type;
-    virtual void accept(Visitor& v) = 0;
-    virtual ~ASTNode() = default;
-};
+#include "ast base.h"
+#include "symbol.h"
 
 /**
 *   We need Stmt inside FunctionDecl, and Decl inside DeclarationStmt,
@@ -41,6 +13,7 @@ struct ASTNode {
 */
 
 struct Expr : ASTNode {
+    Type *resolved_type = nullptr;
 
     Expr(ASTNodeType t) { node_type = t; }
 
@@ -123,6 +96,7 @@ struct StringExpr : Expr {
 
 struct IdentifierExpr : Expr {
     Token name;
+    Symbol *symbol = nullptr;
 
     IdentifierExpr(const Token& n) : Expr(ASTNodeType::IDENTIFIER_EXPR_NODE), name(n) {}
 
@@ -182,7 +156,7 @@ struct AssignmentExpr : Expr {
         target = nullptr;
         delete value;
         value = nullptr;
-        std::cout << "Cleaned up AssignExpr node...\n";
+        std::cout << "Cleaned up AssignmentExpr node...\n";
     }
 };
 
@@ -211,6 +185,7 @@ struct ConditionalExpr : Expr {
 struct CallExpr : Expr {
     Expr *callee = nullptr;
     std::vector<Expr *> arguments;
+    Symbol *symbol = nullptr;
 
     CallExpr(Expr *c, const std::vector<Expr *>& args = std::vector<Expr *>())
         : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {}
@@ -232,6 +207,7 @@ struct CallExpr : Expr {
 struct MemberAccessExpr : Expr {
     Expr *object = nullptr;
     std::string member;
+    Symbol *symbol = nullptr;
 
     MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
 
@@ -248,6 +224,7 @@ struct MemberAccessExpr : Expr {
 struct SubscriptExpr : Expr {
     Expr *object = nullptr;
     Expr *index = nullptr;
+    Symbol *symbol = nullptr;
 
     SubscriptExpr(Expr *o, Expr *i) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), index(i) {}
 
@@ -292,14 +269,13 @@ struct TypeSpecifier {
     std::string type_name;
     bool is_constant;
 
-    TypeSpecifier() {}
-
     TypeSpecifier(const std::string& t, bool c) : type_name(t), is_constant(c) {}
 };
 
 struct VariableDeclarator {
     std::string variable_name;
     Expr *initializer = nullptr;
+    Symbol *symbol = nullptr;
 
     VariableDeclarator(const std::string& n, Expr *i = nullptr) : variable_name(n), initializer(i) {}
 
@@ -312,11 +288,11 @@ struct VariableDeclarator {
 };
 
 struct VariableDecl : Decl {
-    TypeSpecifier variable_type;
+    TypeSpecifier declared_type;
     std::vector<VariableDeclarator *> declarations;
 
     VariableDecl(const TypeSpecifier& t, const std::vector<VariableDeclarator *>& decls)
-        : Decl(ASTNodeType::VAR_DECL_NODE), variable_type(t), declarations(decls) {}
+        : Decl(ASTNodeType::VAR_DECL_NODE), declared_type(t), declarations(decls) {}
 
     void accept(Visitor& v) override;
 
@@ -330,12 +306,32 @@ struct VariableDecl : Decl {
     }
 };
 
+/**
+*   FunctionDecl needs to be aware of this, so that's why it's here instead of in the Stmts section.
+*/
+struct CompoundStmt : Stmt {
+    std::vector<Stmt *> statements;
+
+    CompoundStmt(const std::vector<Stmt *>& s) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {}
+
+    void accept(Visitor& v) override;
+
+    ~CompoundStmt() {
+        for(const Stmt *s : statements) {
+            delete s;
+            s = nullptr;
+        }
+
+        std::cout << "Cleaned up CompoundStmt node...\n";
+    }
+};
+
 struct Parameter {
     TypeSpecifier type_name;
     std::string parameter_name;
     Expr *default_value = nullptr;
 
-    Parameter(const TypeSpecifier& t, const std::string& n, Expr *df = nullptr) : type_name(t), parameter_name(n), default_value(df) {}
+    Parameter(const TypeSpecifier& t, const std::string& n, Expr *dv = nullptr) : type_name(t), parameter_name(n), default_value(dv) {}
 
     ~Parameter() {
         delete default_value;
@@ -350,9 +346,10 @@ struct FunctionDecl : Decl {
     TypeSpecifier return_type;
     std::string function_name;
     std::vector<Parameter *> parameters;
-    Stmt *body = nullptr;
+    CompoundStmt *body = nullptr;
+    Symbol *symbol = nullptr;
 
-    FunctionDecl(const TypeSpecifier& rt, const std::string& n, Stmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
+    FunctionDecl(const TypeSpecifier& rt, const std::string& n, CompoundStmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
         : Decl(ASTNodeType::FUNC_DECL_NODE), return_type(rt), function_name(n), parameters(std::move(p)), body(std::move(b)) {}
 
     void accept(Visitor& v) override;
@@ -376,23 +373,6 @@ struct FunctionDecl : Decl {
 
 
 // --- Statements ---
-struct CompoundStmt : Stmt {
-    std::vector<Stmt *> statements;
-
-    CompoundStmt(const std::vector<Stmt *>& s) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {}
-
-    void accept(Visitor& v) override;
-
-    ~CompoundStmt() {
-        for(const Stmt *s : statements) {
-            delete s;
-            s = nullptr;
-        }
-
-        std::cout << "Cleaned up CompoundStmt node...\n";
-    }
-};
-
 struct ExpressionStmt : Stmt {
     Expr *expression = nullptr;
 
@@ -542,6 +522,28 @@ struct ForStmt : Stmt {
     }
 };
 
+//struct RangeForStmt : Stmt {
+//    VariableDecl *item = nullptr;
+//    Expr *range_initializer = nullptr;
+//    Stmt *body = nullptr;
+//
+//    RangeForStmt(VariableDecl *i, Expr *ri, Stmt *b)
+//        : Stmt(ASTNodeType::RANGE_FOR_STMT_NODE), item(i), range_initializer(ri), body(b) {}
+//
+//    void accept(Visitor& v) override;
+//
+//    ~RangeForStmt() {
+//        delete item;
+//        item = nullptr;
+//        delete range_initializer;
+//        range_initializer = nullptr;
+//        delete body;
+//        body = nullptr;
+//
+//        std::cout << "Cleaned up RangeForStmt node...\n";
+//    }
+//};
+
 struct ReturnStmt : Stmt {
     Expr *expression = nullptr;
 
@@ -577,15 +579,16 @@ public:
     virtual void visit(VariableDecl& d) = 0;
     virtual void visit(FunctionDecl& d) = 0;
 
-    virtual void visit(CompoundStmt& c) = 0;
-    virtual void visit(ExpressionStmt& e) = 0;
-    virtual void visit(DeclarationStmt& d) = 0;
-    virtual void visit(IfStmt& i) = 0;
+    virtual void visit(CompoundStmt& s) = 0;
+    virtual void visit(ExpressionStmt& s) = 0;
+    virtual void visit(DeclarationStmt& s) = 0;
+    virtual void visit(IfStmt& s) = 0;
     virtual void visit(SwitchStmt& s) = 0;
-    virtual void visit(WhileStmt& w) = 0;
-    virtual void visit(DoWhileStmt& dw) = 0;
-    virtual void visit(ForStmt& f) = 0;
-    virtual void visit(ReturnStmt& r) = 0;
+    virtual void visit(WhileStmt& s) = 0;
+    virtual void visit(DoWhileStmt& s) = 0;
+    virtual void visit(ForStmt& s) = 0;
+//    virtual void visit(RangeForStmt& s) = 0;
+    virtual void visit(ReturnStmt& s) = 0;
 
 };
 

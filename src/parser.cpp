@@ -1,191 +1,202 @@
 #include "../include/parser.h"
 #include <sstream>
 
-Expr *Parser::parseExpression() {
-    Expr *e = parse_assignment();
-    if( !is(TT::COMMA) ) return e;
+Precedence Parser::get_precedence(TokenType t) {
+    switch(t) {
+        default:                            return Precedence::PREC_NONE;
+        case TT::COMMA:                     return Precedence::PREC_COMMA;
 
-    std::vector<Expr *> exprs;
-    exprs.push_back(e);
-    while( is(TT::COMMA) ) {
-        get();
-        exprs.push_back(parse_assignment());
+        case TT::ASSIGN:
+        case TT::MOD_ASSIGN:
+        case TT::STAR_ASSIGN:
+        case TT::PLUS_ASSIGN:
+        case TT::MINUS_ASSIGN:
+        case TT::SLASH_ASSIGN:
+        case TT::BIT_OR_ASSIGN:
+        case TT::BIT_AND_ASSIGN:
+        case TT::BIT_XOR_ASSIGN:
+        case TT::LEFT_SHIFT_ASSIGN:
+        case TT::RIGHT_SHIFT_ASSIGN:        return Precedence::PREC_ASSIGNMENT;
+
+        case TT::QUESTION:                  return Precedence::PREC_CONDITIONAL;
+        case TT::OR:                        return Precedence::PREC_LOGICAL_OR;
+        case TT::AND:                       return Precedence::PREC_LOGICAL_AND;
+
+        case TT::BIT_OR:                    return Precedence::PREC_BIT_OR;
+        case TT::BIT_XOR:                   return Precedence::PREC_BIT_XOR;
+        case TT::BIT_AND:                   return Precedence::PREC_BIT_AND;
+
+        case TT::EQUAL:
+        case TT::NOT_EQUAL:                 return Precedence::PREC_EQUALITY;
+
+        case TT::LESS:
+        case TT::GREATER:
+        case TT::LESS_EQUAL:
+        case TT::GREATER_EQUAL:             return Precedence::PREC_COMPARISON;
+
+        case TT::LEFT_SHIFT:
+        case TT::RIGHT_SHIFT:               return Precedence::PREC_SHIFT;
+
+        case TT::PLUS:
+        case TT::MINUS:                     return Precedence::PREC_TERM;
+
+        case TT::MOD:
+        case TT::STAR:
+        case TT::SLASH:                     return Precedence::PREC_FACTOR;
+
+        case TT::BIT_NOT:                   return Precedence::PREC_PREFIX;
+
+        case TT::DOT:
+        case TT::LPAREN:
+        case TT::LBRACKET:
+        case TT::PLUS_PLUS:
+        case TT::MINUS_MINUS:               return Precedence::PREC_POSTFIX;
     }
-
-    return new SequenceExpr(exprs);
 }
 
-Expr *Parser::parse_assignment() { //a = b
-    Expr *target = parse_conditional();
-    if(!target) {
-        std::cout << "target is null" << std::endl;
-        return nullptr;
-    }
-    if( is_assignment_operator() ) {
-//        Token op = get();
-//        Expr *value = parse_assignment();
-        return new AssignmentExpr(target, get().value, parse_assignment());
-    }
+bool Parser::is_right_associative(TokenType t) {
+    switch(t) {
+        case TT::ASSIGN:
+        case TT::MOD_ASSIGN:
+        case TT::STAR_ASSIGN:
+        case TT::PLUS_ASSIGN:
+        case TT::MINUS_ASSIGN:
+        case TT::SLASH_ASSIGN:
+        case TT::BIT_OR_ASSIGN:
+        case TT::BIT_AND_ASSIGN:
+        case TT::BIT_XOR_ASSIGN:
+        case TT::LEFT_SHIFT_ASSIGN:
+        case TT::RIGHT_SHIFT_ASSIGN:
+        case TT::QUESTION: // conditional
+            return true;
 
-    return target;
+        default:
+            return false;
+    }
 }
 
-Expr *Parser::parse_conditional() {
-    Expr *condition = parse_logical_or();
-    if( is(TT::QUESTION) ) {
-        get();
-        Expr *e = parseExpression();
-        expect(TT::COLON, "Error: Expected ':' in conditional operator!");
-        return new ConditionalExpr(condition, e, parse_conditional());
+bool Parser::is_postfix_operator(TokenType t) {
+    switch(t) {
+        case TT::LPAREN:
+        case TT::LBRACKET:
+        case TT::DOT:
+        case TT::PLUS_PLUS:
+        case TT::MINUS_MINUS:
+            return true;
+        default:
+            return false;
     }
-
-    return condition;
 }
 
-Expr *Parser::parse_logical_or() { //a || b
-    Expr *left = parse_logical_and();
-    while( is(TT::OR) ) {
-//        Token op = get();
-//        Expr *right = parse_logical_and();
-
-        left = new BinaryExpr(left, get().value, parse_logical_and());
-    }
-
-    return left;
-}
-
-Expr *Parser::parse_logical_and() {
-    Expr *left = parse_equality();
-    while( is(TT::AND) ) {
-//        Token op = get();
-//        Expr *right = parse_equality();
-
-        left = new BinaryExpr(left, get().value, parse_equality());
-    }
-
-    return left;
-}
-
-Expr *Parser::parse_equality() { //a == b, a != b
-    Expr *left = parse_comparaison();
-    while( is(TT::EQUAL) || is(TT::NOT_EQUAL) ) {
-//        Token op = get();
-//        Expr *right = parse_comparaison();
-
-        left = new BinaryExpr(left, get().value, parse_comparaison());
-    }
-
-    return left;
-}
-
-Expr *Parser::parse_comparaison() {// a < b, a <= b, a > b, a >= b
-    Expr *left = parse_term();
-    while( is(TT::LESS) || is(TT::LESS_EQUAL) || is(TT::GREATER) || is(TT::GREATER_EQUAL) ) {
-//        Token op = get();
-//        Expr *right = parse_term();
-
-        left = new BinaryExpr(left, get().value, parse_term());
-    }
-
-    return left;
-}
-
-Expr *Parser::parse_term() {//a + b, a - b
-    Expr *left = parse_factor();
-    while( is(TT::PLUS) || is(TT::MINUS) ) {
-//        Token op = get();
-//        Expr *right = parse_factor();
-
-        left = new BinaryExpr(left, get().value, parse_factor());
-    }
-
-    return left;
-}
-
-Expr *Parser::parse_factor() {//a * b, a / b, a % b
-    Expr *left = parse_unary();
-    while( is(TT::STAR) || is(TT::SLASH) || is(TT::MOD) ) {
-//        Token op = get();
-//        Expr *right = parse_unary();
-
-        left = new BinaryExpr(left, get().value, parse_unary());
-    }
-
-    return left;
-}
-
-Expr *Parser::parse_unary() {
-    if( is(TT::MINUS) || is(TT::NOT) || is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
-        return new UnaryExpr(get().value, parse_unary());
-    }
-
-    return parse_postfix();
-}
-
-Expr *Parser::parse_postfix() {
-    Expr *primary = parse_primary();
+Expr *Parser::parseExpression(Precedence mbp) {
+    Expr *lhs = parse_primary();
+    if(!lhs) return nullptr;
 
     while(true) {
-        if( is(TT::LPAREN) ) {
+        TokenType t = current().type;
+        Precedence lbp = get_precedence(t);
+        if(lbp < mbp) break;
+
+        Precedence rbp = static_cast<Precedence>( lbp + (is_right_associative(t) ? -1 : 1) );
+//        std::cout << "op: " << current().value << " lbp: " << lbp << ", rbp: " << rbp << ", min_bp: " << mbp  << std::endl;
+
+        if( is_postfix_operator(t) ) {
+            lhs = parse_postfix(lhs);
+            continue;
+        }
+
+        if(t == TT::QUESTION) {
             get();
-            if( is(TT::RPAREN) ) {
-                get();
-                primary = new CallExpr(primary);
-            }
-            else {
-                std::vector<Expr *> args;
-                args.push_back(parse_assignment());
-                while( is(TT::COMMA) ) {
-                    get();
-                    args.push_back(parse_assignment());
-                }
-                expect(TT::RPAREN, "Error: Expected ')' after argument list");
-                primary = new CallExpr(primary, args);
-            }
+            Expr *then_expr = parseExpression();
+            expect(TT::COLON, "Error: Expected ':' in ternary operator!");
+            Expr *else_expr = parseExpression();
+            lhs = new ConditionalExpr(lhs, then_expr, else_expr);
+            continue;
         }
-        else if( is(TT::LBRACKET) ) {
-            get();
-            Expr *index = parseExpression();
-            expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
-            primary = new SubscriptExpr(primary, index);
-        }
-        else if( is(TT::DOT) ) {
-            get();
-            expect(TT::IDENTIFIER, "Error: Expected identifier for member expressions");
-            primary = new MemberAccessExpr(primary, previous().value);
-        }
-        else if( is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
-            primary = new UnaryExpr(get().value, primary, false);
-        }
-        else break;
+
+        Token op = get();
+
+        Expr *rhs = parseExpression(rbp);
+        if(!rhs) return nullptr;
+
+        if(lbp == Precedence::PREC_ASSIGNMENT)    lhs = new AssignmentExpr(lhs, op.value, rhs);
+        else if(lbp == Precedence::PREC_COMMA)    lhs = new SequenceExpr( {lhs, rhs} );
+        else                                      lhs = new BinaryExpr(lhs, op.value, rhs);
+
     }
 
-    return primary;
+    return lhs;
 }
 
+//NUD
 Expr *Parser::parse_primary() {
-    Token t = get();
-    switch(t.type) {
-        case TT::INTEGER:
-            return new IntNumberExpr(std::stoi(t.value));
-        case TT::FLOAT:
-            return new DecimalNumberExpr(std::stod(t.value));
-        case TT::STRING:
-            return new StringExpr(t.value);
+    switch(current().type) {
         case TT::IDENTIFIER:
-            return new IdentifierExpr(t);
+            return new IdentifierExpr( get() );
+        case TT::INTEGER:
+            return new IntNumberExpr( std::stod(get().value) );
+        case TT::FLOAT:
+            return new DecimalNumberExpr( std::stof(get().value) );
+        case TT::STRING:
+            return new StringExpr( get().value );
+
+        case TT::MINUS:
+        case TT::NOT:
+        case TT::BIT_NOT:
+        case TT::PLUS_PLUS:
+        case TT::MINUS_MINUS:
+            return new UnaryExpr(get().value, parseExpression(Precedence::PREC_PREFIX));
+
         case TT::LPAREN: {
             get();
             Expr *e = parseExpression();
-            expect(TT::RPAREN, "Error: Expected closing ')' of primary expression");
+            expect(TT::RPAREN, "Error: Expected closing ')' after expression!");
             return e;
         }
         default:
             std::cerr << "Error: Unknow primary Expression!" << std::endl;
             return nullptr;
     }
+}
 
-    return nullptr;
+Expr *Parser::parse_postfix(Expr *lhs) {
+    if( is(TT::LPAREN) ) {
+        get();
+
+        if( !is(TT::RPAREN) ) {
+            std::vector<Expr *> args;
+            args.push_back(parseExpression(Precedence::PREC_POSTFIX));
+            while( is(TT::COMMA) ) {
+                get();
+                args.push_back(parseExpression(Precedence::PREC_POSTFIX));
+            }
+            expect(TT::RPAREN, "Error: Expected ')' after argument list");
+
+            lhs = new CallExpr(lhs, args);
+        }
+        else {
+            get();
+            lhs = new CallExpr(lhs);
+        }
+    }
+    else if( is(TT::LBRACKET) ) {
+        get();
+        Expr *index = parseExpression(Precedence::PREC_POSTFIX);
+        expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
+
+        lhs = new SubscriptExpr(lhs, index);
+    }
+    else if( is(TT::DOT) ) {
+        get();
+        expect(TT::IDENTIFIER, "Error: Expected identifier for member expressions");
+
+        lhs = new MemberAccessExpr(lhs, previous().value);
+    }
+    else if( is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
+        lhs = new UnaryExpr(get().value, lhs, false);
+    }
+
+    return lhs;
 }
 
 
@@ -196,19 +207,6 @@ Expr *Parser::parse_primary() {
 
 
 Decl *Parser::parseDeclaration() {
-//    size_t n = 1;
-//    /**
-//    *   We loop until we find an identifier.
-//    *   This helps parsing such declarations:
-//    *   - int x;
-//    *   - const int x;
-//    *   - const int square(...) {...}
-//    *   - const int *x;
-//    *   even if there are no pointers (yet).
-//    */
-//    while( !peek(n).is(TT::IDENTIFIER) ) ++n;
-
-
     TypeSpecifier *type = parse_type_specifier();
     expect(TT::IDENTIFIER, "Expected identifier");
 
@@ -219,12 +217,6 @@ Decl *Parser::parseDeclaration() {
         return parse_function_declaration(*type);
     else
         return parse_variable_declaration(*type);
-//
-//
-//    if( peek(n+1).is(TT::LPAREN) )
-//        return parse_function_declaration();
-//    else
-//        return parse_variable_declaration();
 
     return nullptr;
 }
@@ -268,7 +260,7 @@ VariableDeclarator *Parser::parse_variable_declarator(const std::string& tn) {
 
     if( is(TT::ASSIGN) ) {
         get();
-        Expr *init = parse_assignment();
+        Expr *init = parseExpression();
 
         return new VariableDeclarator(name, init);
     }
@@ -277,9 +269,6 @@ VariableDeclarator *Parser::parse_variable_declarator(const std::string& tn) {
 }
 
 FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
-//    TypeSpecifier type = *parse_type_specifier();
-//
-//    expect(TT::IDENTIFIER, "Error: Expected function's name");
     std::string name = get().value;
 
     expect(TT::LPAREN, "Error: Expected '(' after function's name");
@@ -292,15 +281,11 @@ FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
         }
         expect(TT::RPAREN, "Error: Expected ')' after parameter list");
 
-        Stmt *body = parseStatement();
-
-        return new FunctionDecl(type, name, body, parameters);
+        return new FunctionDecl(type, name, parse_compound_statement(), parameters);
     }
     expect(TT::RPAREN, "Error: Expected ')' after parameter list");
 
-    Stmt *body = parseStatement();
-
-    return new FunctionDecl(type, name, body);
+    return new FunctionDecl(type, name, parse_compound_statement());
 }
 
 Parameter *Parser::parse_function_parameters() {
@@ -413,6 +398,7 @@ SwitchStmt *Parser::parse_switch_statement() {
     expect(TT::LPAREN, "Error: Expected '(' after 'switch'");
     Expr *e = parseExpression();
     if(!e) {
+//        throw ParseError("Expected primary-expression after '('");
         std::cerr << "couldn't create switch expression" << std::endl;
         return nullptr;
     }
@@ -486,16 +472,28 @@ DoWhileStmt *Parser::parse_do_while_statement() {
     return new DoWhileStmt(body, condition);
 }
 
-ForStmt *Parser::parse_for_statement() {
-    get();
+//for(int n : v)
+//for(int n = 0; ...)
+//bool Parser::is_rangefor_pattern() {
+//
+//}
 
+Stmt *Parser::dispatch_for_statements() {
+    get();
     expect(TT::LPAREN, "Error: Expected '(' after keyword 'for'");
+
+//    if(is_rangefor_pattern()) return parse_rangefor_statement();
+
+    return parse_for_statement();
+}
+
+ForStmt *Parser::parse_for_statement() {
     Stmt *init = parseStatement();
 //    expect(TT::SEMICOLON, "Error: Expected ';' after for-loop initialization");
 
     Expr *condition = parseExpression();
     if(!condition) {
-        std::cout << "From: parse_for_statement\nError: unable to create desired expression" << std::endl;
+        std::cerr << "From: parse_for_statement\nError: unable to create desired expression" << std::endl;
 //        return nullptr;
     }
     expect(TT::SEMICOLON, "Error: Expected ';' after for-loop condition");
@@ -504,10 +502,16 @@ ForStmt *Parser::parse_for_statement() {
     expect(TT::RPAREN, "Error: Expected ')' after for-loop increment");
 
     Stmt *body = parseStatement();
-//    std::cout << "pos = " << pos << std::endl;
 
     return new ForStmt(init, condition, incr, body);
 }
+
+//RangeForStmt *Parser::parse_rangefor_statement(VariableDecl *v) {
+//    expect(TT::COLON, "");
+//    Expr *range = parseExpression();
+//    expect(TT::RPAREN, "Error: Expected ')' after for-loop");
+//    return new RangeForStmt(v, range, parseStatement());
+//}
 
 ReturnStmt *Parser::parse_return_statement() {
     get();

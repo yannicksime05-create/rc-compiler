@@ -110,6 +110,10 @@ void DoWhileStmt::accept(Visitor& v) {
     v.visit(*this);
 }
 
+//void RangeForStmt::accept(Visitor& v) {
+//    v.visit(*this);
+//}
+
 void ForStmt::accept(Visitor& v) {
     v.visit(*this);
 }

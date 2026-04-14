@@ -204,8 +204,7 @@ void Printer::visit(IdentifierExpr& e) {
 }
 
 void Printer::visit(BinaryExpr& e) {
-    indent(); std::cout << "node type: ";
-    std::cout << "BinaryExpression,\n";
+    indent(); std::cout << "node type: BinaryExpression,\n";
     indent(); std::cout << "operator: \"" << e.op << "\",\n";
     indent(); std::cout << "left: {\n";
     exprs_printer_helper(e.left);
@@ -226,8 +225,7 @@ void Printer::visit(UnaryExpr& e) {
 }
 
 void Printer::visit(AssignmentExpr& e) {
-    indent(); std::cout << "node type: ";
-    std::cout << "AssignmentExpression,\n";
+    indent(); std::cout << "node type: AssignmentExpression,\n";
     indent(); std::cout << "operator: \"" << e.op << "\",\n";
     indent(); std::cout << "target: {\n";
     exprs_printer_helper(e.target);
@@ -387,17 +385,15 @@ void Printer::visit(SequenceExpr& e) {
 
 void Printer::visit(VariableDecl& d) {
     indent(); std::cout << "node type: VariableDeclaration,\n";
-    indent(); std::cout << "type: " << d.variable_type.type_name << ",\n";
+    indent(); std::cout << "type: " << d.declared_type.type_name << ",\n";
     indent(); std::cout << "const: ";
-    d.variable_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
+    d.declared_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
     indent(); std::cout << "identifiers: [\n";
     nspace += tab_length;
     for(const VariableDeclarator *vd : d.declarations) {
         indent(); std::cout << "name: " << vd->variable_name << ",\n";
         indent(); std::cout << "init: ";
-        if(!vd->initializer) {
-            std::cout << "null\n";
-        }
+        if(!vd->initializer) std::cout << "null\n";
         else {
             std::cout << "{\n";
             nspace += tab_length;
@@ -419,9 +415,7 @@ void Printer::visit(FunctionDecl& d) {
     indent(); std::cout << "const: ";
     d.return_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
     indent(); std::cout << "parameters: ";
-    if(d.parameters.empty()) {
-        std::cout << "[],\n";
-    }
+    if(d.parameters.empty()) std::cout << "[],\n";
     else {
         std::cout << "[\n";
         nspace += tab_length;
@@ -588,52 +582,52 @@ void Printer::visit(FunctionDecl& d) {
 //    }
 //}
 
-void Printer::visit(CompoundStmt& c) {
+void Printer::visit(CompoundStmt& s) {
     indent(); std::cout << "node type: CompoundStatement,\n";
     indent(); std::cout << "body: ";
-    if(c.statements.empty()) std::cout << "[]\n";
+    if(s.statements.empty()) std::cout << "[]\n";
     else {
         std::cout << "[\n";
-        for(Stmt *st : c.statements)
+        for(Stmt *st : s.statements)
             stmts_printer_helper(st);
 
         indent(); std::cout << "]\n";
     }
 }
 
-void Printer::visit(ExpressionStmt& e) {
+void Printer::visit(ExpressionStmt& s) {
     indent(); std::cout << "node type: ExpressionStatement,\n";
     indent(); std::cout << "expression: {\n";
-    exprs_printer_helper(e.expression);
+    exprs_printer_helper(s.expression);
     indent(); std::cout << "}\n";
 }
 
-void Printer::visit(DeclarationStmt& d) {
+void Printer::visit(DeclarationStmt& s) {
 //            indent(); std::cout << "node type: DeclarationStatement,\n";
 //            indent(); std::cout << "declarations: {\n";
 //            nspace += tab_length;
 
-    d.declaration->accept(*this);
+    s.declaration->accept(*this);
 //    printDeclaration(d.declaration);
 
 //            nspace -= tab_length;
 //            indent(); std::cout << "}\n";
 }
 
-void Printer::visit(IfStmt& i) {
+void Printer::visit(IfStmt& s) {
     indent(); std::cout << "node type: IfStatement,\n";
     indent(); std::cout << "test: {\n";
-    exprs_printer_helper(i.condition);
+    exprs_printer_helper(s.condition);
     indent(); std::cout << "},\n";
     indent(); std::cout << "then: {\n";
-    stmts_printer_helper(i.then_statement);
-    if(i.else_statement) {
-        indent(); std::cout << "},\n";
-        indent(); std::cout << "else: {\n";
-        stmts_printer_helper(i.else_statement);
+    stmts_printer_helper(s.then_statement);
+    if(!s.else_statement) {
         indent(); std::cout << "}\n";
     }
     else {
+        indent(); std::cout << "},\n";
+        indent(); std::cout << "else: {\n";
+        stmts_printer_helper(s.else_statement);
         indent(); std::cout << "}\n";
     }
 }
@@ -657,49 +651,86 @@ void Printer::visit(SwitchStmt& s) {
     indent(); std::cout << "]\n";
 }
 
-void Printer::visit(WhileStmt& w) {
+void Printer::visit(WhileStmt& s) {
     indent(); std::cout << "node type: WhileStatement,\n";
     indent(); std::cout << "test: {\n";
-    exprs_printer_helper(w.condition);
+    exprs_printer_helper(s.condition);
     indent(); std::cout << "},\n";
     indent(); std::cout << "body: [\n";
-    stmts_printer_helper(w.body);
+    stmts_printer_helper(s.body);
     indent(); std::cout << "]\n";
 }
 
-void Printer::visit(DoWhileStmt& dw) {
+void Printer::visit(DoWhileStmt& s) {
     indent(); std::cout << "node type: DoWhileStatement,\n";
-    indent(); std::cout << "body: [\n";
-    stmts_printer_helper(dw.body);
-    indent(); std::cout << "],\n";
+    indent(); std::cout << "body: ";
+    if(!s.body) std::cout << "[],\n";
+    else {
+        std::cout << "[\n";
+        stmts_printer_helper(s.body);
+        indent(); std::cout << "],\n";
+    }
     indent(); std::cout << "test: {\n";
-    exprs_printer_helper(dw.condition);
+    exprs_printer_helper(s.condition);
     indent(); std::cout << "}\n";
 }
 
-void Printer::visit(ForStmt& f) {
+void Printer::visit(ForStmt& s) {
     indent(); std::cout << "node type: ForStatement,\n";
-    indent(); std::cout << "initialization: {\n";
-    stmts_printer_helper(f.initialization);
-    indent(); std::cout << "},\n";
-    indent(); std::cout << "condition: {\n";
-    exprs_printer_helper(f.condition);
-    indent(); std::cout << "},\n";
-    indent(); std::cout << "increment: {\n";
-    exprs_printer_helper(f.increment);
-    indent(); std::cout << "},\n";
+    indent(); std::cout << "initialization: ";
+    if(!s.initialization) std::cout << "null,\n";
+    else {
+        std::cout << "{\n";
+        stmts_printer_helper(s.initialization);
+        indent(); std::cout << "},\n";
+    }
+    indent(); std::cout << "condition: ";
+    if(!s.condition) std::cout << "null,\n";
+    else {
+        std::cout << "{\n";
+        exprs_printer_helper(s.condition);
+        indent(); std::cout << "},\n";
+    }
+    indent(); std::cout << "increment: ";
+    if(!s.increment) std::cout << "null,\n";
+    else {
+        std::cout << "{\n";
+        exprs_printer_helper(s.increment);
+        indent(); std::cout << "},\n";
+    }
     indent(); std::cout << "body: [\n";
-    stmts_printer_helper(f.body);
+    stmts_printer_helper(s.body);
     indent(); std::cout << "]\n";
 }
 
-void Printer::visit(ReturnStmt& r) {
+//void Printer::visit(RangeForStmt& s) {
+//    indent(); std::cout << "node type: RangeForStatement,\n";
+//    indent(); std::cout << "initialization: ";
+//    if(!s.item) std::cout << "null,\n";
+//    else {
+//        std::cout << "{\n";
+//        s.item->accept(*this);
+//        indent(); std::cout << "},\n";
+//    }
+//    indent(); std::cout << "range: ";
+//    if(!s.range_initializer) std::cout << "null,\n";
+//    else {
+//        std::cout << "{\n";
+//        exprs_printer_helper(s.range_initializer);
+//        indent(); std::cout << "},\n";
+//    }
+//    indent(); std::cout << "body: [\n";
+//    stmts_printer_helper(s.body);
+//    indent(); std::cout << "]\n";
+//}
+
+void Printer::visit(ReturnStmt& s) {
     indent(); std::cout << "node type: ReturnStatement,\n";
     indent(); std::cout << "expression: ";
-    if(!r.expression) std::cout << "null\n";
+    if(!s.expression) std::cout << "null\n";
     else {
         std::cout << "{\n";
-        exprs_printer_helper(r.expression);
+        exprs_printer_helper(s.expression);
         indent(); std::cout << "}\n";
     }
 }
