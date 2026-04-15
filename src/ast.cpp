@@ -25,6 +25,10 @@ void StringExpr::accept(Visitor& v) {
     v.visit(*this);
 }
 
+void BoolExpr::accept(Visitor& v) {
+    v.visit(*this);
+}
+
 void IdentifierExpr::accept(Visitor& v) {
     v.visit(*this);
 }

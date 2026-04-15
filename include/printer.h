@@ -14,16 +14,6 @@ class Printer : public Visitor {
         for(int i = 0; i < nspace; ++i) std::cout << " ";
     }
 
-//    void printExpression(const Expr *expr);
-//    void print_literal_exprs(const Expr *expr);
-//    void print_two_operands_exprs(const Expr *expr);
-
-
-//    void printDeclaration(const Decl *decl);
-//
-//
-//    void printStatement(const Stmt *stmt);
-
 
     void exprs_printer_helper(Expr *e);
     void stmts_printer_helper(Stmt *s);
@@ -51,6 +41,7 @@ public:
     void visit(IntNumberExpr& e) override;
     void visit(DecimalNumberExpr& e) override;
     void visit(StringExpr& e) override;
+    void visit(BoolExpr& e) override;
     void visit(IdentifierExpr& e) override;
     void visit(BinaryExpr& e) override;
     void visit(UnaryExpr& e) override;
@@ -77,4 +68,4 @@ public:
 
 };
 
-#endif // PRINTERS_H
+#endif // PRINTER_H

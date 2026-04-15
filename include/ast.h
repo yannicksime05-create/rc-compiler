@@ -94,6 +94,18 @@ struct StringExpr : Expr {
     }
 };
 
+struct BoolExpr : Expr {
+    bool value;
+
+    BoolExpr(bool v) : Expr(ASTNodeType::BOOL_LIT_NODE), value(v) {}
+
+    void accept(Visitor& v) override;
+
+    ~BoolExpr() {
+        std::cout << "Cleaning up BoolExpr node...\n";
+    }
+};
+
 struct IdentifierExpr : Expr {
     Token name;
     Symbol *symbol = nullptr;
@@ -566,6 +578,7 @@ public:
     virtual void visit(IntNumberExpr& e) = 0;
     virtual void visit(DecimalNumberExpr& e) = 0;
     virtual void visit(StringExpr& e) = 0;
+    virtual void visit(BoolExpr& e) = 0;
     virtual void visit(IdentifierExpr& e) = 0;
     virtual void visit(BinaryExpr& e) = 0;
     virtual void visit(UnaryExpr& e) = 0;

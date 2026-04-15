@@ -140,6 +140,10 @@ Expr *Parser::parse_primary() {
         case TT::STRING:
             return new StringExpr( get().value );
 
+        case TT::KW_FALSE:
+        case TT::KW_TRUE:
+            return new BoolExpr( get().is(TT::KW_TRUE) );
+
         case TT::MINUS:
         case TT::NOT:
         case TT::BIT_NOT:
