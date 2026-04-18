@@ -278,10 +278,10 @@ struct SequenceExpr : Expr {
 
 // ---- Declarations -----
 struct TypeSpecifier {
+    std::vector<std::string> qualifiers;
     std::string type_name;
-    bool is_constant;
 
-    TypeSpecifier(const std::string& t, bool c) : type_name(t), is_constant(c) {}
+    TypeSpecifier(const std::vector<std::string>& qlfs, const std::string& t) : qualifiers(qlfs), type_name(t) {}
 };
 
 struct VariableDeclarator {

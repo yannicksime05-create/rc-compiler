@@ -339,7 +339,22 @@ Token Lexer::handleNumberLiterals() {
     return t;
 }
 
-const Token Lexer::getNextToken() {
+//Token Lexer::handleNumberLiterals() {
+//    Token t;
+//    std::string s(1, c);
+//    bool is_float = c == '.' ? true : false, found_thousands_separator = false;
+//    c = static_cast<unsigned char>(input.get()); ++column;
+//
+//    while( std::isdigit(c) || c == '.' || c == ',' ) {
+//
+//        if(c == ',') found_thousands_separator = true;
+//    }
+//
+//    t.value = s;
+//    return t;
+//}
+
+Token Lexer::getNextToken() {
     Token t;
 
     //On ignore tous les espaces

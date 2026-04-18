@@ -20,22 +20,22 @@ void Printer::visit(Program& p) {
 
 
 void Printer::visit(IntNumberExpr& e) {
-    indent(); std::cout << "node type: Literal,\n";
+    indent(); std::cout << "node type: IntegerLiteral,\n";
     indent(); std::cout << "value: " << e.value << "\n";
 }
 
 void Printer::visit(DecimalNumberExpr& e) {
-    indent(); std::cout << "node type: Literal,\n";
+    indent(); std::cout << "node type: DecimalLiteral,\n";
     indent(); std::cout << "value: " << e.value << "\n";
 }
 
 void Printer::visit(StringExpr& e) {
-    indent(); std::cout << "node type: Literal,\n";
+    indent(); std::cout << "node type: StringLiteral,\n";
     indent(); std::cout << "value: " << e.value << "\n";
 }
 
 void Printer::visit(BoolExpr& e) {
-    indent(); std::cout << "node type: Literal,\n";
+    indent(); std::cout << "node type: BooleanLiteral,\n";
     indent(); std::cout << "value: " << (e.value ? "true\n" : "false\n");
 }
 
@@ -149,8 +149,8 @@ void Printer::visit(SequenceExpr& e) {
 void Printer::visit(VariableDecl& d) {
     indent(); std::cout << "node type: VariableDeclaration,\n";
     indent(); std::cout << "type: " << d.declared_type.type_name << ",\n";
-    indent(); std::cout << "const: ";
-    d.declared_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
+//    indent(); std::cout << "const: ";
+//    d.declared_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
     indent(); std::cout << "identifiers: [\n";
     nspace += tab_length;
     for(const VariableDeclarator *vd : d.declarations) {
@@ -175,8 +175,8 @@ void Printer::visit(FunctionDecl& d) {
     indent(); std::cout << "node type: FunctionDeclaration,\n";
     indent(); std::cout << "name: " << d.function_name << ",\n";
     indent(); std::cout << "return type: " << d.return_type.type_name << ",\n";
-    indent(); std::cout << "const: ";
-    d.return_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
+//    indent(); std::cout << "const: ";
+//    d.return_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
     indent(); std::cout << "parameters: ";
     if(d.parameters.empty()) std::cout << "[],\n";
     else {
@@ -188,8 +188,8 @@ void Printer::visit(FunctionDecl& d) {
             indent(); std::cout << "name: " << p->parameter_name << ",\n";
             indent(); std::cout << "type: " << p->type_name.type_name<< ",\n";
             indent(); std::cout << "const: ";
-            p->type_name.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
-            indent(); std::cout << "default value: ";
+//            p->type_name.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
+//            indent(); std::cout << "default value: ";
             if(p->default_value) {
                 std::cout << "{\n";
                 exprs_printer_helper(p->default_value);
@@ -233,9 +233,13 @@ void Printer::visit(CompoundStmt& s) {
 
 void Printer::visit(ExpressionStmt& s) {
     indent(); std::cout << "node type: ExpressionStatement,\n";
-    indent(); std::cout << "expression: {\n";
-    exprs_printer_helper(s.expression);
-    indent(); std::cout << "}\n";
+    indent(); std::cout << "expression: ";
+    if(s.expression) {
+        std::cout << "{\n";
+        exprs_printer_helper(s.expression);
+        indent(); std::cout << "}\n";
+    }
+    else std::cout << "null\n";
 }
 
 void Printer::visit(DeclarationStmt& s) {

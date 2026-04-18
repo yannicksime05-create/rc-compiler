@@ -66,14 +66,6 @@ struct Token {
     bool is(TokenType t) {
         return type == t;
     }
-
-//    bool isLiteral() {
-//        return type == TokenType::INTEGER || type == TokenType::FLOAT || type == TokenType::STRING;
-//    }
-
-    bool isArithmeticOperator() {
-        return value == "+" || value == "-" || value == "*" || value == "/";
-    }
 };
 
 #endif // TOKEN_H

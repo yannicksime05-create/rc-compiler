@@ -59,7 +59,7 @@ class Lexer {
     Token handleStringLiterals();
     Token handleKeywordsAndIdentifiers();
     Token handleNumberLiterals();
-    const Token getNextToken();
+    Token getNextToken();
 
 
 public:

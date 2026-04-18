@@ -212,69 +212,58 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
 Decl *Parser::parseDeclaration() {
     TypeSpecifier *type = parse_type_specifier();
-    expect(TT::IDENTIFIER, "Expected identifier");
+    expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
 
-    /** If the previous token was actually an identifier, we need to take it back */
-    --pos;
+    std::string name = previous().value;
 
-    if( peek().is(TT::LPAREN) )
-        return parse_function_declaration(*type);
+    if( is(TT::LPAREN) )
+        return parse_function_declaration(*type, name);
     else
-        return parse_variable_declaration(*type);
+        return parse_variable_declaration(*type, name);
 
     return nullptr;
 }
 
 TypeSpecifier *Parser::parse_type_specifier() {
-    bool c = false;
-    if( is(TT::KW_CONST) ) {
-        get();
-        c = true;
-    }
+    std::vector<std::string> qualifiers;
+    while( is(TT::KW_CONST) ) qualifiers.push_back(get().value);
 
-    return new TypeSpecifier(get().value, c);
+//    expect(TT::IDENTIFIER, "Error: Expected type name after qualifiers");
+    if( !is(TT::KW_ANY) && !is(TT::KW_AUTO) && !is(TT::KW_BOOL) && !is(TT::KW_FLOAT) && !is(TT::KW_INT) && !is(TT::KW_STRING) && !is(TT::IDENTIFIER) )
+        throw ParseError("Error: Expected type name after qualifiers");
+
+    std::string base_type = get().value;
+
+    return new TypeSpecifier(qualifiers, base_type);
 }
 
-VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
-//    TypeSpecifier type = *parse_type_specifier();
-
-//    expect(TT::IDENTIFIER, "Expected identifier after type name");
-//
-//    /** If the previous token was actually an identifier, we need to take it back */
-//    --pos;
-
+VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const std::string& name) {
     std::vector<VariableDeclarator *> decls;
-    decls.push_back(parse_variable_declarator(type.type_name));
+    decls.push_back( parse_variable_declarator(type.type_name, name) );
+
     while( is(TT::COMMA) ) {
         get();
-        decls.push_back(parse_variable_declarator(type.type_name));
+        expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
+        decls.push_back(parse_variable_declarator(type.type_name, name));
     }
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
 }
 
-VariableDeclarator *Parser::parse_variable_declarator(const std::string& tn) {
-    std::string name = get().value;
-
-    if(tn == "auto" || tn == "any" || tn == "number") {
+VariableDeclarator *Parser::parse_variable_declarator(const std::string& type_name, const std::string& name) {
+    if( (type_name == "any" || type_name == "auto") && !is(TT::ASSIGN) )
         expect(TT::ASSIGN, "Missing initialization for deduced types!");
-        --pos;
-    }
 
     if( is(TT::ASSIGN) ) {
         get();
-        Expr *init = parseExpression();
-
-        return new VariableDeclarator(name, init);
+        return new VariableDeclarator(name, parseExpression());
     }
 
     return new VariableDeclarator(name);
 }
 
-FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
-    std::string name = get().value;
-
+FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type, const std::string& name) {
     expect(TT::LPAREN, "Error: Expected '(' after function's name");
     if( !is(TT::RPAREN) ) {
         std::vector<Parameter *> parameters;
@@ -325,23 +314,29 @@ Stmt *Parser::parseStatement() {
         case TT::KW_FOR:    return parse_for_statement();
         case TT::KW_RETURN: return parse_return_statement();
 
-        case TT::KW_CONST:
-        case TT::KW_AUTO:
-        case TT::KW_ANY:
-        case TT::KW_INT:
-        case TT::KW_FLOAT:
-        case TT::KW_BOOL:
-        case TT::KW_STRING:
-            return parse_declaration_statement();
         default:
+            if( starts_declaration() ) return parse_declaration_statement();
             return parse_expression_statement();
     }
 
     return nullptr;
 }
 
+bool Parser::starts_declaration() {
+    if( is(TT::KW_CONST) )
+        return true;
+
+    if( is(TT::KW_INT)  || is(TT::KW_FLOAT) || is(TT::KW_DOUBLE) || is(TT::KW_BOOL) ||
+        is(TT::KW_STRING) || is(TT::KW_AUTO) || is(TT::KW_ANY) )
+        return true;
+
+    if( is(TT::IDENTIFIER) && peek().type == TT::IDENTIFIER )
+        return true;
+
+    return false;
+}
+
 CompoundStmt *Parser::parse_compound_statement() {
-//    get();
     expect(TT::LBRACE, "Error: Expected '{' to start compound statement");
 
     std::vector<Stmt *> s;
@@ -354,10 +349,6 @@ CompoundStmt *Parser::parse_compound_statement() {
 
 ExpressionStmt *Parser::parse_expression_statement() {
     Expr *e = parseExpression();
-    if(!e) {
-        std::cerr << "From: parse_expression_statement\nError: unable to create expression" << std::endl;
-        return nullptr;
-    }
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of expression");
     return new ExpressionStmt(e);
 }
