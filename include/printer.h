@@ -63,7 +63,7 @@ public:
     void visit(WhileStmt& s) override;
     void visit(DoWhileStmt& s) override;
     void visit(ForStmt& s) override;
-//    void visit(RangeForStmt& s) override;
+    void visit(RangeForStmt& s) override;
     void visit(ReturnStmt& s) override;
 
 };

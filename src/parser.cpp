@@ -229,7 +229,8 @@ TypeSpecifier *Parser::parse_type_specifier() {
     while( is(TT::KW_CONST) ) qualifiers.push_back(get().value);
 
 //    expect(TT::IDENTIFIER, "Error: Expected type name after qualifiers");
-    if( !is(TT::KW_ANY) && !is(TT::KW_AUTO) && !is(TT::KW_BOOL) && !is(TT::KW_FLOAT) && !is(TT::KW_INT) && !is(TT::KW_STRING) && !is(TT::IDENTIFIER) )
+//    if( !is(TT::KW_ANY) && !is(TT::KW_AUTO) && !is(TT::KW_BOOL) && !is(TT::KW_FLOAT) && !is(TT::KW_INT) && !is(TT::KW_STRING) && !is(TT::IDENTIFIER) )
+    if( !is_primitive_type(pos) && !is(TT::IDENTIFIER) )
         throw ParseError("Error: Expected type name after qualifiers");
 
     std::string base_type = get().value;
@@ -244,7 +245,7 @@ VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, cons
     while( is(TT::COMMA) ) {
         get();
         expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
-        decls.push_back(parse_variable_declarator(type.type_name, name));
+        decls.push_back(parse_variable_declarator(type.type_name, previous().value));
     }
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
@@ -257,7 +258,7 @@ VariableDeclarator *Parser::parse_variable_declarator(const std::string& type_na
 
     if( is(TT::ASSIGN) ) {
         get();
-        return new VariableDeclarator(name, parseExpression());
+        return new VariableDeclarator(name, parseExpression(Precedence::PREC_ASSIGNMENT));
     }
 
     return new VariableDeclarator(name);
@@ -289,7 +290,7 @@ Parameter *Parser::parse_function_parameters() {
 
     if( is(TT::ASSIGN) ) {
         get();
-        Expr *default_value = parseExpression();
+        Expr *default_value = parseExpression(Precedence::PREC_ASSIGNMENT);
 
         return new Parameter(type, name, default_value);
     }
@@ -311,7 +312,7 @@ Stmt *Parser::parseStatement() {
         case TT::KW_SWITCH: return parse_switch_statement();
         case TT::KW_WHILE:  return parse_while_statement();
         case TT::KW_DO:     return parse_do_while_statement();
-        case TT::KW_FOR:    return parse_for_statement();
+        case TT::KW_FOR:    return dispatch_for_statements();
         case TT::KW_RETURN: return parse_return_statement();
 
         default:
@@ -326,8 +327,7 @@ bool Parser::starts_declaration() {
     if( is(TT::KW_CONST) )
         return true;
 
-    if( is(TT::KW_INT)  || is(TT::KW_FLOAT) || is(TT::KW_DOUBLE) || is(TT::KW_BOOL) ||
-        is(TT::KW_STRING) || is(TT::KW_AUTO) || is(TT::KW_ANY) )
+    if( is_primitive_type(pos) )
         return true;
 
     if( is(TT::IDENTIFIER) && peek().type == TT::IDENTIFIER )
@@ -467,46 +467,64 @@ DoWhileStmt *Parser::parse_do_while_statement() {
     return new DoWhileStmt(body, condition);
 }
 
-//for(int n : v)
-//for(int n = 0; ...)
-//bool Parser::is_rangefor_pattern() {
-//
-//}
+bool Parser::is_rangefor_pattern() {
+    size_t i = pos;
+
+    if(i < tokens.size() && tokens[i].type == TT::KW_CONST) ++i;
+
+    if(i < tokens.size() && (is_primitive_type(i) || tokens[i].type == TT::IDENTIFIER)) ++i;
+    else return false;
+
+    if(i < tokens.size() && tokens[i].type == TT::IDENTIFIER) ++i;
+    else return false;
+
+    return (i < tokens.size() && tokens[i].type == TT::COLON);
+}
 
 Stmt *Parser::dispatch_for_statements() {
     get();
     expect(TT::LPAREN, "Error: Expected '(' after keyword 'for'");
 
-//    if(is_rangefor_pattern()) return parse_rangefor_statement();
-
+    if(is_rangefor_pattern()) return parse_rangefor_statement();
     return parse_for_statement();
 }
 
 ForStmt *Parser::parse_for_statement() {
     Stmt *init = parseStatement();
-//    expect(TT::SEMICOLON, "Error: Expected ';' after for-loop initialization");
 
     Expr *condition = parseExpression();
-    if(!condition) {
-        std::cerr << "From: parse_for_statement\nError: unable to create desired expression" << std::endl;
-//        return nullptr;
-    }
     expect(TT::SEMICOLON, "Error: Expected ';' after for-loop condition");
 
     Expr *incr = parseExpression();
     expect(TT::RPAREN, "Error: Expected ')' after for-loop increment");
 
     Stmt *body = parseStatement();
-
     return new ForStmt(init, condition, incr, body);
 }
 
-//RangeForStmt *Parser::parse_rangefor_statement(VariableDecl *v) {
-//    expect(TT::COLON, "");
-//    Expr *range = parseExpression();
-//    expect(TT::RPAREN, "Error: Expected ')' after for-loop");
-//    return new RangeForStmt(v, range, parseStatement());
-//}
+VariableDecl *Parser::parse_rangefor_variable() {
+    TypeSpecifier type = *parse_type_specifier();
+
+    VariableDeclarator *vd = parse_variable_declarator(type.type_name, get().value);
+    const std::vector<VariableDeclarator*> decl = {vd};
+
+    return new VariableDecl(type, decl);
+}
+
+RangeForStmt *Parser::parse_rangefor_statement() {
+    VariableDecl *v = parse_rangefor_variable();
+    expect(TT::COLON, "Error: Expected ':' in range-for statement");
+
+    Expr *range = parseExpression();
+    expect(TT::RPAREN, "Error: Expected ')' after range-for expression");
+
+    Stmt *body = parseStatement();
+    if(!body) {
+        std::cerr << "From: parse_rangefor_statement\nError: unable to parse body" << std::endl;
+    }
+
+    return new RangeForStmt(v, range, body);
+}
 
 ReturnStmt *Parser::parse_return_statement() {
     get();

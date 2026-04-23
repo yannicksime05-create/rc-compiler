@@ -100,8 +100,10 @@ class Parser {
         is(TT::BIT_AND_ASSIGN) || is(TT::BIT_OR_ASSIGN) || is(TT::BIT_XOR_ASSIGN) || is(TT::LEFT_SHIFT_ASSIGN) || is(TT::RIGHT_SHIFT_ASSIGN);
     }
 
-    bool is_literal() {
-        return is(TT::INTEGER) || is(TT::FLOAT) || is(TT::STRING);
+    bool is_primitive_type(size_t i) {
+        return tokens[i].type == TT::KW_INT    || tokens[i].type == TT::KW_FLOAT ||
+               tokens[i].type == TT::KW_DOUBLE || tokens[i].type == TT::KW_BOOL  ||
+               tokens[i].type == TT::KW_STRING || tokens[i].type == TT::KW_AUTO  || tokens[i].type == TT::KW_ANY;
     }
 
     bool is_right_associative(TokenType t);
@@ -138,9 +140,11 @@ class Parser {
     WhileStmt           *parse_while_statement();
     DoWhileStmt         *parse_do_while_statement();
 
+    bool                 is_rangefor_pattern();
     Stmt                *dispatch_for_statements();
     ForStmt             *parse_for_statement();
-//    RangeForStmt        *parse_rangefor_statement(VariableDecl *v);
+    VariableDecl        *parse_rangefor_variable();
+    RangeForStmt        *parse_rangefor_statement();
 
     ReturnStmt          *parse_return_statement();
 
