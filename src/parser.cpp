@@ -413,17 +413,21 @@ SwitchStmt *Parser::parse_switch_statement() {
 }
 
 CaseClause *Parser::parse_case_clause() {
-    expect(TT::KW_CASE, "Error: Expected 'case'");
-    Expr *e = parseExpression();
-    if(!e) {
-        std::cerr << "couldn't create case expression" << std::endl;
-        return nullptr;
+    Expr *e = nullptr;
+
+    //token = TT::KW_DEFAULT
+    if( !is(TT::KW_CASE) ) get();
+    else {
+        get();
+        e = parseExpression();
+        if(!e) {
+            std::cerr << "Error: Expected primary-expression after keyword 'case'" << std::endl;
+            return nullptr;
+        }
     }
-    expect(TT::COLON, "Error: Expected ':' after case expression");
 
-    CompoundStmt *body = parse_compound_statement();
-
-    return new CaseClause(e, body);
+    expect(TT::COLON, "Error: Expected ':' after case/default label");
+    return new CaseClause(e, parse_compound_statement());
 }
 
 WhileStmt *Parser::parse_while_statement() {
@@ -516,6 +520,7 @@ RangeForStmt *Parser::parse_rangefor_statement() {
     expect(TT::COLON, "Error: Expected ':' in range-for statement");
 
     Expr *range = parseExpression();
+    if(!range) throw ParseError("Error: Expected primary-expression before ')'");
     expect(TT::RPAREN, "Error: Expected ')' after range-for expression");
 
     Stmt *body = parseStatement();
