@@ -77,7 +77,9 @@ class Parser {
     void expect(TokenType t, const std::string& error_msg) {
         if( !is(t) ) {
             std::stringstream s;
-            s << error_msg << " found: '" << current().value << "' instead! At line: " << current().loc.line << ", Column: " << current().loc.col;
+            s << error_msg << " found: "
+            << current().value << " instead. Spans from: line " << current().start.line << ", col " << current().start.col
+            << ", to: line " << current().end.line << ", col " << current().end.col;
             throw ParseError(s.str());
         }
 

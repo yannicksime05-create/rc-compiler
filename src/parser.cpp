@@ -134,7 +134,7 @@ Expr *Parser::parse_primary() {
         case TT::IDENTIFIER:
             return new IdentifierExpr( get() );
         case TT::INTEGER:
-            return new IntNumberExpr( std::stod(get().value) );
+            return new IntNumberExpr( std::stoi(get().value) );
         case TT::FLOAT:
             return new DecimalNumberExpr( std::stof(get().value) );
         case TT::STRING:

@@ -59,9 +59,8 @@ struct Location {
 struct Token {
     TokenType type;
     std::string value;
-//    Location start;
-//    Location end;
-    Location loc;
+    Location start;
+    Location end;
 
     bool is(TokenType t) {
         return type == t;
