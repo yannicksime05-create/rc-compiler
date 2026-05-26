@@ -239,7 +239,6 @@ TypeSpecifier *Parser::parse_type_specifier() {
     return new TypeSpecifier(qualifiers, base_type);
 }
 
-
 VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const Token& name) {
     std::vector<VariableDeclarator *> decls;
     decls.push_back( parse_variable_declarator(type.type_name, name) );

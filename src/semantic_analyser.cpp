@@ -1,4 +1,4 @@
-#include "../include/semantic analyser.h"
+#include "../include/semantic_analyser.h"
 
 using TT = TokenType;
 //
@@ -466,10 +466,6 @@ void SemanticAnalyser::visit(SubscriptExpr& e) {
         throw SemanticError(ss.str());
     }
 
-    float arr[2] = {1, 2, 3};
-
-//    float arr[2] = {1.0f, 2.0f};
-//    arr[1.0];
 }
 
 void SemanticAnalyser::visit(SequenceExpr& e) {
