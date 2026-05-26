@@ -374,13 +374,13 @@ Token Lexer::next_token() {
             }
             break;
         case '?':
-            t.type = TT::QUESTION;
+            t.type = TT::CONDITIONAL;
             t.value = "?";
             break;
         case '+':
             if(input.peek() == '+') {
                 get();
-                t.type = TT::PLUS_PLUS;
+                t.type = TT::INCREMENT;
                 t.value = "++";
             }
             else if(input.peek() == '=') {
@@ -396,7 +396,7 @@ Token Lexer::next_token() {
         case '-':
             if(input.peek() == '-') {
                 get();
-                t.type = TT::MINUS_MINUS;
+                t.type = TT::DECREMENT;
                 t.value = "--";
             }
             else if(input.peek() == '=') {

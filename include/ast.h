@@ -121,11 +121,12 @@ struct IdentifierExpr : Expr {
 
 struct BinaryExpr : Expr {
     Expr* left = nullptr;
-    std::string op;
+//    std::string op;
+    Token op;
     Expr* right = nullptr;
 
-    BinaryExpr(Expr* l, const std::string& o, Expr* r)
-        : Expr(ASTNodeType::BINARY_EXPR_NODE), left(l), op(std::move(o)), right(r) {}
+    BinaryExpr(Expr* l, const Token& o, Expr* r)
+        : Expr(ASTNodeType::BINARY_EXPR_NODE), left(l), op(o), right(r) {}
 
     void accept(Visitor& v) override;
 
@@ -140,10 +141,11 @@ struct BinaryExpr : Expr {
 
 struct UnaryExpr : Expr {
     bool is_prefix;            //true if ++a, false if a++
-    std::string op;
+//    std::string op;
+    Token op;
     Expr *expr = nullptr;
 
-    UnaryExpr(std::string& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
+    UnaryExpr(const Token& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
 
     void accept(Visitor& v) override;
 
@@ -155,11 +157,12 @@ struct UnaryExpr : Expr {
 };
 
 struct AssignmentExpr : Expr {
-    Expr* target = nullptr;        // usually a VariableExpr
-    std::string op;                // "=" or "+=", "-=", etc.
+    Expr* target = nullptr;        // usually an IdentifierExpr
+//    std::string op;
+    Token op;                       // "=" or "+=", "-=", etc.
     Expr* value = nullptr;         // the right-hand side expression
 
-    AssignmentExpr(Expr* t, const std::string& o, Expr* v) : Expr(ASTNodeType::ASSIGNMENT_EXPR_NODE), target(t), op(o), value(v) {}
+    AssignmentExpr(Expr* t, const Token& o, Expr* v) : Expr(ASTNodeType::ASSIGNMENT_EXPR_NODE), target(t), op(o), value(v) {}
 
     void accept(Visitor& v) override;
 
@@ -211,6 +214,8 @@ struct CallExpr : Expr {
             delete e;
             e = nullptr;
         }
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up CallExpr node...\n";
     }
@@ -218,16 +223,19 @@ struct CallExpr : Expr {
 
 struct MemberAccessExpr : Expr {
     Expr *object = nullptr;
-    std::string member;
+//    std::string member;
+    Token member;
     Symbol *symbol = nullptr;
 
-    MemberAccessExpr(Expr *obj, const std::string& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
+    MemberAccessExpr(Expr *obj, const Token& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
 
     void accept(Visitor& v) override;
 
     ~MemberAccessExpr() {
         delete object;
         object = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up MemberAccessExpr node...\n";
     }
@@ -247,6 +255,8 @@ struct SubscriptExpr : Expr {
         object = nullptr;
         delete index;
         index = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up SubscriptExpr node...\n";
     }
@@ -285,15 +295,18 @@ struct TypeSpecifier {
 };
 
 struct VariableDeclarator {
-    std::string variable_name;
+//    std::string variable_name;
+    Token variable_name;
     Expr *initializer = nullptr;
     Symbol *symbol = nullptr;
 
-    VariableDeclarator(const std::string& n, Expr *i = nullptr) : variable_name(n), initializer(i) {}
+    VariableDeclarator(const Token& n, Expr *i = nullptr) : variable_name(n), initializer(i) {}
 
     ~VariableDeclarator() {
         delete initializer;
         initializer = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up VariableDeclarator...\n";
     }
@@ -340,14 +353,18 @@ struct CompoundStmt : Stmt {
 
 struct Parameter {
     TypeSpecifier type_name;
-    std::string parameter_name;
+//    std::string parameter_name;
+    Token parameter_name;
     Expr *default_value = nullptr;
+    Symbol *symbol = nullptr;
 
-    Parameter(const TypeSpecifier& t, const std::string& n, Expr *dv = nullptr) : type_name(t), parameter_name(n), default_value(dv) {}
+    Parameter(const TypeSpecifier& t, const Token& n, Expr *dv = nullptr) : type_name(t), parameter_name(n), default_value(dv) {}
 
     ~Parameter() {
         delete default_value;
         default_value = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaning up Param...\n";
     }
@@ -356,23 +373,26 @@ struct Parameter {
 // --- Function Declaration Node ---
 struct FunctionDecl : Decl {
     TypeSpecifier return_type;
-    std::string function_name;
+//    std::string function_name;
+    Token function_name;
     std::vector<Parameter *> parameters;
     CompoundStmt *body = nullptr;
     Symbol *symbol = nullptr;
 
-    FunctionDecl(const TypeSpecifier& rt, const std::string& n, CompoundStmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
+    FunctionDecl(const TypeSpecifier& rt, const Token& n, CompoundStmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
         : Decl(ASTNodeType::FUNC_DECL_NODE), return_type(rt), function_name(n), parameters(std::move(p)), body(std::move(b)) {}
 
     void accept(Visitor& v) override;
 
     ~FunctionDecl() {
-        delete body;
-        body = nullptr;
         for(const Parameter *p : parameters) {
             delete p;
             p = nullptr;
         }
+        delete body;
+        body = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up FunctionDecl...\n";
     }

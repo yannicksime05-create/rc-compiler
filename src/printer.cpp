@@ -46,7 +46,7 @@ void Printer::visit(IdentifierExpr& e) {
 
 void Printer::visit(BinaryExpr& e) {
     indent(); std::cout << "node type: BinaryExpression,\n";
-    indent(); std::cout << "operator: \"" << e.op << "\",\n";
+    indent(); std::cout << "operator: \"" << e.op.value << "\",\n";
     indent(); std::cout << "left: {\n";
     exprs_printer_helper(e.left);
     indent(); std::cout << "},\n";
@@ -57,7 +57,7 @@ void Printer::visit(BinaryExpr& e) {
 
 void Printer::visit(UnaryExpr& e) {
     indent(); std::cout << "node type: UnaryExpression,\n";
-    indent(); std::cout << "operator: \"" << e.op << "\",\n";
+    indent(); std::cout << "operator: \"" << e.op.value << "\",\n";
     indent(); std::cout << "prefix: ";
     e.is_prefix ? (std::cout << "true,\n") : (std::cout << "false,\n");
     indent(); std::cout << "expression: {\n";
@@ -67,7 +67,7 @@ void Printer::visit(UnaryExpr& e) {
 
 void Printer::visit(AssignmentExpr& e) {
     indent(); std::cout << "node type: AssignmentExpression,\n";
-    indent(); std::cout << "operator: \"" << e.op << "\",\n";
+    indent(); std::cout << "operator: \"" << e.op.value << "\",\n";
     indent(); std::cout << "target: {\n";
     exprs_printer_helper(e.target);
     indent(); std::cout << "},\n";
@@ -112,7 +112,7 @@ void Printer::visit(MemberAccessExpr& e) {
     indent(); std::cout << "object: {\n";
     exprs_printer_helper(e.object);
     indent(); std::cout << "}\n";
-    indent(); std::cout << "property: " << e.member << "\n";
+    indent(); std::cout << "property: " << e.member.value << "\n";
 //    indent(); std::cout << "}\n";
 }
 
@@ -148,13 +148,17 @@ void Printer::visit(SequenceExpr& e) {
 //
 void Printer::visit(VariableDecl& d) {
     indent(); std::cout << "node type: VariableDeclaration,\n";
+    indent(); std::cout << "qualifiers: ";
+    if(d.declared_type.qualifiers.empty()) std::cout << "none,\n";
+    else {
+        for(const std::string& q : d.declared_type.qualifiers) std::cout << q << ",";
+        std::cout << "\n";
+    }
     indent(); std::cout << "type: " << d.declared_type.type_name << ",\n";
-//    indent(); std::cout << "const: ";
-//    d.declared_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
     indent(); std::cout << "identifiers: [\n";
     nspace += tab_length;
     for(const VariableDeclarator *vd : d.declarations) {
-        indent(); std::cout << "name: " << vd->variable_name << ",\n";
+        indent(); std::cout << "name: " << vd->variable_name.value << ",\n";
         indent(); std::cout << "init: ";
         if(!vd->initializer) std::cout << "null\n";
         else {
@@ -173,10 +177,14 @@ void Printer::visit(VariableDecl& d) {
 
 void Printer::visit(FunctionDecl& d) {
     indent(); std::cout << "node type: FunctionDeclaration,\n";
-    indent(); std::cout << "name: " << d.function_name << ",\n";
+    indent(); std::cout << "name: " << d.function_name.value << ",\n";
+    indent(); std::cout << "qualifiers: ";
+    if(d.return_type.qualifiers.empty()) std::cout << "none,\n";
+    else {
+        for(const std::string& q : d.return_type.qualifiers) std::cout << q << ",";
+        std::cout << "\n";
+    }
     indent(); std::cout << "return type: " << d.return_type.type_name << ",\n";
-//    indent(); std::cout << "const: ";
-//    d.return_type.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
     indent(); std::cout << "parameters: ";
     if(d.parameters.empty()) std::cout << "[],\n";
     else {
@@ -185,7 +193,7 @@ void Printer::visit(FunctionDecl& d) {
         for(const Parameter *p : d.parameters) {
             indent(); std::cout << "identifier: {\n";
             nspace += tab_length;
-            indent(); std::cout << "name: " << p->parameter_name << ",\n";
+            indent(); std::cout << "name: " << p->parameter_name.value<< ",\n";
             indent(); std::cout << "type: " << p->type_name.type_name<< ",\n";
             indent(); std::cout << "const: ";
 //            p->type_name.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");

@@ -9,6 +9,7 @@ enum class TypeKind {
     FUNCTION,
     AUTO,
     ANY,
+    ARRAY,
     UNKNOWN
 };
 
@@ -35,7 +36,21 @@ struct Type {
 //    bool is_auto_resolved = false;
 
     BuiltinTypes builtin;
+    Type *element_type = nullptr; //When kind = ARRAY
 //    FunctionTypes *function_data = nullptr;
+
+    Type() {}
+    Type(TypeKind tk, BuiltinTypes b, bool constness = true) : kind(tk), is_constant(constness), builtin(b) {}
+    //Array type constructor
+    Type(TypeKind tk, Type *elt_type) {
+        kind = tk;
+        element_type = elt_type;
+
+        if(!element_type) {
+//            element_type = new Type(TypeKind::UNKNOWN);
+        }
+    }
+
 };
 
 enum class SymbolType {
@@ -57,8 +72,8 @@ struct Symbol {
     ~Symbol() {
         delete declared_type;
         declared_type = nullptr;
-        delete declaration;
-        declaration = nullptr;
+
+//        std::cout << "Cleaning symbol...\n";
     }
 };
 

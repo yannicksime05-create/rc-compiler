@@ -34,6 +34,6 @@ postfix                 ::= primary
 
 argument-list           ::= expression { "," expression }
 
-primary                 ::= literal
-                            | identifier
-                            | "(" expression ")"
+primary                 ::= literal | identifier | "(" expression ")"
+
+literal                 ::= NUMBER  | STRING | "true" | "false"
