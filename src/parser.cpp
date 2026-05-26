@@ -239,33 +239,22 @@ TypeSpecifier *Parser::parse_type_specifier() {
     return new TypeSpecifier(qualifiers, base_type);
 }
 
-<<<<<<< Updated upstream
-VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const std::string& name) {
-=======
+
 VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const Token& name) {
->>>>>>> Stashed changes
     std::vector<VariableDeclarator *> decls;
     decls.push_back( parse_variable_declarator(type.type_name, name) );
 
     while( is(TT::COMMA) ) {
         get();
         expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
-<<<<<<< Updated upstream
-        decls.push_back(parse_variable_declarator(type.type_name, previous().value));
-=======
         decls.push_back(parse_variable_declarator(type.type_name, previous()));
->>>>>>> Stashed changes
     }
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
 }
 
-<<<<<<< Updated upstream
-VariableDeclarator *Parser::parse_variable_declarator(const std::string& type_name, const std::string& name) {
-=======
 VariableDeclarator *Parser::parse_variable_declarator(const std::string& type_name, const Token& name) {
->>>>>>> Stashed changes
     if( (type_name == "any" || type_name == "auto") && !is(TT::ASSIGN) )
         expect(TT::ASSIGN, "Missing initialization for deduced types!");
 
@@ -277,11 +266,7 @@ VariableDeclarator *Parser::parse_variable_declarator(const std::string& type_na
     return new VariableDeclarator(name);
 }
 
-<<<<<<< Updated upstream
-FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type, const std::string& name) {
-=======
 FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type, const Token& name) {
->>>>>>> Stashed changes
     expect(TT::LPAREN, "Error: Expected '(' after function's name");
     if( !is(TT::RPAREN) ) {
         std::vector<Parameter *> parameters;
@@ -527,11 +512,7 @@ ForStmt *Parser::parse_for_statement() {
 VariableDecl *Parser::parse_rangefor_variable() {
     TypeSpecifier type = *parse_type_specifier();
 
-<<<<<<< Updated upstream
-    VariableDeclarator *vd = parse_variable_declarator(type.type_name, get().value);
-=======
     VariableDeclarator *vd = parse_variable_declarator(type.type_name, get());
->>>>>>> Stashed changes
     const std::vector<VariableDeclarator*> decl = {vd};
 
     return new VariableDecl(type, decl);
