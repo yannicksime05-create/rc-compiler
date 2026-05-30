@@ -167,36 +167,38 @@ enum class FloatState {
     SUFFIX,          // reading the type suffix — must be the last character
 };
 
-const char *state_to_string(FloatState s) {
-    switch(s) {
-        case FloatState::INTEGER_PART:          return "integer_part";
-        case FloatState::AFTER_DOT:             return "after_dot";
-        case FloatState::FRACTION_PART:         return "fraction_part";
-        case FloatState::AFTER_E:               return "after_e";
-        case FloatState::AFTER_SIGN:            return "after_sign";
-        case FloatState::EXPONENT_PART:         return "exponent_part";
-        case FloatState::SUFFIX:                return "suffix";
-    }
-
-    return "";
-}
+//For debugging purposes
+//const char *state_to_string(FloatState s) {
+//    switch(s) {
+//        case FloatState::INTEGER_PART:          return "integer_part";
+//        case FloatState::AFTER_DOT:             return "after_dot";
+//        case FloatState::FRACTION_PART:         return "fraction_part";
+//        case FloatState::AFTER_E:               return "after_e";
+//        case FloatState::AFTER_SIGN:            return "after_sign";
+//        case FloatState::EXPONENT_PART:         return "exponent_part";
+//        case FloatState::SUFFIX:                return "suffix";
+//    }
+//
+//    return "";
+//}
 
 void Lexer::base10_or_float_numbers(Token& t, std::string& s) {
     bool has_dot = c == '.' ? true : false, has_e = false, is_float, has_l = false, has_ll = false, has_u = false;
     FloatState state = has_dot ? FloatState::AFTER_DOT : FloatState::INTEGER_PART;
 
-    char prev, next;
-    c = static_cast<char>(get());
-    while(  c == '.'                                  ||
-            std::isdigit(c)                           ||
-            c == '+' || c == '-'                      ||
-            c == 'e' || c == 'E'                      ||
-            c == 'l' || c == 'L'                      ||
-            ( is_float && (c == 'f' || c == 'F') )    ||
-            ( !is_float && (c == 'u' || c == 'U') )
+    is_float = has_dot || has_e;
+    char next = input.peek();
+    while(  next == '.'                                     ||
+            std::isdigit(next)                              ||
+            next == '+' || next == '-'                      ||
+            next == 'e' || next == 'E'                      ||
+            next == 'l' || next == 'L'                      ||
+            ( is_float && (next == 'f' || next == 'F') )    ||
+            ( !is_float && (next == 'u' || next == 'U') )
         )
     {
 
+        c = static_cast<char>(get());
 //        std::cout << "s = " << s << ", c = " << c << ", state = " << state_to_string(state) << std::endl;
         is_float = has_dot || has_e;
         s += c;
@@ -242,7 +244,7 @@ void Lexer::base10_or_float_numbers(Token& t, std::string& s) {
             error(t, s, "Error: exponent has no digits");
             return;
         }
-        else if(is_float && state == FloatState::SUFFIX && (next == 'l' || next == 'L' || next == 'f' || next == 'F')) {
+        else if(is_float && state == FloatState::SUFFIX && (std::tolower(next) == 'l' || std::tolower(next) == 'f')) {
             t.end = {column, line};
             error(t, s, "Float literal has more than one suffix");
             return;
@@ -269,11 +271,7 @@ void Lexer::base10_or_float_numbers(Token& t, std::string& s) {
             return;
         }
 
-
-        prev = c;
-        c = get();
     }
-    input.unget(); --column;
 
     t.type = is_float ? TT::FLOAT : TT::INTEGER;
     t.value = s;
@@ -313,7 +311,6 @@ Token Lexer::numbers() {
         }
     }
 
-//    scan_decimal_or_float(t, s, c == '.' ? true : false);
     base10_or_float_numbers(t, s);
     return t;
 }
