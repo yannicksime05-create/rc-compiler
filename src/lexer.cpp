@@ -391,7 +391,10 @@ Token Lexer::next_token() {
             }
             break;
         case '-':
-            if(input.peek() == '-') {
+            if( std::isdigit(input.peek()) || input.peek() == '.' ) {
+                t = numbers();
+            }
+            else if(input.peek() == '-') {
                 get();
                 t.type = TT::DECREMENT;
                 t.value = "--";
