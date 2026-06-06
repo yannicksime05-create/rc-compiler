@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "ast.h"
+#include "scope.h"
 
 using ANT = ASTNodeType;
 
@@ -18,30 +19,24 @@ class Printer : public Visitor {
     void exprs_printer_helper(Expr *e);
     void stmts_printer_helper(Stmt *s);
 
-public:
-    void print(const std::vector<Stmt *>& statements) {
-        std::cout << "AST:" << std::endl;
-        indent(); std::cout << "Program: {\n";
-        nspace += tab_length;
-        indent(); std::cout << "body: [\n";
-        for(Stmt *s : statements) {
-            stmts_printer_helper(s);
-        }
-        indent(); std::cout << "]\n";
-        nspace -= tab_length;
-        indent(); std::cout << "}\n";
+    void print_type_specifier(TypeSpecifier& t, const char *msg) {
+        indent(); std::cout << msg << t.type_name.value;
+        for(int d : t.dimension) std::cout << "[" << d << "]";
+        std::cout << ",\n";
     }
 
+public:
     void print(Program& p) {
         visit(p);
     }
 
     void visit(Program& p) override;
 
+    void visit(BoolExpr& e) override;
     void visit(IntNumberExpr& e) override;
     void visit(DecimalNumberExpr& e) override;
     void visit(StringExpr& e) override;
-    void visit(BoolExpr& e) override;
+    void visit(ArrayLiteralExpr& e) override;
     void visit(IdentifierExpr& e) override;
     void visit(BinaryExpr& e) override;
     void visit(UnaryExpr& e) override;
@@ -67,5 +62,13 @@ public:
     void visit(ReturnStmt& s) override;
 
 };
+
+//class ScopePrinter {
+//
+//public:
+//    ScopePrinter() {
+//
+//    }
+//};
 
 #endif // PRINTER_H

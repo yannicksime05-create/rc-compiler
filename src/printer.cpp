@@ -19,6 +19,11 @@ void Printer::visit(Program& p) {
 
 
 
+void Printer::visit(BoolExpr& e) {
+    indent(); std::cout << "node type: BooleanLiteral,\n";
+    indent(); std::cout << "value: " << (e.value ? "true\n" : "false\n");
+}
+
 void Printer::visit(IntNumberExpr& e) {
     indent(); std::cout << "node type: IntegerLiteral,\n";
     indent(); std::cout << "value: " << e.value << "\n";
@@ -34,9 +39,17 @@ void Printer::visit(StringExpr& e) {
     indent(); std::cout << "value: " << e.value << "\n";
 }
 
-void Printer::visit(BoolExpr& e) {
-    indent(); std::cout << "node type: BooleanLiteral,\n";
-    indent(); std::cout << "value: " << (e.value ? "true\n" : "false\n");
+void Printer::visit(ArrayLiteralExpr& e) {
+    indent(); std::cout << "node type: ArrayLiteral,\n";
+    indent(); std::cout << "elements: [";
+    if(e.elements.empty()) std::cout << "]\n";
+    else {
+        std::cout << "\n";
+        for(Expr *expr : e.elements)
+            exprs_printer_helper(expr);
+
+        indent(); std::cout << "]\n";
+    }
 }
 
 void Printer::visit(IdentifierExpr& e) {
@@ -154,7 +167,7 @@ void Printer::visit(VariableDecl& d) {
         for(const std::string& q : d.declared_type.qualifiers) std::cout << q << ",";
         std::cout << "\n";
     }
-    indent(); std::cout << "type: " << d.declared_type.type_name << ",\n";
+    print_type_specifier(d.declared_type, "type: ");
     indent(); std::cout << "identifiers: [\n";
     nspace += tab_length;
     for(const VariableDeclarator *vd : d.declarations) {
@@ -184,7 +197,10 @@ void Printer::visit(FunctionDecl& d) {
         for(const std::string& q : d.return_type.qualifiers) std::cout << q << ",";
         std::cout << "\n";
     }
-    indent(); std::cout << "return type: " << d.return_type.type_name << ",\n";
+    print_type_specifier(d.return_type, "return type: ");
+//    indent(); std::cout << "return type: " << d.return_type.type_name << ",\n";
+
+
     indent(); std::cout << "parameters: ";
     if(d.parameters.empty()) std::cout << "[],\n";
     else {
@@ -194,7 +210,7 @@ void Printer::visit(FunctionDecl& d) {
             indent(); std::cout << "identifier: {\n";
             nspace += tab_length;
             indent(); std::cout << "name: " << p->parameter_name.value<< ",\n";
-            indent(); std::cout << "type: " << p->type_name.type_name<< ",\n";
+            indent(); std::cout << "type: " << p->type_name.type_name.value << ",\n";
             indent(); std::cout << "const: ";
 //            p->type_name.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
 //            indent(); std::cout << "default value: ";

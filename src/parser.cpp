@@ -131,18 +131,28 @@ Expr *Parser::parseExpression(Precedence mbp) {
 //NUD
 Expr *Parser::parse_primary() {
     switch(current().type) {
-        case TT::IDENTIFIER:
-            return new IdentifierExpr( get() );
-        case TT::INTEGER:
-            return new IntNumberExpr( std::stoi(get().value) );
-        case TT::FLOAT:
-            return new DecimalNumberExpr( std::stof(get().value) );
-        case TT::STRING:
-            return new StringExpr( get().value );
+        case TT::IDENTIFIER:    return new IdentifierExpr( get() );
+        case TT::INTEGER:       return new IntNumberExpr( std::stoi(get().value) );
+        case TT::FLOAT:         return new DecimalNumberExpr( std::stod(get().value) );
+        case TT::STRING:        return new StringExpr( get().value );
 
-        case TT::KW_FALSE:
         case TT::KW_TRUE:
+        case TT::KW_FALSE:
             return new BoolExpr( get().is(TT::KW_TRUE) );
+
+        case TT::LBRACKET: {
+            get();
+            std::vector<Expr *> elems;
+            if(!is(TT::RBRACKET)) {
+                elems.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+                while(is(TT::COMMA)) {
+                    get();
+                    elems.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+                }
+            }
+            expect(TT::RBRACKET, "Error: Expected closing ']' after array literal.");
+            return new ArrayLiteralExpr(elems);
+        }
 
         case TT::MINUS:
         case TT::NOT:
@@ -229,14 +239,24 @@ TypeSpecifier *Parser::parse_type_specifier() {
     std::vector<std::string> qualifiers;
     while( is(TT::KW_CONST) ) qualifiers.push_back(get().value);
 
-//    expect(TT::IDENTIFIER, "Error: Expected type name after qualifiers");
-//    if( !is(TT::KW_ANY) && !is(TT::KW_AUTO) && !is(TT::KW_BOOL) && !is(TT::KW_FLOAT) && !is(TT::KW_INT) && !is(TT::KW_STRING) && !is(TT::IDENTIFIER) )
     if( !is_primitive_type(pos) && !is(TT::IDENTIFIER) )
         throw ParseError("Error: Expected type name after qualifiers");
 
-    std::string base_type = get().value;
+//    std::string base_type = get().value;
+    Token base_type = get();
 
-    return new TypeSpecifier(qualifiers, base_type);
+    //int[3][4]
+    std::vector<int> dimension;
+    while( is(TT::LBRACKET) ) {
+        get();
+
+        if( !is(TT::INTEGER) ) throw ParseError("Error: Array size must be an integer literal!");
+        dimension.push_back(std::stoi(get().value));
+
+        expect(TT::RBRACKET, "Error: Expected ']' after array size");
+    }
+
+    return new TypeSpecifier(qualifiers, base_type, dimension);
 }
 
 VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const Token& name) {
@@ -253,8 +273,11 @@ VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, cons
     return new VariableDecl(type, decls);
 }
 
-VariableDeclarator *Parser::parse_variable_declarator(const std::string& type_name, const Token& name) {
-    if( (type_name == "any" || type_name == "auto") && !is(TT::ASSIGN) )
+VariableDeclarator *Parser::parse_variable_declarator(const Token& type_name, const Token& name) {
+//    if( (type_name == "any" || type_name == "auto") && !is(TT::ASSIGN) )
+//        expect(TT::ASSIGN, "Missing initialization for deduced types!");
+
+    if( (type_name.type == TT::KW_ANY || type_name.type == TT::KW_AUTO) && !is(TT::ASSIGN) )
         expect(TT::ASSIGN, "Missing initialization for deduced types!");
 
     if( is(TT::ASSIGN) ) {

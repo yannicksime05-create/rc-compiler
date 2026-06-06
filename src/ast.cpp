@@ -13,6 +13,10 @@ void Program::accept(Visitor& v) {
 
 
 //
+void BoolExpr::accept(Visitor& v) {
+    v.visit(*this);
+}
+
 void IntNumberExpr::accept(Visitor& v) {
     v.visit(*this);
 }
@@ -25,7 +29,7 @@ void StringExpr::accept(Visitor& v) {
     v.visit(*this);
 }
 
-void BoolExpr::accept(Visitor& v) {
+void ArrayLiteralExpr::accept(Visitor& v) {
     v.visit(*this);
 }
 

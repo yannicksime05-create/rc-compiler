@@ -58,6 +58,18 @@ struct Program : ASTNode {
 
 
 // --- Expressions ---
+struct BoolExpr : Expr {
+    bool value;
+
+    BoolExpr(bool v) : Expr(ASTNodeType::BOOL_LIT_NODE), value(v) {}
+
+    void accept(Visitor& v) override;
+
+    ~BoolExpr() {
+        std::cout << "Cleaning up BoolExpr node...\n";
+    }
+};
+
 struct IntNumberExpr : Expr {
     int value;
 
@@ -94,15 +106,20 @@ struct StringExpr : Expr {
     }
 };
 
-struct BoolExpr : Expr {
-    bool value;
+struct ArrayLiteralExpr : Expr {
+    std::vector<Expr *> elements;
 
-    BoolExpr(bool v) : Expr(ASTNodeType::BOOL_LIT_NODE), value(v) {}
+    ArrayLiteralExpr(const std::vector<Expr *>& e) : Expr(ASTNodeType::ARRAY_LIT_NODE), elements(e) {}
 
     void accept(Visitor& v) override;
 
-    ~BoolExpr() {
-        std::cout << "Cleaning up BoolExpr node...\n";
+    ~ArrayLiteralExpr() {
+        for(Expr *e : elements) {
+            delete e;
+            e = nullptr;
+        }
+
+        std::cout << "Cleaning ArrayLiteralExpr node...\n";
     }
 };
 
@@ -289,9 +306,13 @@ struct SequenceExpr : Expr {
 // ---- Declarations -----
 struct TypeSpecifier {
     std::vector<std::string> qualifiers;
-    std::string type_name;
+//    std::string type_name;
+    Token type_name;
+    std::vector<int> dimension;     //when int[size][size]
 
-    TypeSpecifier(const std::vector<std::string>& qlfs, const std::string& t) : qualifiers(qlfs), type_name(t) {}
+    TypeSpecifier(const std::vector<std::string>& qlfs, const Token& t, const std::vector<int> dims)
+        : qualifiers(qlfs), type_name(t), dimension(dims) {}
+
 };
 
 struct VariableDeclarator {
@@ -595,10 +616,11 @@ class Visitor {
 public:
     virtual void visit(Program& p) = 0;
 
+    virtual void visit(BoolExpr& e) = 0;
     virtual void visit(IntNumberExpr& e) = 0;
     virtual void visit(DecimalNumberExpr& e) = 0;
     virtual void visit(StringExpr& e) = 0;
-    virtual void visit(BoolExpr& e) = 0;
+    virtual void visit(ArrayLiteralExpr& e) = 0;
     virtual void visit(IdentifierExpr& e) = 0;
     virtual void visit(BinaryExpr& e) = 0;
     virtual void visit(UnaryExpr& e) = 0;
