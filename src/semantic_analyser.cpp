@@ -1,16 +1,6 @@
 #include "../include/semantic_analyser.h"
 
 using TT = TokenType;
-//
-//std::optional<BuiltinTypes> SemanticAnalyser::lookup_builtin_types(const std::string& name) {
-//    if (name == "bool")   return BuiltinTypes::BOOL;
-//    if (name == "int")    return BuiltinTypes::INT;
-//    if (name == "float")  return BuiltinTypes::FLOAT;
-//    if (name == "string") return BuiltinTypes::STRING;
-//    if (name == "void")   return BuiltinTypes::VOID;
-//
-//    return std::nullopt;
-//}
 
 //For now it checks only int, but later, we'll add short, long, ...
 bool SemanticAnalyser::is_integral_type(const Type *t) {
@@ -38,7 +28,26 @@ bool SemanticAnalyser::is_bool_type(const Type *t) {
     return t && t->kind == TypeKind::BUILTIN && t->builtin == BuiltinTypes::BOOL;
 }
 
-const char *SemanticAnalyser::type_to_string(const Type *t) {
+std::string SemanticAnalyser::type_to_string(const Type *t) {
+//    ARRAY(size=3, element: ARRAY(size=4, element: INT))
+//  int[3][4]
+    if(t->kind == TypeKind::ARRAY) {
+        const Type *tmp = t;
+        while(tmp->kind == TypeKind::ARRAY) tmp = tmp->element_type;
+
+        std::stringstream ss;
+        ss << type_to_string(tmp);
+
+        tmp = t;
+        do{
+            ss << "[" << tmp->size << "]";
+            tmp = tmp->element_type;
+        }while(tmp->kind == TypeKind::ARRAY);
+        tmp = nullptr;
+
+        return ss.str();
+    }
+
     switch(t->builtin) {
         case BuiltinTypes::BOOL:    return "bool";
         case BuiltinTypes::FLOAT:   return "float";
@@ -69,18 +78,36 @@ std::string SemanticAnalyser::type_mismatch(const Type *lt, Token& op, const Typ
 
 Type SemanticAnalyser::resolve(TypeSpecifier& t) {
     Type result;
+    //for now it only constains 'const'
     result.is_constant = !t.qualifiers.empty();
 
-    if(t.type_name == "any")    { result.kind = TypeKind::ANY;  return result; }
-    if(t.type_name == "auto")   { result.kind = TypeKind::AUTO; return result; }
-    if(t.type_name == "bool")   { result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::BOOL;     return result; }
-    if(t.type_name == "int")    { result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::INT;      return result; }
-    if(t.type_name == "float"
-    || t.type_name == "double") { result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::FLOAT;    return result; }
-    if(t.type_name == "string") { result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::STRING;   return result; }
-    if(t.type_name == "void")   { result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::VOID;     return result; }
+    switch(t.type_name.type) {
+        case TT::KW_ANY:    result.kind = TypeKind::ANY; break;
+        case TT::KW_AUTO:   result.kind = TypeKind::AUTO; break;
 
-    result.kind = TypeKind::UNKNOWN;
+        case TT::KW_BOOL:   result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::BOOL; break;
+        case TT::KW_INT:    result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::INT; break;
+
+        case TT::KW_FLOAT:
+        case TT::KW_DOUBLE: result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::FLOAT; break;
+
+        case TT::KW_STRING: result.kind = TypeKind::BUILTIN; result.builtin = BuiltinTypes::STRING; break;
+//        case TT::KW_VOID:
+        default:            result.kind = TypeKind::UNKNOWN;
+    }
+
+    //int[3]            (kind: ARRAY, size: 3, elem_type: (kind: BUILTIN, builtin: INT))
+    //int[3][4]         (kind: ARRAY, size: 3, elem_type: (kind: ARRAY, size: 4, elem_type: (kind: BUILTIN, builtin: INT)))
+    while( !t.dimension.empty() ) {
+        Type *elem_type = new Type(result);
+
+//        int dim = t.dimension.back();
+//        std::cout << "dim = " << dim << "\n";
+
+        result = Type(TypeKind::ARRAY, elem_type, t.dimension.back());
+        t.dimension.pop_back();
+    }
+
     return result;
 }
 
@@ -95,6 +122,10 @@ void SemanticAnalyser::visit(Program& p) {
     manager.exit();
 }
 
+void SemanticAnalyser::visit(BoolExpr& e) {
+    e.resolved_type = new Type(TypeKind::BUILTIN, BuiltinTypes::BOOL);
+}
+
 void SemanticAnalyser::visit(IntNumberExpr& e) {
     e.resolved_type = new Type(TypeKind::BUILTIN, BuiltinTypes::INT);
 }
@@ -107,15 +138,35 @@ void SemanticAnalyser::visit(StringExpr& e) {
     e.resolved_type = new Type(TypeKind::BUILTIN, BuiltinTypes::STRING);
 }
 
-void SemanticAnalyser::visit(BoolExpr& e) {
-    e.resolved_type = new Type(TypeKind::BUILTIN, BuiltinTypes::BOOL);
+//[1, 2, 3]
+void SemanticAnalyser::visit(ArrayLiteralExpr& e) {
+    if(e.elements.empty()) return;
+
+    for(Expr *elem : e.elements) {
+        if(elem) elem->accept(*this);
+    }
+
+    const Type *first = e.elements[0]->resolved_type;
+    for(size_t i = 1; i < e.elements.size(); ++i) {
+        const Type *t = e.elements[i]->resolved_type;
+
+        if(!t || t->kind != first->kind || t->builtin != first->builtin) {
+            ss.str("");
+            ss << "Error: Mixed types in array literal — expected all '"
+               << type_to_string(first) << "' but found '"
+               << type_to_string(t) << "' instead at element " << i+1 << "!";
+            throw SemanticError(ss.str());
+        }
+    }
+
+    e.resolved_type = new Type(TypeKind::ARRAY, new Type(*first), static_cast<int>(e.elements.size()));
 }
 
 void SemanticAnalyser::visit(IdentifierExpr& e) {
     Symbol *s = manager.lookup(e.name.value);
     if(!s) {
         ss.str("");
-        ss << "Used of undefined variables. Line: " << e.name.start.line << ", Col: " << e.name.start.col << ".\n";
+        ss << "Used of undefined identifier. Line: " << e.name.start.line << ", Col: " << e.name.start.col << ".\n";
         throw SemanticError(ss.str());
     }
 
@@ -205,7 +256,7 @@ void SemanticAnalyser::visit(BinaryExpr& e) {
         case TT::SLASH: {
             //e.resolved_type = array
             if(is_string_type(lt) && (is_string_type(rt) || is_integral_type(rt))) {
-                e.resolved_type = new Type(TypeKind::ARRAY, lt);
+                e.resolved_type = new Type(TypeKind::ARRAY, new Type(*lt), -1);
                 break;
             }
 
@@ -383,7 +434,8 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
         }
         case TT::SLASH_ASSIGN: {
             if(is_string_type(tt) && (is_string_type(vt) || is_integral_type(vt))) {
-                e.resolved_type = new Type(TypeKind::ARRAY, tt); //array of strings
+//                e.resolved_type = new Type(TypeKind::ARRAY, tt); //array of strings
+                e.resolved_type;
                 break;
             }
 
@@ -427,14 +479,18 @@ void SemanticAnalyser::visit(ConditionalExpr& e) {
 
     if(!is_bool_type(ct)) {
         ss.str("");
-        ss << "";
-        throw SemanticError("");
+        ss << "Error: Ternary condition must be bool, found '" << type_to_string(ct) << "'!";
+        throw SemanticError(ss.str());
     }
 
-    if( (!is_string_type(itt) || !is_string_type(ift)) && (!is_numeric_type(itt) || !is_numeric_type(ift)) ) {
+    bool both_numeric = is_numeric_type(itt) && is_numeric_type(ift);
+    bool both_string  = is_string_type(itt)  && is_string_type(ift);
+    bool both_bool    = is_bool_type(itt)    && is_bool_type(ift);
+
+    if(!both_numeric && !both_string && !both_bool) {
         ss.str("");
-        ss << "";
-        throw SemanticError("");
+        ss << "Error: Ternary branches must have compatible types, found '" << type_to_string(itt) << "' and '" << type_to_string(ift) << "'!";
+        throw SemanticError(ss.str());
     }
 
     e.resolved_type = new Type(*itt);
@@ -442,10 +498,26 @@ void SemanticAnalyser::visit(ConditionalExpr& e) {
 
 void SemanticAnalyser::visit(CallExpr& e) {
     if(e.callee) e.callee->accept(*this);
+
     for(Expr *exp : e.arguments) {
         if(exp) exp->accept(*this);
     }
 
+//
+//    FunctionDecl *decl = static_cast<FunctionDecl *>(e.symbol->declaration);
+//    if(!decl) {
+//
+//    }
+//
+//
+//    if( e.arguments.size() != decl->parameters.size() ) {
+//        ss.str("");
+//        ss << "Error: Function '" << callee_id->name.value << "' expects "
+//           << decl->parameters.size() << " argument(s), but "
+//           << e.arguments.size() << " were provided. Line: "
+//           << callee_id->name.start.line << ".";
+//        throw SemanticError(ss.str());
+//    }
 
 }
 
@@ -457,15 +529,22 @@ void SemanticAnalyser::visit(SubscriptExpr& e) {
     if(e.object) e.object->accept(*this);
     if(e.index)  e.index->accept(*this);
 
-    const Type *obt = e.object->resolved_type;
-    const Type *it = e.index->resolved_type;
+    const Type *obj_type = e.object->resolved_type;
+    const Type *index_type = e.index->resolved_type;
 
-    if(!is_integral_type(it)) {
+    if(obj_type->kind != TypeKind::ARRAY) {
         ss.str("");
-        ss << "Invalid type for array subscript: ";
+        ss << "Error: Subscript operator '[]' requires an array type, found '" << type_to_string(obj_type) << "' instead!";
         throw SemanticError(ss.str());
     }
 
+    if(!is_integral_type(index_type)) {
+        ss.str("");
+        ss << "Error: Array index must be an integer, found '" << type_to_string(index_type) << "' instead!";
+        throw SemanticError(ss.str());
+    }
+
+    e.resolved_type = new Type(*obj_type->element_type);
 }
 
 void SemanticAnalyser::visit(SequenceExpr& e) {
@@ -486,6 +565,8 @@ void SemanticAnalyser::visit(SequenceExpr& e) {
 void SemanticAnalyser::visit(VariableDecl& d) {
     Type *t = new Type(resolve(d.declared_type));
 
+    std::cout << "resolved type = " << type_to_string(t) << "\n";
+
     for(VariableDeclarator *vd : d.declarations) {
         if(vd->initializer) vd->initializer->accept(*this);
 
@@ -499,7 +580,7 @@ void SemanticAnalyser::visit(VariableDecl& d) {
 //        if( (t.kind == TypeKind::ANY || t.kind == TypeKind::AUTO) && !vd->initializer )
 
 
-        Symbol *s = new Symbol(vd->variable_name.value, SymbolType::VARIABLE, t->is_constant, t, &d);
+        Symbol *s = new Symbol(vd->variable_name.value, SymbolType::VARIABLE, t->is_constant, new Type(*t), &d);
         manager.insert(s);
         vd->symbol = s;
     }
@@ -518,6 +599,7 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
     d.symbol = f;
 
     manager.enter(ScopeType::FUNCTION);
+    manager.insert(f);
     for(Parameter *param : d.parameters) {
         if(manager.lookup_current(param->parameter_name.value)) {
             ss.str("");

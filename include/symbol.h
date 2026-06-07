@@ -2,6 +2,7 @@
 #define SYMBOL_H
 
 #include <string>
+#include <iostream>
 #include "ast_base.h"
 
 enum class TypeKind {
@@ -36,18 +37,52 @@ struct Type {
 //    bool is_auto_resolved = false;
 
     BuiltinTypes builtin;
-    Type *element_type = nullptr; //When kind = ARRAY
+    Type *element_type = nullptr;   //When kind == ARRAY
+    int size = 0;
 //    FunctionTypes *function_data = nullptr;
 
     Type() {}
-    Type(TypeKind tk, BuiltinTypes b, bool constness = true) : kind(tk), is_constant(constness), builtin(b) {}
-    //Array type constructor
-    Type(TypeKind tk, Type *elt_type) {
-        kind = tk;
-        element_type = elt_type;
 
-        if(!element_type) {
-//            element_type = new Type(TypeKind::UNKNOWN);
+    Type(TypeKind tk, BuiltinTypes b, bool constness = true) : kind(tk), is_constant(constness), builtin(b) {}
+
+    //Array type constructor
+    Type(TypeKind tk, Type *elt_type, int sz) : kind(tk), element_type(elt_type), size(sz) {}
+
+    Type(const Type& t) {
+        kind = t.kind;
+        is_constant = t.is_constant;
+        builtin = t.builtin;
+
+        size = t.size;
+        if(t.element_type) {
+            element_type = new Type(*t.element_type);
+        }
+    }
+
+    Type& operator=(const Type& t) {
+        if(this != &t) {
+            kind = t.kind;
+            is_constant = t.is_constant;
+            builtin = t.builtin;
+            size = t.size;
+
+            if(element_type) {
+                delete element_type;
+                element_type = nullptr;
+            }
+
+            if(t.element_type) {
+                element_type = new Type(*t.element_type);
+            }
+        }
+
+        return *this;
+    }
+
+    ~Type() {
+        if(element_type) {
+            delete element_type;
+            element_type = nullptr;
         }
     }
 
@@ -73,7 +108,7 @@ struct Symbol {
         delete declared_type;
         declared_type = nullptr;
 
-//        std::cout << "Cleaning symbol...\n";
+        std::cout << "Cleaning Symbol...\n";
     }
 };
 

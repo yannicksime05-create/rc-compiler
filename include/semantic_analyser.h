@@ -30,13 +30,12 @@ class SemanticAnalyser : public Visitor {
     */
     std::stringstream ss;
 
-//    std::optional<BuiltinTypes> lookup_builtin_types(const std::string& name);
     bool is_integral_type(const Type *t);
     bool is_floating_type(const Type *t);
     bool is_numeric_type(const Type *t);
     bool is_string_type(const Type *t);
     bool is_bool_type(const Type *t);
-    const char* type_to_string(const Type *t);
+    std::string type_to_string(const Type *t);
     Type *promote(const Type *left, const Type *right);
     std::string type_mismatch(const Type *lt, Token& op, const Type *rt);
     Type resolve(TypeSpecifier& t);
@@ -54,10 +53,11 @@ public:
 
     void visit(Program& p) override;
 
+    void visit(BoolExpr& e) override;
     void visit(IntNumberExpr& e) override;
     void visit(DecimalNumberExpr& e) override;
     void visit(StringExpr& e) override;
-    void visit(BoolExpr& e) override;
+    void visit(ArrayLiteralExpr& e) override;
     void visit(IdentifierExpr& e) override;
     void visit(BinaryExpr& e) override;
     void visit(UnaryExpr& e) override;
