@@ -220,17 +220,28 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
 
 
+//Decl *Parser::parseDeclaration() {
+//    TypeSpecifier *type = parse_type_specifier();
+//    expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
+//
+//    Token name = previous();
+//
+//    if( is(TT::LPAREN) )
+//        return parse_function_declaration(*type, name);
+//    else
+//        return parse_variable_declaration(*type, name);
+//
+//    return nullptr;
+//}
+
 Decl *Parser::parseDeclaration() {
     TypeSpecifier *type = parse_type_specifier();
     expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
 
-//    std::string name = previous().value;
-    Token name = previous();
-
     if( is(TT::LPAREN) )
-        return parse_function_declaration(*type, name);
+        return parse_function_declaration(*type);
     else
-        return parse_variable_declaration(*type, name);
+        return parse_variable_declaration(*type);
 
     return nullptr;
 }
@@ -242,7 +253,6 @@ TypeSpecifier *Parser::parse_type_specifier() {
     if( !is_primitive_type(pos) && !is(TT::IDENTIFIER) )
         throw ParseError("Error: Expected type name after qualifiers");
 
-//    std::string base_type = get().value;
     Token base_type = get();
 
     //int[3][4]
@@ -259,36 +269,79 @@ TypeSpecifier *Parser::parse_type_specifier() {
     return new TypeSpecifier(qualifiers, base_type, dimension);
 }
 
-VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const Token& name) {
+//VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const Token& name) {
+//    std::vector<VariableDeclarator *> decls;
+//    decls.push_back( parse_variable_declarator(type.type_name, name) );
+//
+//    while( is(TT::COMMA) ) {
+//        get();
+//        expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
+//        decls.push_back(parse_variable_declarator(type.type_name, previous()));
+//    }
+//    expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
+//
+//    return new VariableDecl(type, decls);
+//}
+
+//VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
+////    if( (type_name.type == TT::KW_ANY || type_name.type == TT::KW_AUTO) && !is(TT::ASSIGN) )
+////        expect(TT::ASSIGN, "Missing initialization for deduced types!");
+//
+//    if( is(TT::ASSIGN) ) {
+//        get();
+//        return new VariableDeclarator(name, parseExpression(Precedence::PREC_ASSIGNMENT));
+//    }
+//
+//    return new VariableDeclarator(name);
+//}
+
+//FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type, const Token& name) {
+//    expect(TT::LPAREN, "Error: Expected '(' after function's name");
+//    if( !is(TT::RPAREN) ) {
+//        std::vector<Parameter *> parameters;
+//        parameters.push_back(parse_function_parameters());
+//        while( is(TT::COMMA) ) {
+//            get();
+//            parameters.push_back(parse_function_parameters());
+//        }
+//        expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+//
+//        return new FunctionDecl(type, name, parse_compound_statement(), parameters);
+//    }
+//    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+//
+//    return new FunctionDecl(type, name, parse_compound_statement());
+//}
+
+VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
+    Token name = previous();
+
     std::vector<VariableDeclarator *> decls;
-    decls.push_back( parse_variable_declarator(type.type_name, name) );
+    decls.push_back( parse_variable_declarator(name) );
 
     while( is(TT::COMMA) ) {
         get();
         expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
-        decls.push_back(parse_variable_declarator(type.type_name, previous()));
+        decls.push_back(parse_variable_declarator(previous()));
     }
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
 }
 
-VariableDeclarator *Parser::parse_variable_declarator(const Token& type_name, const Token& name) {
-//    if( (type_name == "any" || type_name == "auto") && !is(TT::ASSIGN) )
-//        expect(TT::ASSIGN, "Missing initialization for deduced types!");
-
-    if( (type_name.type == TT::KW_ANY || type_name.type == TT::KW_AUTO) && !is(TT::ASSIGN) )
-        expect(TT::ASSIGN, "Missing initialization for deduced types!");
-
+VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
+    Expr *init = nullptr;
     if( is(TT::ASSIGN) ) {
         get();
-        return new VariableDeclarator(name, parseExpression(Precedence::PREC_ASSIGNMENT));
+        init = parseExpression(Precedence::PREC_ASSIGNMENT);
     }
 
-    return new VariableDeclarator(name);
+    return new VariableDeclarator(name, init);
 }
 
-FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type, const Token& name) {
+FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
+    Token name = previous();
+
     expect(TT::LPAREN, "Error: Expected '(' after function's name");
     if( !is(TT::RPAREN) ) {
         std::vector<Parameter *> parameters;
@@ -310,7 +363,6 @@ Parameter *Parser::parse_function_parameters() {
     TypeSpecifier type = *parse_type_specifier();
 
     expect(TT::IDENTIFIER, "Error: Expected parameter's name in function declaration");
-//    std::string name = previous().value;
     Token name = previous();
 
     if( is(TT::ASSIGN) ) {
@@ -534,7 +586,7 @@ ForStmt *Parser::parse_for_statement() {
 VariableDecl *Parser::parse_rangefor_variable() {
     TypeSpecifier type = *parse_type_specifier();
 
-    VariableDeclarator *vd = parse_variable_declarator(type.type_name, get());
+    VariableDeclarator *vd = parse_variable_declarator( get() );
     const std::vector<VariableDeclarator*> decl = {vd};
 
     return new VariableDecl(type, decl);
