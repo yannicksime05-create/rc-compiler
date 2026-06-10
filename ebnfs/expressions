@@ -10,7 +10,13 @@ conditional             ::= logical-or [ "?" expression ":" conditional ]
 
 logical-or              ::= logical-and { "||" logical-and }
 
-logical-and             ::= equality { "&&" equality }
+logical-and             ::= bit-or { "&&" bit-or }
+
+bit-or                  ::= bit-xor { "|" bit-xor }
+
+bit-xor                 ::= bit-and { "^" bit-and }
+
+bit-and                 ::= equality { "&" equality }
 
 equality                ::= comparaison { ( "==" | "!=" ) comparaison }
 
@@ -34,6 +40,9 @@ postfix                 ::= primary
 
 argument-list           ::= expression { "," expression }
 
-primary                 ::= literal | identifier | "(" expression ")"
+primary                 ::= literal 
+                            | identifier 
+                            | "[" [ expression { "," expression } ] "]" 
+                            | "(" expression ")"
 
 literal                 ::= NUMBER  | STRING | "true" | "false"
