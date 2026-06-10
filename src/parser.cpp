@@ -119,9 +119,17 @@ Expr *Parser::parseExpression(Precedence mbp) {
         Expr *rhs = parseExpression(rbp);
         if(!rhs) return nullptr;
 
-        if(lbp == Precedence::PREC_ASSIGNMENT)    lhs = new AssignmentExpr(lhs, op, rhs);
-        else if(lbp == Precedence::PREC_COMMA)    lhs = new SequenceExpr( {lhs, rhs} );
-        else                                      lhs = new BinaryExpr(lhs, op, rhs);
+        if(lbp == Precedence::PREC_ASSIGNMENT)                      lhs = new AssignmentExpr(lhs, op, rhs);
+        else if(lbp == Precedence::PREC_COMMA) {
+            if(lhs->node_type != ASTNodeType::SEQUENCE_EXPR_NODE)   lhs = new SequenceExpr( {lhs, rhs} );
+            else {
+                SequenceExpr *tmp = static_cast<SequenceExpr*>(lhs);
+                tmp->expressions.push_back(rhs);
+                lhs = tmp;
+                tmp = nullptr;
+            }
+        }
+        else                                                        lhs = new BinaryExpr(lhs, op, rhs);
 
     }
 
