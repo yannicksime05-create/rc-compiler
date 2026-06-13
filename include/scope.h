@@ -44,6 +44,14 @@ public:
 
         return nullptr;
     }
+
+    ~Scope() {
+        //Adding this will cause visit(CallExpr&) to crash on this line: bool valid_arg_type = arg_type->kind == param_type->kind;
+        //so I'll let this out for now.
+//        for(auto& pair : symbols) {
+//            if(pair.second) delete pair.second;
+//        }
+    }
 };
 
 class ScopeManager {
@@ -53,7 +61,7 @@ public:
     ScopeManager() {}
 
     ~ScopeManager() {
-        for(Scope *s : scopes) delete s;
+        for(Scope *s : scopes) if(s) delete s;
     }
 
     Scope *current() const {
