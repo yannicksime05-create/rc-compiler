@@ -91,7 +91,7 @@ public:
         Token t;
         do{
             t = next_token();
-            print(t);
+            if(t.type != TT::UNKNOWN) print(t);
             if(t.type != TT::USELESS) tokens.push_back(t);
         }while( t.type != TT::END_OF_FILE );
 

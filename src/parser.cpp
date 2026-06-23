@@ -18,7 +18,7 @@ Precedence Parser::get_precedence(TokenType t) {
         case TT::LEFT_SHIFT_ASSIGN:
         case TT::RIGHT_SHIFT_ASSIGN:        return Precedence::PREC_ASSIGNMENT;
 
-        case TT::QUESTION:                  return Precedence::PREC_CONDITIONAL;
+        case TT::CONDITIONAL:               return Precedence::PREC_CONDITIONAL;
         case TT::OR:                        return Precedence::PREC_LOGICAL_OR;
         case TT::AND:                       return Precedence::PREC_LOGICAL_AND;
 
@@ -49,8 +49,8 @@ Precedence Parser::get_precedence(TokenType t) {
         case TT::DOT:
         case TT::LPAREN:
         case TT::LBRACKET:
-        case TT::PLUS_PLUS:
-        case TT::MINUS_MINUS:               return Precedence::PREC_POSTFIX;
+        case TT::INCREMENT:
+        case TT::DECREMENT:               return Precedence::PREC_POSTFIX;
     }
 }
 
@@ -67,7 +67,7 @@ bool Parser::is_right_associative(TokenType t) {
         case TT::BIT_XOR_ASSIGN:
         case TT::LEFT_SHIFT_ASSIGN:
         case TT::RIGHT_SHIFT_ASSIGN:
-        case TT::QUESTION: // conditional
+        case TT::CONDITIONAL: // conditional
             return true;
 
         default:
@@ -80,8 +80,8 @@ bool Parser::is_postfix_operator(TokenType t) {
         case TT::LPAREN:
         case TT::LBRACKET:
         case TT::DOT:
-        case TT::PLUS_PLUS:
-        case TT::MINUS_MINUS:
+        case TT::INCREMENT:
+        case TT::DECREMENT:
             return true;
         default:
             return false;
@@ -105,7 +105,7 @@ Expr *Parser::parseExpression(Precedence mbp) {
             continue;
         }
 
-        if(t == TT::QUESTION) {
+        if(t == TT::CONDITIONAL) {
             get();
             Expr *then_expr = parseExpression();
             expect(TT::COLON, "Error: Expected ':' in ternary operator!");
@@ -119,9 +119,17 @@ Expr *Parser::parseExpression(Precedence mbp) {
         Expr *rhs = parseExpression(rbp);
         if(!rhs) return nullptr;
 
-        if(lbp == Precedence::PREC_ASSIGNMENT)    lhs = new AssignmentExpr(lhs, op.value, rhs);
-        else if(lbp == Precedence::PREC_COMMA)    lhs = new SequenceExpr( {lhs, rhs} );
-        else                                      lhs = new BinaryExpr(lhs, op.value, rhs);
+        if(lbp == Precedence::PREC_ASSIGNMENT)                      lhs = new AssignmentExpr(lhs, op, rhs);
+        else if(lbp == Precedence::PREC_COMMA) {
+            if(lhs->node_type != ASTNodeType::SEQUENCE_EXPR_NODE)   lhs = new SequenceExpr( {lhs, rhs} );
+            else {
+                SequenceExpr *tmp = static_cast<SequenceExpr*>(lhs);
+                tmp->expressions.push_back(rhs);
+                lhs = tmp;
+                tmp = nullptr;
+            }
+        }
+        else                                                        lhs = new BinaryExpr(lhs, op, rhs);
 
     }
 
@@ -131,25 +139,35 @@ Expr *Parser::parseExpression(Precedence mbp) {
 //NUD
 Expr *Parser::parse_primary() {
     switch(current().type) {
-        case TT::IDENTIFIER:
-            return new IdentifierExpr( get() );
-        case TT::INTEGER:
-            return new IntNumberExpr( std::stoi(get().value) );
-        case TT::FLOAT:
-            return new DecimalNumberExpr( std::stof(get().value) );
-        case TT::STRING:
-            return new StringExpr( get().value );
+        case TT::IDENTIFIER:    return new IdentifierExpr( get() );
+        case TT::INTEGER:       return new IntNumberExpr( std::stoi(get().value) );
+        case TT::FLOAT:         return new DecimalNumberExpr( std::stod(get().value) );
+        case TT::STRING:        return new StringExpr( get().value );
 
-        case TT::KW_FALSE:
         case TT::KW_TRUE:
+        case TT::KW_FALSE:
             return new BoolExpr( get().is(TT::KW_TRUE) );
+
+        case TT::LBRACKET: {
+            get();
+            std::vector<Expr *> elems;
+            if(!is(TT::RBRACKET)) {
+                elems.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+                while(is(TT::COMMA)) {
+                    get();
+                    elems.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+                }
+            }
+            expect(TT::RBRACKET, "Error: Expected closing ']' after array literal.");
+            return new ArrayLiteralExpr(elems);
+        }
 
         case TT::MINUS:
         case TT::NOT:
         case TT::BIT_NOT:
-        case TT::PLUS_PLUS:
-        case TT::MINUS_MINUS:
-            return new UnaryExpr(get().value, parseExpression(Precedence::PREC_PREFIX));
+        case TT::INCREMENT:
+        case TT::DECREMENT:
+            return new UnaryExpr(get(), parseExpression(Precedence::PREC_PREFIX));
 
         case TT::LPAREN: {
             get();
@@ -194,10 +212,10 @@ Expr *Parser::parse_postfix(Expr *lhs) {
         get();
         expect(TT::IDENTIFIER, "Error: Expected identifier for member expressions");
 
-        lhs = new MemberAccessExpr(lhs, previous().value);
+        lhs = new MemberAccessExpr(lhs, previous());
     }
-    else if( is(TT::PLUS_PLUS) || is(TT::MINUS_MINUS) ) {
-        lhs = new UnaryExpr(get().value, lhs, false);
+    else if( is(TT::INCREMENT) || is(TT::DECREMENT) ) {
+        lhs = new UnaryExpr(get(), lhs, false);
     }
 
     return lhs;
@@ -210,16 +228,28 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
 
 
+//Decl *Parser::parseDeclaration() {
+//    TypeSpecifier *type = parse_type_specifier();
+//    expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
+//
+//    Token name = previous();
+//
+//    if( is(TT::LPAREN) )
+//        return parse_function_declaration(*type, name);
+//    else
+//        return parse_variable_declaration(*type, name);
+//
+//    return nullptr;
+//}
+
 Decl *Parser::parseDeclaration() {
     TypeSpecifier *type = parse_type_specifier();
     expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
 
-    std::string name = previous().value;
-
     if( is(TT::LPAREN) )
-        return parse_function_declaration(*type, name);
+        return parse_function_declaration(*type);
     else
-        return parse_variable_declaration(*type, name);
+        return parse_variable_declaration(*type);
 
     return nullptr;
 }
@@ -228,43 +258,98 @@ TypeSpecifier *Parser::parse_type_specifier() {
     std::vector<std::string> qualifiers;
     while( is(TT::KW_CONST) ) qualifiers.push_back(get().value);
 
-//    expect(TT::IDENTIFIER, "Error: Expected type name after qualifiers");
-//    if( !is(TT::KW_ANY) && !is(TT::KW_AUTO) && !is(TT::KW_BOOL) && !is(TT::KW_FLOAT) && !is(TT::KW_INT) && !is(TT::KW_STRING) && !is(TT::IDENTIFIER) )
     if( !is_primitive_type(pos) && !is(TT::IDENTIFIER) )
         throw ParseError("Error: Expected type name after qualifiers");
 
-    std::string base_type = get().value;
+    Token base_type = get();
 
-    return new TypeSpecifier(qualifiers, base_type);
+    //int[3][4]
+    std::vector<int> dimension;
+    while( is(TT::LBRACKET) ) {
+        get();
+
+        if( !is(TT::INTEGER) ) throw ParseError("Error: Array size must be an integer literal!");
+        dimension.push_back(std::stoi(get().value));
+
+        expect(TT::RBRACKET, "Error: Expected ']' after array size");
+    }
+
+    return new TypeSpecifier(qualifiers, base_type, dimension);
 }
 
-VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const std::string& name) {
+//VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type, const Token& name) {
+//    std::vector<VariableDeclarator *> decls;
+//    decls.push_back( parse_variable_declarator(type.type_name, name) );
+//
+//    while( is(TT::COMMA) ) {
+//        get();
+//        expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
+//        decls.push_back(parse_variable_declarator(type.type_name, previous()));
+//    }
+//    expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
+//
+//    return new VariableDecl(type, decls);
+//}
+
+//VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
+////    if( (type_name.type == TT::KW_ANY || type_name.type == TT::KW_AUTO) && !is(TT::ASSIGN) )
+////        expect(TT::ASSIGN, "Missing initialization for deduced types!");
+//
+//    if( is(TT::ASSIGN) ) {
+//        get();
+//        return new VariableDeclarator(name, parseExpression(Precedence::PREC_ASSIGNMENT));
+//    }
+//
+//    return new VariableDeclarator(name);
+//}
+
+//FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type, const Token& name) {
+//    expect(TT::LPAREN, "Error: Expected '(' after function's name");
+//    if( !is(TT::RPAREN) ) {
+//        std::vector<Parameter *> parameters;
+//        parameters.push_back(parse_function_parameters());
+//        while( is(TT::COMMA) ) {
+//            get();
+//            parameters.push_back(parse_function_parameters());
+//        }
+//        expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+//
+//        return new FunctionDecl(type, name, parse_compound_statement(), parameters);
+//    }
+//    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+//
+//    return new FunctionDecl(type, name, parse_compound_statement());
+//}
+
+VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
+    Token name = previous();
+
     std::vector<VariableDeclarator *> decls;
-    decls.push_back( parse_variable_declarator(type.type_name, name) );
+    decls.push_back( parse_variable_declarator(name) );
 
     while( is(TT::COMMA) ) {
         get();
         expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
-        decls.push_back(parse_variable_declarator(type.type_name, previous().value));
+        decls.push_back(parse_variable_declarator(previous()));
     }
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
 }
 
-VariableDeclarator *Parser::parse_variable_declarator(const std::string& type_name, const std::string& name) {
-    if( (type_name == "any" || type_name == "auto") && !is(TT::ASSIGN) )
-        expect(TT::ASSIGN, "Missing initialization for deduced types!");
-
+VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
+    Expr *init = nullptr;
     if( is(TT::ASSIGN) ) {
         get();
-        return new VariableDeclarator(name, parseExpression(Precedence::PREC_ASSIGNMENT));
+        init = parseExpression(Precedence::PREC_ASSIGNMENT);
     }
 
-    return new VariableDeclarator(name);
+    return new VariableDeclarator(name, init);
 }
 
-FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type, const std::string& name) {
+FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
+    Token name = previous();
+
     expect(TT::LPAREN, "Error: Expected '(' after function's name");
     if( !is(TT::RPAREN) ) {
         std::vector<Parameter *> parameters;
@@ -286,7 +371,7 @@ Parameter *Parser::parse_function_parameters() {
     TypeSpecifier type = *parse_type_specifier();
 
     expect(TT::IDENTIFIER, "Error: Expected parameter's name in function declaration");
-    std::string name = previous().value;
+    Token name = previous();
 
     if( is(TT::ASSIGN) ) {
         get();
@@ -509,7 +594,7 @@ ForStmt *Parser::parse_for_statement() {
 VariableDecl *Parser::parse_rangefor_variable() {
     TypeSpecifier type = *parse_type_specifier();
 
-    VariableDeclarator *vd = parse_variable_declarator(type.type_name, get().value);
+    VariableDeclarator *vd = parse_variable_declarator( get() );
     const std::vector<VariableDeclarator*> decl = {vd};
 
     return new VariableDecl(type, decl);

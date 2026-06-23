@@ -25,7 +25,7 @@ enum class TokenType {
 
     // ===== Operators =====
     PLUS, MINUS, STAR, SLASH, MOD,                                      // + - * / %
-    PLUS_PLUS, MINUS_MINUS,                                             // ++ --
+    INCREMENT, DECREMENT,                                               // ++ --
 
     ASSIGN,                                                             // =
     PLUS_ASSIGN, MINUS_ASSIGN, STAR_ASSIGN, SLASH_ASSIGN, MOD_ASSIGN,   // += -= *= /= %=
@@ -39,7 +39,7 @@ enum class TokenType {
     BIT_AND, AND, BIT_OR, OR,                                           // & && | ||
     BIT_XOR, BIT_NOT,                                                   // ^ ~
     LEFT_SHIFT, RIGHT_SHIFT,                                            // << >>
-    QUESTION, COLON,                                                    // ? :
+    CONDITIONAL, COLON,                                                 // ? :
     DOT,
     //ARROW, DOT, DOT_STAR, ELLIPSIS,                                   // -> . .* ...
 
