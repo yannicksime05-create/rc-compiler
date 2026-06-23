@@ -122,9 +122,10 @@ void Lexer::scan_octal_numbers(Token& t, std::string& s) {
     do{
         s += get();
     }while( input.peek() >= '0' && input.peek() <= '7' );
+    t.type = TT::INTEGER;
     t.value = s;
     t.end = {column, line};
-    t.type = TT::INTEGER;
+
     std::cout << "Octal number found!" << std::endl;
 }
 
@@ -139,9 +140,10 @@ void Lexer::scan_hex_numbers(Token& t, std::string& s) {
     do{
         s += get();
     }while( std::isxdigit(static_cast<unsigned char>(input.peek())) );
+    t.type = TT::INTEGER;
     t.value = s;
     t.end = {column, line};
-    t.type = TT::INTEGER;
+
     std::cout << "Hexdecimal number found!" << std::endl;
 }
 
@@ -312,6 +314,8 @@ Token Lexer::numbers() {
     }
 
     base10_or_float_numbers(t, s);
+
+    t.end = {column, line};
     return t;
 }
 
@@ -364,6 +368,7 @@ Token Lexer::next_token() {
         case '.':
             if( std::isdigit(input.peek()) ) {
                 t = numbers();
+                return t;
             }
             else {
                 t.type = TT::DOT;
@@ -393,6 +398,7 @@ Token Lexer::next_token() {
         case '-':
             if( std::isdigit(input.peek()) || input.peek() == '.' ) {
                 t = numbers();
+                return t;
             }
             else if(input.peek() == '-') {
                 get();
