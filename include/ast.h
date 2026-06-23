@@ -310,7 +310,7 @@ struct TypeSpecifier {
     Token type_name;
     std::vector<int> dimension;     //when int[size][size]
 
-    TypeSpecifier(const std::vector<std::string>& qlfs, const Token& t, const std::vector<int> dims)
+    TypeSpecifier(const std::vector<std::string>& qlfs, const Token& t, const std::vector<int>& dims)
         : qualifiers(qlfs), type_name(t), dimension(dims) {}
 
 };
