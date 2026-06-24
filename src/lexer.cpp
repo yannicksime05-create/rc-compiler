@@ -29,10 +29,7 @@ Token Lexer::comments_or_div_operator() {
             }
         }
 
-        if(!ended) {
-            t.end = {column, line};
-            error(t, "", "Error: Unterminated comment!");
-        }
+        if(!ended) error(t, "", "Error: Unterminated comment!");
     }
     else if(input.peek() == '=') {
         get();
@@ -40,9 +37,11 @@ Token Lexer::comments_or_div_operator() {
         t.value = "/=";
     }
     else {
-        t.type = TT::SLASH;          //                      /
+        t.type = TT::SLASH;
         t.value = "/";
     }
+
+    t.end = {column, line};
     return t;
 }
 
@@ -66,9 +65,8 @@ Token Lexer::strings() {
 
         s += c;
     }
-//                    std::cout << "character after the end of the loop = " << c << std::endl;
+
     if(input.eof()) {
-        t.end = {column, line};
         error(t, s, "Error: Unterminated string literal! Missing enclosing \"");
         return t;
     }
@@ -76,6 +74,7 @@ Token Lexer::strings() {
     //Commentez la ligne suivante pour enlever ' " ' dans s.
     s += c;
     t.value = s;
+    t.end = {column, line};
     return t;
 }
 
@@ -84,67 +83,60 @@ Token Lexer::keywords_and_identifiers() {
     t.start = {column - 1, line};
     std::string s(1, c);
     while( std::isalnum(static_cast<unsigned char>(input.peek())) || input.peek() == '_' ) {
-//        input.get(c); ++column;
-//        s += c;
         s += get();
     }
 
     t.type = get_word_type(s);
     t.type == TT::IDENTIFIER ? (std::cout << "Identifier found!" << std::endl) : (std::cout << "Keyword found!" << std::endl);
     t.value = s;
+    t.end = {column, line};
     return t;
 }
 
-void Lexer::scan_binary_numbers(Token& t, std::string& s) {
+bool Lexer::scan_binary_numbers(Token& t, std::string& s) {
     if( input.peek() != '0' && input.peek() != '1' ) {
-        t.end = {column, line};
         error(t, s, "Error: Binary number has no digits!");
-        return;
+        return false;
     }
 
     do{
         s += get();
     }while( input.peek() == '0' || input.peek() == '1' );
     t.type = TT::INTEGER;
-    t.value = s;
-    t.end = {column, line};
 
     std::cout << "Binary number found!" << std::endl;
+    return true;
 }
 
-void Lexer::scan_octal_numbers(Token& t, std::string& s) {
+bool Lexer::scan_octal_numbers(Token& t, std::string& s) {
     if( input.peek() < '0' || input.peek() > '7' ) {
-        t.end = {column, line};
         error(t, s, "Error: Octal number has no digits!");
-        return;
+        return false;
     }
 
     do{
         s += get();
     }while( input.peek() >= '0' && input.peek() <= '7' );
     t.type = TT::INTEGER;
-    t.value = s;
-    t.end = {column, line};
 
     std::cout << "Octal number found!" << std::endl;
+    return true;
 }
 
-void Lexer::scan_hex_numbers(Token& t, std::string& s) {
+bool Lexer::scan_hex_numbers(Token& t, std::string& s) {
     char ch = static_cast<unsigned char>( input.peek() );
     if( !std::isxdigit(ch) ) {
-        t.end = {column, line};
         error(t, s, "Error: Hexdecimal number has no digits!");
-        return;
+        return false;
     }
 
     do{
         s += get();
     }while( std::isxdigit(static_cast<unsigned char>(input.peek())) );
     t.type = TT::INTEGER;
-    t.value = s;
-    t.end = {column, line};
 
     std::cout << "Hexdecimal number found!" << std::endl;
+    return true;
 }
 
 //
@@ -166,7 +158,6 @@ enum class FloatState {
     AFTER_E,         // just consumed 'e'/'E', expecting sign or digit
     AFTER_SIGN,      // just consumed '+'/'-', expecting digit
     EXPONENT_PART,   // reading exponent digits
-    SUFFIX,          // reading the type suffix — must be the last character
 };
 
 //For debugging purposes
@@ -178,28 +169,27 @@ enum class FloatState {
 //        case FloatState::AFTER_E:               return "after_e";
 //        case FloatState::AFTER_SIGN:            return "after_sign";
 //        case FloatState::EXPONENT_PART:         return "exponent_part";
-//        case FloatState::SUFFIX:                return "suffix";
 //    }
 //
 //    return "";
 //}
 
-void Lexer::base10_or_float_numbers(Token& t, std::string& s) {
-    bool has_dot = c == '.' ? true : false, has_e = false, is_float, has_l = false, has_ll = false, has_u = false;
+void Lexer::scan_integral_part(Token& t, std::string& s) {
+    while( std::isdigit(input.peek()) ) {
+        c = get();
+        s += c;
+    }
+
+    t.type = TT::INTEGER;
+}
+
+void Lexer::scan_floating_point_part(Token& t, std::string& s) {
+    bool has_dot = c == '.' ? true : false, has_e = false, is_float;
     FloatState state = has_dot ? FloatState::AFTER_DOT : FloatState::INTEGER_PART;
 
     is_float = has_dot || has_e;
     char next = input.peek();
-    while(  next == '.'                                     ||
-            std::isdigit(next)                              ||
-            next == '+' || next == '-'                      ||
-            next == 'e' || next == 'E'                      ||
-            next == 'l' || next == 'L'                      ||
-            ( is_float && (next == 'f' || next == 'F') )    ||
-            ( !is_float && (next == 'u' || next == 'U') )
-        )
-    {
-
+    while( next == '.' || std::isdigit(next) || next == '+' || next == '-' || next == 'e' || next == 'E' ) {
         c = static_cast<char>(get());
 //        std::cout << "s = " << s << ", c = " << c << ", state = " << state_to_string(state) << std::endl;
         is_float = has_dot || has_e;
@@ -209,11 +199,10 @@ void Lexer::base10_or_float_numbers(Token& t, std::string& s) {
             has_dot = true;
             state = FloatState::AFTER_DOT;
         }
-//        else if(state == FloatState::AFTER_DOT && !has_e) {
+//        else if(state == FloatState::AFTER_DOT && std::isdigit(c)) {
 //            state = FloatState::FRACTION_PART;
 //        }
         else if((state == FloatState::INTEGER_PART || state == FloatState::AFTER_DOT) && std::tolower(c) == 'e') {
-//        (state == FloatState::INTEGER_PART || state == FloatState::AFTER_DOT) && (c == 'e' || c == 'E')
             has_e = true;
             state = FloatState::AFTER_E;
         }
@@ -223,18 +212,10 @@ void Lexer::base10_or_float_numbers(Token& t, std::string& s) {
         else if((state == FloatState::AFTER_E || state == FloatState::AFTER_SIGN) && std::isdigit(c)) {
             state = FloatState::EXPONENT_PART;
         }
-        else if(std::tolower(c) == 'u' || std::tolower(c) == 'l' || std::tolower(c) == 'f') {
-            state = FloatState::SUFFIX;
-
-            if(std::tolower(c) == 'u') has_u = true;
-            else if(std::tolower(c) == 'l' && !has_l) has_l = true;
-            else if(std::tolower(c) == 'l' && has_l) has_ll = true;
-        }
 
 
         next = static_cast<char>(input.peek());
         if(is_float && c == '.') {
-            t.end = {column, line};
             error(t, s, "Error: Too many decimal points in number");
             return;
         }
@@ -242,79 +223,126 @@ void Lexer::base10_or_float_numbers(Token& t, std::string& s) {
                     (state == FloatState::AFTER_E && !std::isdigit(next) && next != '+' && next != '-')
                 )
         {
-            t.end = {column, line};
             error(t, s, "Error: exponent has no digits");
             return;
         }
-        else if(is_float && state == FloatState::SUFFIX && (std::tolower(next) == 'l' || std::tolower(next) == 'f')) {
-            t.end = {column, line};
-            error(t, s, "Float literal has more than one suffix");
-            return;
-        }
-        else if( (  state == FloatState::AFTER_E     ||
-                    state == FloatState::AFTER_SIGN  ||
-                    state == FloatState::SUFFIX      ||
-                    state == FloatState::EXPONENT_PART
+        else if(    (next == 'e' || next == 'E') &&
+                    (state == FloatState::AFTER_E || state == FloatState::AFTER_SIGN || state == FloatState::EXPONENT_PART)
                 )
-                && (next == 'e' || next == 'E')
-        ) {
+        {
             s += next;
-            t.end = {column, line};
             error(t, s, "Unexpected exponent marker");
             return;
         }
-        else if(    (has_u && std::tolower(next) == 'u') ||
-                    (has_ll && std::tolower(next) == 'l')
-        ) {
-//            c += get(); s += c;
-            s += next;
-            t.end = {column, line};
-            error(t, s, "Unknown suffix");
-            return;
-        }
-
     }
 
-    t.type = is_float ? TT::FLOAT : TT::INTEGER;
-    t.value = s;
+    t.type = TT::FLOAT;
+}
+
+bool Lexer::scan_integer_suffix(Token& t, std::string& s) {
+    bool suffix_u = false, suffix_l = false, suffix_ll = false, suffix_ul = false, suffix_ull = false, first = true;
+
+    char next = input.peek(), first_suffix;
+    while( next == 'u' || next == 'U' || next == 'l' || next == 'L' ) {
+        c = static_cast<char>(get());
+
+        if(first) {
+            first = false;
+            first_suffix = std::tolower(c);
+        }
+
+
+        if( first_suffix == 'u' ) {
+            if(!suffix_u)                                               suffix_u = true;
+            else if(suffix_u && std::tolower(c) == 'l' && !suffix_ul)   suffix_ul = true;
+            else if(suffix_ul && std::tolower(c) == 'l' && !suffix_ull) suffix_ull = true;
+            else {
+                s += c;
+                error(t, s, "Unknown suffix");
+                return false;
+            }
+        }
+
+
+        else if( first_suffix == 'l' ) {
+            if(!suffix_l)                                               suffix_l = true;
+            else if(suffix_l && !suffix_ll)                             suffix_ll = true;
+            else if(suffix_ll && std::tolower(c) == 'u' && !suffix_ull) suffix_ull = true;
+            else {
+                s += c;
+                error(t, s, "Unknown suffix");
+                return false;
+            }
+
+        }
+
+        s += c;
+        next = input.peek();
+    }
+
+    return true;
+
+}
+
+bool Lexer::scan_float_suffix(Token& t, std::string& s) {
+    char next = input.peek();
+    if( std::tolower(next) != 'l' && std::tolower(next) != 'f' ) return true;
+
+    s += get();
+
+    next = input.peek();
+    if( std::tolower(next) == 'l' || std::tolower(next) == 'f' || std::tolower(next) == 'e' ) {
+        s += get();
+        error(t, s, std::tolower(next) == 'e' ? "Error: Suffix must come last in floating point literals" : "Error: Float literal can only have one suffix");
+        return false;
+    }
+
+    return true;
 }
 
 Token Lexer::numbers() {
     Token t;
     t.start = {column - 1, line};
     std::string s(1, c);
+    bool base10_number = true;
 
     if(c == '0') {
-        char next = static_cast<unsigned char>(input.peek());
+        char next = static_cast<char>(input.peek());
         if( std::isdigit(next) ) {
-//            c = get(); s += c;
             s += get();
-            t.end = {column, line};
             error(t, s, "C-style octal numbers are discouraged!");
             return t;
         }
         else if(next == 'b' || next == 'B') {
-//            c = get(); s += c;
+            base10_number = false;
             s += get();
-            scan_binary_numbers(t, s);
-            return t;
+            if( !scan_binary_numbers(t, s) )    return t;
         }
         else if(next == 'o' || next == 'O') {
-//            c = get(); s += c;
+            base10_number = false;
             s += get();
-            scan_octal_numbers(t, s);
-            return t;
+            if( !scan_octal_numbers(t, s) )     return t;
         }
         else if(next == 'x' || next == 'X') {
-//            c = get(); s += c;
+            base10_number = false;
             s += get();
-            scan_hex_numbers(t, s);
-            return t;
+            if( !scan_hex_numbers(t, s) )       return t;
         }
     }
 
-    base10_or_float_numbers(t, s);
+    if(base10_number) {
+        scan_integral_part(t, s);
 
+        //Note: Putting this here prevents non-base10 floating-point numbers. I read that some languages allowed them, but we'll stick with this for now.
+        //c == '.' handles leading-dot floats (.5, .14e3) entered via next_token's case '.'.
+        //input.peek() handles mid-number floats (3.14) and exponents (1e9).
+        if(c == '.' || input.peek() == '.' || std::tolower(input.peek()) == 'e') scan_floating_point_part(t, s);
+    }
+
+    if(t.type == TT::INTEGER && !scan_integer_suffix(t, s))     return t;
+    else if(t.type == TT::FLOAT && !scan_float_suffix(t, s))    return t;
+
+    t.value = s;
     t.end = {column, line};
     return t;
 }
@@ -396,11 +424,7 @@ Token Lexer::next_token() {
             }
             break;
         case '-':
-            if( std::isdigit(input.peek()) || input.peek() == '.' ) {
-                t = numbers();
-                return t;
-            }
-            else if(input.peek() == '-') {
+            if(input.peek() == '-') {
                 get();
                 t.type = TT::DECREMENT;
                 t.value = "--";
@@ -582,7 +606,7 @@ Token Lexer::next_token() {
                 return t;
             }
             //=============== KEYWORDS & IDENTIFIERS ===============
-            else if( std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
+            else if( std::isalpha(static_cast<unsigned char>(c)) || c == '_' ) {
                 t = keywords_and_identifiers();
                 return t;
             }
@@ -593,7 +617,6 @@ Token Lexer::next_token() {
             }
             else {
                 std::string s(1, c);
-                t.end = {column, line};
                 error(t, s, "Unknown token found!");
                 return t;
             }
