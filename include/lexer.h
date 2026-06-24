@@ -67,15 +67,20 @@ class Lexer {
     void error(Token& t, const std::string& s, const std::string& msg) {
         t.type = TT::UNKNOWN;
         t.value = s;
+        t.end = {column, line};
+
         std::cerr << msg << "\nToken: value = " << t.value
         << ", spans from: line " << t.start.line << ", col " << t.start.col
-        << " to: line " << t.end.line << ", col " << t.end.col << ".\n" << std::endl;
+        << " to: line " << line << ", col " << column << ".\n" << std::endl;
     }
 
-    void scan_binary_numbers(Token& t, std::string& s);
-    void scan_octal_numbers(Token& t, std::string& s);
-    void scan_hex_numbers(Token& t, std::string& s);
-    void base10_or_float_numbers(Token& t, std::string& s);
+    bool scan_binary_numbers(Token& t, std::string& s);
+    bool scan_octal_numbers(Token& t, std::string& s);
+    bool scan_hex_numbers(Token& t, std::string& s);
+    void scan_integral_part(Token& t, std::string& s);
+    void scan_floating_point_part(Token& t, std::string& s);
+    bool scan_integer_suffix(Token& t, std::string& s);
+    bool scan_float_suffix(Token& t, std::string& s);
 
     Token comments_or_div_operator();
     Token strings();
@@ -99,7 +104,8 @@ public:
     }
 
     void print(Token& t) {
-        std::cout << "token value = " << t.value << std::endl << std::endl;
+        std::cout << "token value = " << t.value << "\n" << std::endl;
+//        std::cout << "token value = " << t.value << ", ends at: line: " << t.end.line << ", col: " << t.end.col << std::endl;
     }
 
 };
