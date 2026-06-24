@@ -1,16 +1,19 @@
-//Valid numbers
 0xfff
+0xFFl
 0b1010
 0o777
 2458
-2.5
 .5
+2.5
 0.5e10
 0.5e+10
 2.5f
 1.2L
 6.02e23L
-42u
+
+
+//Valid integer literals with suffixes
+//42u
 42l
 42ul
 42lu
@@ -18,13 +21,23 @@
 42ull
 42llu
 
+
+//
+01
+
+//
+0b10.0 //in some languages this is valid, but here the lexer will read this as 0b10 and .0
+
 //Invalid ones
+1.+2 	//this should be invalid but, for some reason, it's not
 25uu
 25lul
 25lll
 1e2e3
 1e
 1e+
+
+
 1..2
 0x
 2.6le
