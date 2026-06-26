@@ -45,12 +45,8 @@ public:
         return nullptr;
     }
 
+    //This destructor does nothing because the declarations nodes on the ast will delete their symbols.
     ~Scope() {
-        //Adding this will cause visit(CallExpr&) to crash on this line: bool valid_arg_type = arg_type->kind == param_type->kind;
-        //so I'll let this out for now.
-//        for(auto& pair : symbols) {
-//            if(pair.second) delete pair.second;
-//        }
     }
 };
 

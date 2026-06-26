@@ -13,12 +13,14 @@
 */
 
 struct Expr : ASTNode {
-    //Non-owning, so never call delete on it.
     Type *resolved_type = nullptr;
 
     Expr(ASTNodeType t) { node_type = t; }
 
-    virtual ~Expr() = default;
+    virtual ~Expr() {
+        delete resolved_type;
+        resolved_type = nullptr;
+    }
 };
 
 struct Decl : ASTNode {
@@ -231,8 +233,6 @@ struct CallExpr : Expr {
             delete e;
             e = nullptr;
         }
-//        delete symbol;
-//        symbol = nullptr;
 
         std::cout << "Cleaned up CallExpr node...\n";
     }
@@ -251,8 +251,6 @@ struct MemberAccessExpr : Expr {
     ~MemberAccessExpr() {
         delete object;
         object = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
 
         std::cout << "Cleaned up MemberAccessExpr node...\n";
     }
@@ -273,8 +271,6 @@ struct SubscriptExpr : Expr {
         object = nullptr;
         delete index;
         index = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
 
         std::cout << "Cleaned up SubscriptExpr node...\n";
     }
@@ -310,7 +306,7 @@ struct TypeSpecifier {
     Token type_name;
     std::vector<int> dimension;     //when int[size][size]
 
-    TypeSpecifier(const std::vector<std::string>& qlfs, const Token& t, const std::vector<int> dims)
+    TypeSpecifier(const std::vector<std::string>& qlfs, const Token& t, const std::vector<int>& dims)
         : qualifiers(qlfs), type_name(t), dimension(dims) {}
 
 };
@@ -318,7 +314,6 @@ struct TypeSpecifier {
 struct VariableDeclarator {
     Token variable_name;
     Expr *initializer = nullptr;
-    //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
     VariableDeclarator(const Token& n, Expr *i = nullptr) : variable_name(n), initializer(i) {}
@@ -326,8 +321,8 @@ struct VariableDeclarator {
     ~VariableDeclarator() {
         delete initializer;
         initializer = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up VariableDeclarator...\n";
     }
@@ -376,7 +371,6 @@ struct Parameter {
     TypeSpecifier type_name;
     Token parameter_name;
     Expr *default_value = nullptr;
-    //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
     Parameter(const TypeSpecifier& t, const Token& n, Expr *dv = nullptr) : type_name(t), parameter_name(n), default_value(dv) {}
@@ -384,8 +378,8 @@ struct Parameter {
     ~Parameter() {
         delete default_value;
         default_value = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaning up Param...\n";
     }
@@ -397,7 +391,6 @@ struct FunctionDecl : Decl {
     Token function_name;
     std::vector<Parameter *> parameters;
     CompoundStmt *body = nullptr;
-    //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
     FunctionDecl(const TypeSpecifier& rt, const Token& n, CompoundStmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
@@ -412,8 +405,8 @@ struct FunctionDecl : Decl {
         }
         delete body;
         body = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up FunctionDecl...\n";
     }

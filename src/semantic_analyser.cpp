@@ -190,9 +190,9 @@ void SemanticAnalyser::visit(ArrayLiteralExpr& e) {
     }
 
     std::stringstream ss;
-    Type *first = e.elements[0]->resolved_type;
+    Type *first = e.elements[0]->resolved_type, *t = nullptr;
     for(size_t i = 1; i < e.elements.size(); ++i) {
-        Type *t = e.elements[i]->resolved_type;
+        t = e.elements[i]->resolved_type;
 
         if(!t || t->kind != first->kind) {
             ss.str("");
@@ -202,8 +202,10 @@ void SemanticAnalyser::visit(ArrayLiteralExpr& e) {
             throw SemanticError(ss.str());
         }
     }
+    t = nullptr;
 
     e.resolved_type = new ArrayType(first->clone(), static_cast<int>(e.elements.size()));
+    first = nullptr;
 }
 
 void SemanticAnalyser::visit(IdentifierExpr& e) {
@@ -215,7 +217,7 @@ void SemanticAnalyser::visit(IdentifierExpr& e) {
     }
 
     e.symbol = s;
-    e.resolved_type = s->declared_type;
+    e.resolved_type = s->declared_type->clone();
 
     std::cout << "identifier expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
 }
@@ -308,7 +310,7 @@ void SemanticAnalyser::visit(BinaryExpr& e) {
         }
         case TT::SLASH: {
             if(is_string_type(lt) && (is_string_type(rt) || is_integral_type(rt))) {
-                e.resolved_type = new ArrayType(new BuiltinType(*lt), -1);
+                e.resolved_type = new ArrayType(lt->clone(), -1);
                 break;
             }
 
@@ -326,7 +328,7 @@ void SemanticAnalyser::visit(BinaryExpr& e) {
                 throw SemanticError(ss.str());
             }
 
-            e.resolved_type = new BuiltinType(*lt);
+            e.resolved_type = lt->clone();
             break;
         }
 
@@ -416,7 +418,7 @@ void SemanticAnalyser::visit(UnaryExpr& e) {
                 throw SemanticError(ss.str());
             }
 
-            e.resolved_type = new BuiltinType(*t);
+            e.resolved_type = t->clone();
             break;
         }
         // --- !
@@ -441,7 +443,7 @@ void SemanticAnalyser::visit(UnaryExpr& e) {
                 throw SemanticError(ss.str());
             }
 
-            e.resolved_type = new BuiltinType(*t);
+            e.resolved_type = t->clone();
             break;
         }
         // --- ~
@@ -453,7 +455,7 @@ void SemanticAnalyser::visit(UnaryExpr& e) {
                 throw SemanticError(ss.str());
             }
 
-            e.resolved_type = new BuiltinType(*t);
+            e.resolved_type = t->clone();
             break;
         }
         default:
@@ -478,46 +480,46 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
         throw SemanticError(ss.str());
     }
 
-    const BuiltinType *tt = static_cast<const BuiltinType*>(tmp1);
-    const BuiltinType *vt = static_cast<const BuiltinType*>(tmp2);
+    const BuiltinType *target_type = static_cast<const BuiltinType*>(tmp1);
+    const BuiltinType *value_type = static_cast<const BuiltinType*>(tmp2);
     tmp1 = tmp2 = nullptr;
 
     switch(e.op.type) {
         case TT::ASSIGN: {
-            if( (is_string_type(tt) && !is_string_type(vt)) ||
-                (is_numeric_type(tt) && !is_numeric_type(vt))
-              ) throw SemanticError(type_mismatch(tt, e.op, vt));
+            if( (is_string_type(target_type) && !is_string_type(value_type)) ||
+                (is_numeric_type(target_type) && !is_numeric_type(value_type))
+              ) throw SemanticError(type_mismatch(target_type, e.op, value_type));
 
-            e.resolved_type = new BuiltinType(*tt);
+            e.resolved_type = target_type->clone();
             break;
         }
         case TT::PLUS_ASSIGN:
         case TT::MINUS_ASSIGN:
         case TT::STAR_ASSIGN: {
-            bool valid = ( is_numeric_type(tt) && is_numeric_type(vt) )                                 ||
-                         ( e.op.type == TT::MINUS_ASSIGN && is_string_type(tt) && is_string_type(vt) )  ||
-                         ( e.op.type == TT::STAR_ASSIGN && is_string_type(tt) && is_integral_type(vt) ) ||
-                         ( e.op.type == TT::PLUS_ASSIGN && is_string_type(tt) && (is_string_type(vt) || is_numeric_type(vt)) );
+            bool valid = ( is_numeric_type(target_type) && is_numeric_type(value_type) )                                 ||
+                         ( e.op.type == TT::MINUS_ASSIGN && is_string_type(target_type) && is_string_type(value_type) )  ||
+                         ( e.op.type == TT::STAR_ASSIGN && is_string_type(target_type) && is_integral_type(value_type) ) ||
+                         ( e.op.type == TT::PLUS_ASSIGN && is_string_type(target_type) && (is_string_type(value_type) || is_numeric_type(value_type)) );
             if(valid) {
-                e.resolved_type = new BuiltinType(*tt);
+                e.resolved_type = target_type->clone();
                 break;
             }
 
-            throw SemanticError(type_mismatch(tt, e.op, vt));
+            throw SemanticError(type_mismatch(target_type, e.op, value_type));
         }
         case TT::SLASH_ASSIGN: {
-            if(is_string_type(tt) && (is_string_type(vt) || is_integral_type(vt))) {
-//                e.resolved_type = new Type(TK::ARRAY, tt); //array of strings
-                e.resolved_type = new ArrayType(new BuiltinType(*tt), -1);
+            if(is_string_type(target_type) && (is_string_type(value_type) || is_integral_type(value_type))) {
+//                e.resolved_type = new Type(TK::ARRAY, target_type); //array of strings
+                e.resolved_type = new ArrayType(target_type->clone(), -1);
                 break;
             }
 
-            if(is_numeric_type(tt) && is_numeric_type(vt)) {
-                e.resolved_type = new BuiltinType(*tt);
+            if(is_numeric_type(target_type) && is_numeric_type(value_type)) {
+                e.resolved_type = target_type->clone();
                 break;
             }
 
-            throw SemanticError(type_mismatch(tt, e.op, vt));
+            throw SemanticError(type_mismatch(target_type, e.op, value_type));
         }
         case TT::MOD_ASSIGN:
         case TT::BIT_OR_ASSIGN:
@@ -525,12 +527,12 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
         case TT::BIT_XOR_ASSIGN:
         case TT::LEFT_SHIFT_ASSIGN:
         case TT::RIGHT_SHIFT_ASSIGN: {
-            if(is_integral_type(tt) && is_integral_type(vt)) {
-                e.resolved_type = new BuiltinType(*tt);
+            if(is_integral_type(target_type) && is_integral_type(value_type)) {
+                e.resolved_type = target_type->clone();
                 break;
             }
 
-            throw SemanticError(type_mismatch(tt, e.op, vt));
+            throw SemanticError(type_mismatch(target_type, e.op, value_type));
         }
 
         default:
@@ -557,28 +559,28 @@ void SemanticAnalyser::visit(ConditionalExpr& e) {
         throw SemanticError(ss.str());
     }
 
-    const BuiltinType *ct = static_cast<const BuiltinType*>(tmp1);
-    const BuiltinType *itt = static_cast<const BuiltinType*>(tmp2);
-    const BuiltinType *ift = static_cast<const BuiltinType*>(tmp3);
+    const BuiltinType *condition_type = static_cast<const BuiltinType*>(tmp1);
+    const BuiltinType *if_true_type = static_cast<const BuiltinType*>(tmp2);
+    const BuiltinType *if_false_type = static_cast<const BuiltinType*>(tmp3);
     tmp1 = tmp2 = tmp3 = nullptr;
 
-    if(!is_bool_type(ct)) {
+    if(!is_bool_type(condition_type)) {
         ss.str("");
-        ss << "Error: Ternary condition must be bool, found '" << type_to_string(ct) << "'!";
+        ss << "Error: Ternary condition must be bool, found '" << type_to_string(condition_type) << "'!";
         throw SemanticError(ss.str());
     }
 
-    bool both_numeric = is_numeric_type(itt) && is_numeric_type(ift);
-    bool both_string  = is_string_type(itt)  && is_string_type(ift);
-    bool both_bool    = is_bool_type(itt)    && is_bool_type(ift);
+    bool both_numeric = is_numeric_type(if_true_type) && is_numeric_type(if_false_type);
+    bool both_string  = is_string_type(if_true_type)  && is_string_type(if_false_type);
+    bool both_bool    = is_bool_type(if_true_type)    && is_bool_type(if_false_type);
 
     if(!both_numeric && !both_string && !both_bool) {
         ss.str("");
-        ss << "Error: Ternary branches must have compatible types, found '" << type_to_string(itt) << "' and '" << type_to_string(ift) << "'!";
+        ss << "Error: Ternary branches must have compatible types, found '" << type_to_string(if_true_type) << "' and '" << type_to_string(if_false_type) << "'!";
         throw SemanticError(ss.str());
     }
 
-    e.resolved_type = new BuiltinType(*itt);
+    e.resolved_type = if_true_type->clone();
 }
 
 void SemanticAnalyser::visit(CallExpr& e) {
@@ -677,6 +679,7 @@ void SemanticAnalyser::visit(SubscriptExpr& e) {
     if(tmp1->kind != TK::ARRAY) {
         ss.str("");
         ss << "Error: Subscript operator '[]' requires an array type, found '" << type_to_string(tmp1) << "' instead!";
+        tmp1 = nullptr;
         throw SemanticError(ss.str());
     }
 
@@ -704,7 +707,7 @@ void SemanticAnalyser::visit(SequenceExpr& e) {
     }
 
     e.resolved_type = e.expressions.back()->resolved_type->clone();
-//    std::cout << "sequence expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
+    std::cout << "sequence expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
 }
 
 
