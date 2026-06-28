@@ -78,4 +78,42 @@ struct ArrayType : Type {
     }
 };
 
+struct AutoType : Type {
+    Type *underlying_type = nullptr;
+
+    AutoType(Type *t, bool c = false) : Type(TypeKind::AUTO, c) {}
+
+    AutoType(const AutoType& t) : Type(TypeKind::AUTO, t.is_constant) {
+        underlying_type = t.underlying_type ? t.underlying_type->clone() : nullptr;
+    }
+
+    AutoType& operator=(const AutoType& t) {
+        if(this != &t) {
+            is_constant = t.is_constant;
+            delete underlying_type;
+
+            underlying_type = t.underlying_type ? t.underlying_type->clone() : nullptr;
+        }
+
+        return *this;
+    }
+
+    AutoType *clone() const override { return new AutoType(*this); }
+
+    ~AutoType() {
+        delete underlying_type;
+        underlying_type = nullptr;
+    }
+};
+
+struct UnknownType : Type {
+    std::string why;
+
+    UnknownType(const std::string& reason, bool c = false) : Type(TypeKind::UNKNOWN, c), why(reason) {}
+
+    UnknownType *clone() const override { return new UnknownType(*this); }
+
+    ~UnknownType() {}
+};
+
 #endif // TYPES_H

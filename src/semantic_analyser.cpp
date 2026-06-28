@@ -30,6 +30,62 @@ bool SemanticAnalyser::is_bool_type(const BuiltinType *t) {
     return t && t->builtin == BuiltinType::Types::BOOL;
 }
 
+BuiltinType *SemanticAnalyser::promote(const BuiltinType *left, const BuiltinType *right) {
+    if(!is_numeric_type(left) || !is_numeric_type(right)) return nullptr;
+
+    if(left->builtin == BuiltinType::Types::FLOAT || right->builtin == BuiltinType::Types::FLOAT)
+        return new BuiltinType(BuiltinType::Types::FLOAT);
+
+    return new BuiltinType(BuiltinType::Types::INT);
+}
+
+std::string SemanticAnalyser::type_mismatch(const Type *lt, Token& op, const Type *rt) {
+    std::stringstream ss;
+    ss << "Operands' types mismatch for operator '" << op.value << "' at line: " << op.start.line
+    << ".\n Left is: '" << type_to_string(lt) << "', right is: '" << type_to_string(rt) << "'.\n";
+
+    return ss.str();
+}
+
+
+Type *SemanticAnalyser::resolve(TypeSpecifier& t) {
+    Type *tmp = resolve_type_name(t.type_name);
+//    //for now it only constains 'const'
+    tmp->is_constant = !t.qualifiers.empty();
+
+//        //int[3]            (kind: ARRAY, size: 3, elem_type: (kind: BUILTIN, builtin: INT))
+//        //int[3][4]         (kind: ARRAY, size: 3, elem_type: (kind: ARRAY, size: 4, elem_type: (kind: BUILTIN, builtin: INT)))
+    while( !t.dimension.empty() ) {
+        Type *elem_type = tmp;
+
+        tmp = new ArrayType(elem_type, t.dimension.back());
+        t.dimension.pop_back();
+    }
+
+    return tmp;
+}
+
+Type *SemanticAnalyser::resolve_type_name(Token& t) {
+    switch(t.type) {
+//        case TT::KW_ANY:    return new Type(TK::ANY);
+        case TT::KW_AUTO:   return new Type(TK::AUTO);
+
+        case TT::KW_BOOL:   return new BuiltinType(BuiltinType::Types::BOOL);
+        case TT::KW_INT:    return new BuiltinType(BuiltinType::Types::INT);
+
+        case TT::KW_FLOAT:
+        case TT::KW_DOUBLE: return new BuiltinType(BuiltinType::Types::FLOAT);
+
+        case TT::KW_STRING: return new BuiltinType(BuiltinType::Types::STRING);
+//        case TT::KW_VOID:
+        default: {
+            std::stringstream ss;
+            ss << "undefined type '" << t.value << "'";
+            return new UnknownType(ss.str());
+        }
+    }
+}
+
 std::string SemanticAnalyser::type_to_string(const Type *t) {
     if(!t) return "unknown";
 
@@ -45,6 +101,11 @@ std::string SemanticAnalyser::type_to_string(const Type *t) {
         case TK::BUILTIN: {
             const BuiltinType *bt = static_cast<const BuiltinType*>(t);
             ss << builtintype_to_string(bt);
+            break;
+        }
+        case TK::AUTO: {
+            const AutoType *at = static_cast<const AutoType*>(t);
+            ss << autotype_to_string(at);
             break;
         }
 //        case TK::FUNCTION: {
@@ -89,69 +150,8 @@ std::string SemanticAnalyser::arraytype_to_string(const ArrayType *t) {
     return ss.str();
 }
 
-//std::string SemanticAnalyser::functiontype_to_string(const FunctionType *t) {
-//    std::stringstream ss;
-//    ss << type_to_string(t->return_type) << " " << t->name << "(";
-//
-//    for(size_t i = 0; i < t->parameters_types.size(); ++i) {
-//        ss << type_to_string(t->parameters_types[i]);
-//
-//        if(i < t->parameters_types.size()) ss << ", ";
-//    }
-//    ss << ")";
-//
-//    return ss.str();
-//}
-
-BuiltinType *SemanticAnalyser::promote(const BuiltinType *left, const BuiltinType *right) {
-    if(!is_numeric_type(left) || !is_numeric_type(right)) return nullptr;
-
-    if(left->builtin == BuiltinType::Types::FLOAT || right->builtin == BuiltinType::Types::FLOAT)
-        return new BuiltinType(BuiltinType::Types::FLOAT);
-
-    return new BuiltinType(BuiltinType::Types::INT);
-}
-
-std::string SemanticAnalyser::type_mismatch(const Type *lt, Token& op, const Type *rt) {
-    std::stringstream ss;
-    ss << "Operands' types mismatch for operator '" << op.value << "' at line: " << op.start.line
-    << ".\n Left is: '" << type_to_string(lt) << "', right is: '" << type_to_string(rt) << "'.\n";
-
-    return ss.str();
-}
-
-Type *SemanticAnalyser::resolve_type_name(Token& t) {
-    switch(t.type) {
-//        case TT::KW_ANY:    return new Type(TK::ANY);
-//        case TT::KW_AUTO:   return new Type(TK::AUTO);
-
-        case TT::KW_BOOL:   return new BuiltinType(BuiltinType::Types::BOOL);
-        case TT::KW_INT:    return new BuiltinType(BuiltinType::Types::INT);
-
-        case TT::KW_FLOAT:
-        case TT::KW_DOUBLE: return new BuiltinType(BuiltinType::Types::FLOAT);
-
-        case TT::KW_STRING: return new BuiltinType(BuiltinType::Types::STRING);
-//        case TT::KW_VOID:
-        default:            return new Type(TK::UNKNOWN);
-    }
-}
-
-Type *SemanticAnalyser::resolve(TypeSpecifier& t) {
-    Type *tmp = resolve_type_name(t.type_name);
-//    //for now it only constains 'const'
-    tmp->is_constant = !t.qualifiers.empty();
-
-//        //int[3]            (kind: ARRAY, size: 3, elem_type: (kind: BUILTIN, builtin: INT))
-//        //int[3][4]         (kind: ARRAY, size: 3, elem_type: (kind: ARRAY, size: 4, elem_type: (kind: BUILTIN, builtin: INT)))
-    while( !t.dimension.empty() ) {
-        Type *elem_type = tmp;
-
-        tmp = new ArrayType(elem_type, t.dimension.back());
-        t.dimension.pop_back();
-    }
-
-    return tmp;
+std::string SemanticAnalyser::autotype_to_string(const AutoType *t) {
+    return type_to_string(t->underlying_type);
 }
 
 
@@ -212,7 +212,7 @@ void SemanticAnalyser::visit(IdentifierExpr& e) {
     Symbol *s = manager.lookup(e.name.value);
     if(!s) {
         std::stringstream ss;
-        ss << "Used of undefined identifier. Line: " << e.name.start.line << ", Col: " << e.name.start.col << ".\n";
+        ss << "Use of undefined identifier '" << e.name.value << "'. Line: " << e.name.start.line << ", Col: " << e.name.start.col << ".\n";
         throw SemanticError(ss.str());
     }
 
@@ -623,13 +623,17 @@ void SemanticAnalyser::visit(CallExpr& e) {
     if(too_few_args || too_many_args) {
         ss  << "Error: ";
 
-        if(too_few_args) ss << "too few ";
-        else if(too_many_args) ss << "too many ";
+        if(too_few_args)        ss << "too few ";
+        else if(too_many_args)  ss << "too many ";
 
-        ss  << "arguments provided for function '"
-            << callee->name.value << "', expected "
-            << expected_args << " at least, but only "
-            << provided_args << " were provided. Line: "
+        ss  << "arguments to function '"
+            << callee->name.value << "', expected ";
+
+        if(too_few_args)        ss << expected_args << " at least, but only ";
+        else if(too_many_args)  ss << decl->parameters.size() << " at most, but ";
+
+        ss  << provided_args << " were provided."
+            << " Line: "
             << callee->name.start.line << ".\n";
         throw SemanticError(ss.str());
     }
@@ -720,8 +724,6 @@ void SemanticAnalyser::visit(SequenceExpr& e) {
 void SemanticAnalyser::visit(VariableDecl& d) {
     Type *t = resolve(d.declared_type);
 
-    std::cout << "declared variable(s)' resolved type = " << type_to_string(t) << "\n";
-
     std::stringstream ss;
     for(VariableDeclarator *vd : d.declarations) {
         if( (t->is_constant || t->kind == TK::ANY || t->kind == TK::AUTO) && !vd->initializer ) {
@@ -730,37 +732,44 @@ void SemanticAnalyser::visit(VariableDecl& d) {
             throw SemanticError(ss.str());
         }
 
-        if(vd->initializer) vd->initializer->accept(*this);
-
         if(manager.lookup_current(vd->variable_name.value)) {
             ss.str("");
-            ss << "Error: Redefinition of variable: " << vd->variable_name.value << ". Line: "
+            ss << "Error: Redefinition of variable: '" << vd->variable_name.value << "'. Line: "
             << vd->variable_name.start.line << ", Col: " << vd->variable_name.start.col;
             throw SemanticError(ss.str());
         }
 
-        if(vd->initializer && is_builtin_type(t) && is_builtin_type(vd->initializer->resolved_type)) {
-//            const Type *init_type = vd->initializer->resolved_type;
-            const BuiltinType *tmp1 = static_cast<const BuiltinType*>(t);
-            const BuiltinType *tmp2 = static_cast<const BuiltinType *>(vd->initializer->resolved_type);
+        if(vd->initializer) {
+            vd->initializer->accept(*this);
 
-            bool valid = ( is_numeric_type(tmp1) && is_numeric_type(tmp2) ) || ( is_string_type(tmp1) && is_string_type(tmp2) );
-
-            if(!valid) {
-                ss.str("");
-                ss << "Invalid conversion from: '" << type_to_string(tmp2) << "' to: '" << type_to_string(tmp1) << "'. Line: " << d.declared_type.type_name.start.line << "\n";
-                throw SemanticError(ss.str());
+            if(t->kind == TK::AUTO && vd->initializer->resolved_type) {
+                AutoType *tmp = static_cast<AutoType*>(t);
+                tmp->underlying_type = vd->initializer->resolved_type->clone();
+                t = tmp;
+                tmp = nullptr;
             }
+            else if(is_builtin_type(t) && is_builtin_type(vd->initializer->resolved_type)) {
+                const BuiltinType *tmp1 = static_cast<const BuiltinType*>(t);
+                const BuiltinType *tmp2 = static_cast<const BuiltinType *>(vd->initializer->resolved_type);
 
-            tmp1 = tmp2 = nullptr;
-//            init_type = nullptr;
+                bool valid = ( is_numeric_type(tmp1) && is_numeric_type(tmp2) ) || ( is_string_type(tmp1) && is_string_type(tmp2) );
+
+                if(!valid) {
+                    ss.str("");
+                    ss << "Invalid conversion from: '" << type_to_string(tmp2) << "' to: '" << type_to_string(tmp1) << "'. Line: " << d.declared_type.type_name.start.line << "\n";
+                    throw SemanticError(ss.str());
+                }
+
+                tmp1 = tmp2 = nullptr;
+            }
         }
-
 
         Symbol *s = new Symbol(vd->variable_name.value, SymbolType::VARIABLE, t->is_constant, t->clone(), &d);
         manager.insert(s);
         vd->symbol = s;
     }
+
+    std::cout << "declared variable(s)' resolved type = " << type_to_string(t) << "\n";
 }
 
 void SemanticAnalyser::visit(FunctionDecl& d) {

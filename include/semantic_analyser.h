@@ -23,11 +23,6 @@ class SemanticAnalyser : public Visitor {
     ScopeManager manager;
     Program& program;
 
-    /**
-    *   We use this to build the string for SemanticError("").
-    */
-//    std::stringstream ss;
-
     bool is_builtin_type(const Type *t);
     bool is_integral_type(const BuiltinType *t);
     bool is_floating_type(const BuiltinType *t);
@@ -38,6 +33,7 @@ class SemanticAnalyser : public Visitor {
     std::string type_to_string(const Type *t);
     std::string builtintype_to_string(const BuiltinType *t);
     std::string arraytype_to_string(const ArrayType *t);
+    std::string autotype_to_string(const AutoType *t);
 //    std::string functiontype_to_string(const FunctionType *t);
 
     BuiltinType *promote(const BuiltinType *left, const BuiltinType *right);
