@@ -122,15 +122,9 @@ class Parser {
 
     Decl                    *parseDeclaration();
     TypeSpecifier           *parse_type_specifier();
-
-//    VariableDecl            *parse_variable_declaration(const TypeSpecifier& type, const Token& name);
-//    VariableDeclarator      *parse_variable_declarator(const Token& type_name, const Token& name);
-//    FunctionDecl            *parse_function_declaration(const TypeSpecifier& type, const Token& name);
-
     VariableDecl            *parse_variable_declaration(const TypeSpecifier& type);
     VariableDeclarator      *parse_variable_declarator(const Token& name);
     FunctionDecl            *parse_function_declaration(const TypeSpecifier& type);
-
     Parameter               *parse_function_parameters();
 
 
@@ -144,16 +138,13 @@ class Parser {
     IfStmt              *parse_if_statement();
     SwitchStmt          *parse_switch_statement();
     CaseClause          *parse_case_clause();
-
     WhileStmt           *parse_while_statement();
     DoWhileStmt         *parse_do_while_statement();
-
     bool                 is_rangefor_pattern();
     Stmt                *dispatch_for_statements();
     ForStmt             *parse_for_statement();
     VariableDecl        *parse_rangefor_variable();
     RangeForStmt        *parse_rangefor_statement();
-
     ReturnStmt          *parse_return_statement();
 
 

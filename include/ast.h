@@ -591,9 +591,11 @@ struct RangeForStmt : Stmt {
 };
 
 struct ReturnStmt : Stmt {
+    //We need this for the SemanticAnalyser when reporting an error on a ReturnStmt found outside of a function.
+    Token return_token;
     Expr *expression = nullptr;
 
-    ReturnStmt(Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), expression(e) {}
+    ReturnStmt(Token& t, Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), return_token(t), expression(e) {}
 
     void accept(Visitor& v) override;
 

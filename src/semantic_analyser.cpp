@@ -873,6 +873,12 @@ void SemanticAnalyser::visit(RangeForStmt& s) {
 }
 
 void SemanticAnalyser::visit(ReturnStmt& s) {
+    std::stringstream ss;
+    if(manager.current()->get_type() != ScopeType::FUNCTION) {
+        ss << "Can't return outside of a function! Line: " << s.return_token.start.line << "\n";
+        throw SemanticError(ss.str());
+    }
+
     if(s.expression) s.expression->accept(*this);
 }
 
