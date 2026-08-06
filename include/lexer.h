@@ -30,6 +30,7 @@ const std::map<std::string, TokenType> keywords = {
     {"string",      TT::KW_STRING},
     {"switch",      TT::KW_SWITCH},
     {"true",        TT::KW_TRUE},
+    {"void",        TT::KW_VOID},
     {"while",       TT::KW_WHILE}
 };
 
