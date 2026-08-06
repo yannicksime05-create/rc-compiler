@@ -47,7 +47,7 @@ variable-declarator   ::= identifier [ "=" expression ] ;
 function-declaration 	::= type-specifier identifier "(" [ parameter-list ] ")" [ function-body ]
 parameter-list       	::= parameter { "," parameter }
 parameter            	::= type-specifier identifier [ "=" expression ]
-function-body        	::= compound-statement
+function-body        	::= "=" expression-statement | compound-statement
 
 
 class-declaration		::= "class" identifier [] class-body

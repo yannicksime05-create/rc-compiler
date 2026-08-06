@@ -33,7 +33,6 @@ public:
 
     Symbol *lookup(const std::string& name) const {
         auto it = symbols.find(name);
-
         return it != symbols.end() ? it->second : nullptr;
     }
 
@@ -45,6 +44,10 @@ public:
 
         return nullptr;
     }
+
+    //This destructor does nothing because the declarations nodes on the ast will delete their symbols.
+    ~Scope() {
+    }
 };
 
 class ScopeManager {
@@ -52,6 +55,10 @@ class ScopeManager {
 
 public:
     ScopeManager() {}
+
+    ~ScopeManager() {
+        for(Scope *s : scopes) if(s) delete s;
+    }
 
     Scope *current() const {
         if(!scopes.empty()) return scopes.back();
@@ -64,10 +71,30 @@ public:
     }
 
     void exit() {
-        if(!scopes.empty()) scopes.pop_back();
+        if(!scopes.empty()) {
+            delete scopes.back();
+            scopes.pop_back();;
+        }
     }
 
+    /**
+    *   @brief Inserts into the current scope.
+    */
+    bool insert(Symbol *s) { return current()->insert(s); }
+
+    /**
+    *   @brief Looks up into the entire scope chain.
+    */
     Symbol *lookup(const std::string& name) const {
+        if( !current() ) return nullptr;
+        return current()->global_lookup(name);
+    }
+
+    /**
+    *   @brief Looks up into the current scope.
+    */
+    Symbol *lookup_current(const std::string& name) const {
+        if(!current()) return nullptr;
         return current()->lookup(name);
     }
 };

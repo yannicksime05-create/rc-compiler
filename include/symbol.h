@@ -2,41 +2,9 @@
 #define SYMBOL_H
 
 #include <string>
-#include "ast base.h"
-
-enum class TypeKind {
-    BUILTIN,
-    FUNCTION,
-    AUTO,
-    ANY,
-    UNKNOWN
-};
-
-enum class BuiltinTypes {
-    BOOL,
-    INT,
-    FLOAT,
-    STRING,
-    VOID
-};
-
-//struct FunctionTypes {
-//    std::vector<DataType *> parameters_type;
-//    DataType *return_type;
-//};
-
-//struct AutoTypes {
-//    bool resolved;
-//};
-
-struct Type {
-    TypeKind kind;
-    bool is_constant = false;
-//    bool is_auto_resolved = false;
-
-    BuiltinTypes builtin;
-//    FunctionTypes *function_data = nullptr;
-};
+#include <iostream>
+#include "ast_base.h"
+#include "types.h"
 
 enum class SymbolType {
     VARIABLE,
@@ -49,16 +17,19 @@ struct Symbol {
     SymbolType type;
     bool is_constant = false;
     Type *declared_type = nullptr;
+    //Non-owning, so never call delete on it.
     ASTNode *declaration = nullptr;
 
     Symbol(const std::string& n, SymbolType t, bool c, Type *dt, ASTNode *node)
     : name(n), type(t), is_constant(c), declared_type(dt), declaration(node) {}
 
     ~Symbol() {
-        delete declared_type;
-        declared_type = nullptr;
-        delete declaration;
-        declaration = nullptr;
+        if(declared_type) {
+            delete declared_type;
+            declared_type = nullptr;
+        }
+
+        std::cout << "Cleaning Symbol...\n";
     }
 };
 

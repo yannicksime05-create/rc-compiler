@@ -1,0 +1,66 @@
+//This file contains a list of some of the declarations/satements/expressions I've seen in other programming languages. Some of them might not 
+//make their way in the language. I keep them here as references and as a way to track my progress.
+//
+//Sime K. Yannick
+
+ASTNode
+ ├── Declaration
+ 	 ├── VariableDeclaration 																			//ok
+	 ├── FunctionDeclaration																			//ok
+	 ├── ParameterDeclaration																			//ok
+	 ├── ClassDeclaration
+
+	 ├── StructDeclaration
+	 ├── EnumDeclaration
+	 ├── NamespaceDeclaration
+	 ├── TypedefDeclaration / UsingDeclaration
+	 ├── TemplateDeclaration
+	 ├── ConceptDeclaration
+	 ├── ImportDeclaration
+	 ├── ExportDeclaration
+	 ├── FriendDeclaration
+	 └── StaticAssertDeclaration
+
+ ├── Statement
+	 ├── CompoundStatement         // { ... }															//ok
+	 ├── ExpressionStatement       // x = 3;															//ok
+	 ├── IfStatement               // if (...)															//ok
+	 ├── SwitchStatement           // switch (...)														//ok
+	 ├── WhileStatement            // while (...)														//ok
+	 ├── DoWhileStatement          // do ... while 														//ok
+	 ├── ForStatement              // for (...)															//ok
+	 ├── RangeForStatement         // for (auto x : ...)												//ok
+	 ├── ReturnStatement																				//ok
+	 ├── DeclarationStatement      // e.g., int x = 5; inside function 									//ok
+	 └── EmptyStatement            // ;
+
+	 ├── BreakStatement
+	 ├── ContinueStatement
+	 ├── GotoStatement
+	 ├── LabeledStatement
+	 ├── TryCatchStatement
+	 ├── CoroutineStatement        // co_return, co_yield, co_await
+
+ └── Expression
+	 ├── LiteralExpression             // 42, "hi", true 												//ok
+	 ├── ArrayLiteralExpression		   // [1, 2]														//ok
+	 ├── IdentifierExpression          // x, y 															//ok
+	 ├── BinaryExpression              // a + b 														//ok
+	 ├── UnaryExpression               // -x, !flag														//ok
+	 ├── AssignmentExpression          // x = y 														//ok
+	 ├── ConditionalExpression         // cond ? a : b 													//ok
+	 ├── CallExpression                // foo(x, y)														//ok
+	 ├── MemberAccessExpression        // obj.member 													//ok
+	 ├── ArraySubscriptExpression      // arr[i]														//ok
+
+
+	 ├── CastExpression                // (int)x, static_cast<int>(x)
+	 ├── NewExpression / DeleteExpression
+	 ├── LambdaExpression
+	 ├── FoldExpression
+	 ├── RequiresExpression
+	 ├── ThisExpression
+	 ├── SizeofExpression / AlignofExpression / TypeidExpression
+	 ├── CoawaitExpression             // co_await expr
+	 ├── ThrowExpression               // throw e
+	 └── CommaExpression               // (a, b)

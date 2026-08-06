@@ -13,12 +13,14 @@
 */
 
 struct Expr : ASTNode {
-    //Non-owning, so never call delete on it.
     Type *resolved_type = nullptr;
 
     Expr(ASTNodeType t) { node_type = t; }
 
-    virtual ~Expr() = default;
+    virtual ~Expr() {
+        delete resolved_type;
+        resolved_type = nullptr;
+    }
 };
 
 struct Decl : ASTNode {
@@ -231,8 +233,6 @@ struct CallExpr : Expr {
             delete e;
             e = nullptr;
         }
-//        delete symbol;
-//        symbol = nullptr;
 
         std::cout << "Cleaned up CallExpr node...\n";
     }
@@ -251,8 +251,6 @@ struct MemberAccessExpr : Expr {
     ~MemberAccessExpr() {
         delete object;
         object = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
 
         std::cout << "Cleaned up MemberAccessExpr node...\n";
     }
@@ -273,8 +271,6 @@ struct SubscriptExpr : Expr {
         object = nullptr;
         delete index;
         index = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
 
         std::cout << "Cleaned up SubscriptExpr node...\n";
     }
@@ -326,8 +322,8 @@ struct VariableDeclarator {
     ~VariableDeclarator() {
         delete initializer;
         initializer = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up VariableDeclarator...\n";
     }
@@ -376,7 +372,6 @@ struct Parameter {
     TypeSpecifier type_name;
     Token parameter_name;
     Expr *default_value = nullptr;
-    //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
     Parameter(const TypeSpecifier& t, const Token& n, Expr *dv = nullptr) : type_name(t), parameter_name(n), default_value(dv) {}
@@ -384,8 +379,8 @@ struct Parameter {
     ~Parameter() {
         delete default_value;
         default_value = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaning up Param...\n";
     }
@@ -412,8 +407,8 @@ struct FunctionDecl : Decl {
         }
         delete body;
         body = nullptr;
-//        delete symbol;
-//        symbol = nullptr;
+        delete symbol;
+        symbol = nullptr;
 
         std::cout << "Cleaned up FunctionDecl...\n";
     }
@@ -598,9 +593,11 @@ struct RangeForStmt : Stmt {
 };
 
 struct ReturnStmt : Stmt {
+    //We need this for the SemanticAnalyser when reporting an error on a ReturnStmt found outside of a function.
+    Token return_token;
     Expr *expression = nullptr;
 
-    ReturnStmt(Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), expression(e) {}
+    ReturnStmt(Token& t, Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), return_token(t), expression(e) {}
 
     void accept(Visitor& v) override;
 
