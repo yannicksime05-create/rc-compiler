@@ -23,6 +23,11 @@ class SemanticAnalyser : public Visitor {
     ScopeManager manager;
     Program& program;
 
+    /**
+    */
+    bool is_function_scope = false;
+    Symbol *current_function_symbol = nullptr;
+
     bool is_builtin_type(const Type *t);
     bool is_integral_type(const BuiltinType *t);
     bool is_floating_type(const BuiltinType *t);
@@ -37,9 +42,11 @@ class SemanticAnalyser : public Visitor {
 //    std::string functiontype_to_string(const FunctionType *t);
 
     BuiltinType *promote(const BuiltinType *left, const BuiltinType *right);
-    std::string type_mismatch(const Type *lt, Token& op, const Type *rt);
     Type *resolve_type_name(Token& t);
     Type *resolve(TypeSpecifier& t);
+
+    std::string type_mismatch(const Type *lt, Token& op, const Type *rt);
+    std::string invalid_conversion(const Type *src_type, const Type *dest_type, const Token& where);
 
 
 public:
