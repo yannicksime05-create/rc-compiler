@@ -7,24 +7,6 @@
 
 using TT = TokenType;
 
-//enum Precedence {
-//    PREC_NONE               = -1,
-//
-//    PREC_DEFAULT            = 0,
-//
-//    PREC_COMMA              = 1,        // ,
-//    PREC_ASSIGNMENT         = 2,       // = += -= ...
-//    PREC_CONDITIONAL        = 3,       // ?:
-//    PREC_LOGICAL_OR         = 4,       // ||
-//    PREC_LOGICAL_AND        = 5,       // &&
-//    PREC_EQUALITY           = 6,       // == !=
-//    PREC_COMPARISON         = 7,       // < <= > >=
-//    PREC_TERM               = 8,       // + -
-//    PREC_FACTOR             = 9,       // * / %
-//    PREC_PREFIX             = 10,      // - ! ++ --
-//    PREC_POSTFIX            = 11       // () [] . ++ --
-//};
-
 enum Precedence {
     PREC_NONE = -1,
     PREC_DEFAULT,

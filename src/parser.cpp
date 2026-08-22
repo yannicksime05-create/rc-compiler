@@ -1,5 +1,4 @@
 #include "../include/parser.h"
-#include <sstream>
 
 Precedence Parser::get_precedence(TokenType t) {
     switch(t) {
@@ -146,7 +145,7 @@ Expr *Parser::parse_primary() {
 
         case TT::KW_TRUE:
         case TT::KW_FALSE:
-            return new BoolExpr( get().is(TT::KW_TRUE) );
+            return new BoolExpr( get().type == TT::KW_TRUE );
 
         case TT::LBRACKET: {
             get();
@@ -408,25 +407,26 @@ IfStmt *Parser::parse_if_statement() {
     get();
 
     expect(TT::LPAREN, "Error: Expected '(' after keyword if");
+    Token loc = previous();
     Expr *condition = parseExpression();
     if(!condition) {
-        std::cerr << "Error: Expected primary expression for if-statement" << std::endl;
+        std::cerr << "Error: Expected primary-expression for if-statement" << std::endl;
         return nullptr;
     }
     expect(TT::RPAREN, "Error: Expected closing ')' for if-statement");
 
     Stmt *then_stmt = parseStatement();
     if(!then_stmt) {
-        return new IfStmt(condition);
+        return new IfStmt(loc, condition);
     }
 
     if( is(TT::KW_ELSE) ) {
         get();
         Stmt *else_stmt = parseStatement();
-        return new IfStmt(condition, then_stmt, else_stmt);
+        return new IfStmt(loc, condition, then_stmt, else_stmt);
     }
 
-    return new IfStmt(condition, then_stmt);
+    return new IfStmt(loc, condition, then_stmt);
 }
 
 SwitchStmt *Parser::parse_switch_statement() {
@@ -475,9 +475,10 @@ WhileStmt *Parser::parse_while_statement() {
     get();
 
     expect(TT::LPAREN, "Error: Expected '(' after 'while'");
+    Token loc = previous();
     Expr *condition = parseExpression();
     if(!condition) {
-        std::cout << "From: parse_while_statement\nError: test is null" << std::endl;
+        std::cout << "Error: Expected primary-expression for while-statement" << std::endl;
         return nullptr;
     }
     expect(TT::RPAREN, "Error: Expected ')' after while expression");
@@ -487,7 +488,7 @@ WhileStmt *Parser::parse_while_statement() {
         std::cout << "From: parse_while_statement\nError: statement is null" << std::endl;
         return nullptr;
     }
-    return new WhileStmt(condition, body);
+    return new WhileStmt(loc, condition, body);
 }
 
 DoWhileStmt *Parser::parse_do_while_statement() {
@@ -500,16 +501,17 @@ DoWhileStmt *Parser::parse_do_while_statement() {
     }
     expect(TT::KW_WHILE, "Error: Expected 'while' after 'do'");
     expect(TT::LPAREN, "Error: Expected '(' after 'while'");
+    Token loc = previous();
 
     Expr *condition = parseExpression();
     if(!condition) {
-        std::cout << "From: parse_do_while_statement\nError: test is null" << std::endl;
+        std::cout << "Error: Expected primary-expression for do-while-statement" << std::endl;
         return nullptr;
     }
     expect(TT::RPAREN, "Error: Expected ')' after while expression");
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of do..while");
 
-    return new DoWhileStmt(body, condition);
+    return new DoWhileStmt(loc, body, condition);
 }
 
 bool Parser::is_rangefor_pattern() {

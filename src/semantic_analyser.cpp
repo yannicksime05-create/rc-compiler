@@ -47,6 +47,13 @@ std::string SemanticAnalyser::type_mismatch(const Type *lt, Token& op, const Typ
     return ss.str();
 }
 
+std::string SemanticAnalyser::invalid_conversion(const Type *src_type, const Type *dest_type, const Token& where) {
+    std::stringstream ss;
+    ss << "Invalid conversion from '" << type_to_string(src_type) << "' to '" << type_to_string(dest_type) << "'. Line: " << where.start.line << "\n";
+
+    return ss.str();
+}
+
 
 Type *SemanticAnalyser::resolve(TypeSpecifier& t) {
     Type *tmp = resolve_type_name(t.type_name);
@@ -152,6 +159,28 @@ std::string SemanticAnalyser::arraytype_to_string(const ArrayType *t) {
 
 std::string SemanticAnalyser::autotype_to_string(const AutoType *t) {
     return type_to_string(t->underlying_type);
+}
+
+void SemanticAnalyser::check_stmts_condition(Expr *condition, const Token& where) {
+    Type *cond_type = nullptr;
+
+    if(condition) {
+        condition->accept(*this);
+        cond_type = condition->resolved_type;
+    }
+
+    if(!is_builtin_type(cond_type)) {
+        std::stringstream ss;
+        ss << "Error: Condition must be of a builtin type, found '" << type_to_string(cond_type) << "'. Line: " << where.start.line << ".\n";
+        throw SemanticError(ss.str());
+    }
+
+    const BuiltinType *ct = static_cast<const BuiltinType*>(cond_type);
+    if( !is_bool_type(ct) && !is_numeric_type(ct)) {
+        std::stringstream ss;
+        ss << "Error: Condition must be a numeric or boolean expression, found '" << type_to_string(ct) << "'. Line: " << where.start.line << ".\n";
+        throw SemanticError(ss.str());
+    }
 }
 
 
@@ -756,8 +785,8 @@ void SemanticAnalyser::visit(VariableDecl& d) {
 
                 if(!valid) {
                     ss.str("");
-                    ss << "Invalid conversion from: '" << type_to_string(tmp2) << "' to: '" << type_to_string(tmp1) << "'. Line: " << d.declared_type.type_name.start.line << "\n";
-                    throw SemanticError(ss.str());
+//                    ss << "Invalid conversion from: '" << type_to_string(tmp2) << "' to: '" << type_to_string(tmp1) << "'. Line: " << d.declared_type.type_name.start.line << "\n";
+                    throw SemanticError(invalid_conversion(tmp2, tmp1, d.declared_type.type_name));
                 }
 
                 tmp1 = tmp2 = nullptr;
@@ -801,8 +830,14 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
         if(param->default_value) param->default_value->accept(*this);
     }
 
+    current_function_symbol = f;
+    is_function_scope = true;
+
     if(d.body) d.body->accept(*this);
     manager.exit();
+
+    is_function_scope = false;
+    current_function_symbol = nullptr;
 }
 
 
@@ -832,7 +867,7 @@ void SemanticAnalyser::visit(DeclarationStmt& s) {
 }
 
 void SemanticAnalyser::visit(IfStmt& s) {
-    if(s.condition)         s.condition->accept(*this);
+    check_stmts_condition(s.condition, s.condition_loc);
     if(s.then_statement)    s.then_statement->accept(*this);
     if(s.else_statement)    s.else_statement->accept(*this);
 }
@@ -846,13 +881,13 @@ void SemanticAnalyser::visit(SwitchStmt& s) {
 }
 
 void SemanticAnalyser::visit(WhileStmt& s) {
-    if(s.condition) s.condition->accept(*this);
+    check_stmts_condition(s.condition, s.condition_loc);
     if(s.body)      s.body->accept(*this);
 }
 
 void SemanticAnalyser::visit(DoWhileStmt& s) {
     if(s.body)      s.body->accept(*this);
-    if(s.condition) s.condition->accept(*this);
+    check_stmts_condition(s.condition, s.condition_loc);
 }
 
 void SemanticAnalyser::visit(ForStmt& s) {
@@ -874,11 +909,38 @@ void SemanticAnalyser::visit(RangeForStmt& s) {
 
 void SemanticAnalyser::visit(ReturnStmt& s) {
     std::stringstream ss;
-    if(manager.current()->get_type() != ScopeType::FUNCTION) {
+    if(!is_function_scope) {
         ss << "Can't return outside of a function! Line: " << s.return_token.start.line << "\n";
         throw SemanticError(ss.str());
     }
 
-    if(s.expression) s.expression->accept(*this);
+    Type *ret_type = nullptr;
+    bool delete_ret_type = false;
+    if(s.expression) {
+        s.expression->accept(*this);
+        ret_type = s.expression->resolved_type;
+    }
+    else {
+        delete_ret_type = true;
+        ret_type = new BuiltinType(BuiltinType::Types::VOID);
+    }
+
+    Type *fn_ret_type = current_function_symbol->declared_type;
+    if(ret_type->kind != fn_ret_type->kind) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.return_token));
+
+    if(ret_type->kind == TK::BUILTIN) {
+        BuiltinType *r = static_cast<BuiltinType*>(ret_type);
+        BuiltinType *f = static_cast<BuiltinType*>(fn_ret_type);
+
+        bool same_builtin = r->builtin == f->builtin;
+        bool promotion = is_numeric_type(r) && is_numeric_type(f);
+
+        if(!same_builtin && !promotion) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.return_token));
+    }
+
+    if(delete_ret_type) {
+        delete ret_type;
+        ret_type = nullptr;
+    }
 }
 
