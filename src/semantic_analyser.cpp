@@ -161,6 +161,28 @@ std::string SemanticAnalyser::autotype_to_string(const AutoType *t) {
     return type_to_string(t->underlying_type);
 }
 
+void SemanticAnalyser::check_stmts_condition(Expr *condition, const Token& where) {
+    Type *cond_type = nullptr;
+
+    if(condition) {
+        condition->accept(*this);
+        cond_type = condition->resolved_type;
+    }
+
+    if(!is_builtin_type(cond_type)) {
+        std::stringstream ss;
+        ss << "Error: Condition must be of a builtin type, found '" << type_to_string(cond_type) << "'. Line: " << where.start.line << ".\n";
+        throw SemanticError(ss.str());
+    }
+
+    const BuiltinType *ct = static_cast<const BuiltinType*>(cond_type);
+    if( !is_bool_type(ct) && !is_numeric_type(ct)) {
+        std::stringstream ss;
+        ss << "Error: Condition must be a numeric or boolean expression, found '" << type_to_string(ct) << "'. Line: " << where.start.line << ".\n";
+        throw SemanticError(ss.str());
+    }
+}
+
 
 void SemanticAnalyser::visit(Program& p) {
     manager.enter(ScopeType::GLOBAL);
@@ -845,7 +867,7 @@ void SemanticAnalyser::visit(DeclarationStmt& s) {
 }
 
 void SemanticAnalyser::visit(IfStmt& s) {
-    if(s.condition)         s.condition->accept(*this);
+    check_stmts_condition(s.condition, s.condition_loc);
     if(s.then_statement)    s.then_statement->accept(*this);
     if(s.else_statement)    s.else_statement->accept(*this);
 }
@@ -859,13 +881,13 @@ void SemanticAnalyser::visit(SwitchStmt& s) {
 }
 
 void SemanticAnalyser::visit(WhileStmt& s) {
-    if(s.condition) s.condition->accept(*this);
+    check_stmts_condition(s.condition, s.condition_loc);
     if(s.body)      s.body->accept(*this);
 }
 
 void SemanticAnalyser::visit(DoWhileStmt& s) {
     if(s.body)      s.body->accept(*this);
-    if(s.condition) s.condition->accept(*this);
+    check_stmts_condition(s.condition, s.condition_loc);
 }
 
 void SemanticAnalyser::visit(ForStmt& s) {
