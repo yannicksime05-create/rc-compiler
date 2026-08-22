@@ -61,10 +61,6 @@ struct Token {
     std::string value;
     Location start;
     Location end;
-
-    bool is(TokenType t) {
-        return type == t;
-    }
 };
 
 #endif // TOKEN_H

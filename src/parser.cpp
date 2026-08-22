@@ -1,5 +1,4 @@
 #include "../include/parser.h"
-#include <sstream>
 
 Precedence Parser::get_precedence(TokenType t) {
     switch(t) {
@@ -146,7 +145,7 @@ Expr *Parser::parse_primary() {
 
         case TT::KW_TRUE:
         case TT::KW_FALSE:
-            return new BoolExpr( get().is(TT::KW_TRUE) );
+            return new BoolExpr( get().type == TT::KW_TRUE );
 
         case TT::LBRACKET: {
             get();
