@@ -450,12 +450,13 @@ struct DeclarationStmt : Stmt {
 };
 
 struct IfStmt : Stmt {
+    Token condition_loc;
     Expr *condition = nullptr;
     Stmt *then_statement = nullptr;
     Stmt *else_statement = nullptr;
 
-    IfStmt(Expr *c, Stmt *t = nullptr, Stmt *e = nullptr)
-        : Stmt(ASTNodeType::IF_STMT_NODE), condition(c), then_statement(t), else_statement(e) {}
+    IfStmt(const Token& loc, Expr *c, Stmt *t = nullptr, Stmt *e = nullptr)
+        : Stmt(ASTNodeType::IF_STMT_NODE), condition_loc(loc), condition(c), then_statement(t), else_statement(e) {}
 
     void accept(Visitor& v) override;
 
@@ -508,10 +509,11 @@ struct SwitchStmt : Stmt {
 };
 
 struct WhileStmt : Stmt {
+    Token condition_loc;
     Expr *condition = nullptr;
     Stmt *body = nullptr;
 
-    WhileStmt(Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), condition(c), body(b) {}
+    WhileStmt(const Token& loc, Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), condition_loc(loc), condition(c), body(b) {}
 
     void accept(Visitor& v) override;
 
@@ -526,10 +528,11 @@ struct WhileStmt : Stmt {
 };
 
 struct DoWhileStmt : Stmt {
+    Token condition_loc;
     Stmt *body = nullptr;
     Expr *condition = nullptr;
 
-    DoWhileStmt(Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), body(b), condition(c) {}
+    DoWhileStmt(const Token& loc, Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), condition_loc(loc), body(b), condition(c) {}
 
     void accept(Visitor& v) override;
 
@@ -544,6 +547,7 @@ struct DoWhileStmt : Stmt {
 };
 
 struct ForStmt : Stmt {
+//    Token condition_loc;
     Stmt *initialization = nullptr;
     Expr *condition = nullptr;
     Expr *increment = nullptr;
