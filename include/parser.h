@@ -105,7 +105,8 @@ class Parser {
     bool is_primitive_type(size_t i) {
         return tokens[i].type == TT::KW_INT    || tokens[i].type == TT::KW_FLOAT ||
                tokens[i].type == TT::KW_DOUBLE || tokens[i].type == TT::KW_BOOL  ||
-               tokens[i].type == TT::KW_STRING || tokens[i].type == TT::KW_AUTO  || tokens[i].type == TT::KW_ANY;
+               tokens[i].type == TT::KW_STRING || tokens[i].type == TT::KW_VOID  ||
+               tokens[i].type == TT::KW_AUTO   || tokens[i].type == TT::KW_ANY;
     }
 
     bool is_right_associative(TokenType t);
