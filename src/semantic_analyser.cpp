@@ -754,8 +754,15 @@ void SemanticAnalyser::visit(VariableDecl& d) {
     Type *t = resolve(d.declared_type);
 
     std::stringstream ss;
+    if(manager.current()->get_type() == ScopeType::GLOBAL) {
+        ss << "Warning: Declaration of variable happening in the global scope! Some other parts of your code might accidentally modify it. Either mark it const or remove it. Line: " << d.declared_type.type_name.start.line << "\n";
+        warning(ss.str());
+        ss.str("");
+    }
+
+
     for(VariableDeclarator *vd : d.declarations) {
-        if( (t->is_constant || t->kind == TK::ANY || t->kind == TK::AUTO) && !vd->initializer ) {
+        if( (t->is_constant || t->kind == TK::ANY || t->kind == TK::AUTO) && !vd->initializer) {
             ss.str("");
             ss << "Missing initialization for const/any/auto types! Line: " << vd->variable_name.start.line << ", col: " << vd->variable_name.start.col+1 << "\n";
             throw SemanticError(ss.str());
