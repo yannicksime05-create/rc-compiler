@@ -156,7 +156,7 @@ void CppGenerator::visit(CompoundStmt& s) {
 }
 
 void CppGenerator::visit(ExpressionStmt& s) {
-    s.expression->accept(*this);
+    if(s.expression) s.expression->accept(*this);
     out << ";\n";
 }
 
@@ -190,7 +190,7 @@ void CppGenerator::visit(SwitchStmt& s) {
         if(c->expression) {
             out << "case ";
             c->expression->accept(*this);
-            out << ":"
+            out << ":";
         }
         else {
             out << "default:";
