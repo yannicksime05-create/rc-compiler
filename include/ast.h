@@ -611,7 +611,7 @@ struct ReturnStmt : Stmt {
     }
 };
 
-struct PrintStatement : Stmt {
+struct PrintStmt : Stmt {
     std::vector<Expr*> expressions;
 
     PrintStatement(const std::vector<Expr*>& exprs) : Stmt(ASTNodeType::PRINT_STMT_NODE), expressions(exprs) {}
@@ -660,7 +660,7 @@ public:
     virtual void visit(ForStmt& s) = 0;
     virtual void visit(RangeForStmt& s) = 0;
     virtual void visit(ReturnStmt& s) = 0;
-    virtual void visit(PrintStatement& s) = 0;
+    virtual void visit(PrintStmt& s) = 0;
 
 };
 
