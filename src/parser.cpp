@@ -570,7 +570,7 @@ ReturnStmt *Parser::parse_return_statement() {
     return new ReturnStmt(t, e);
 }
 
-PrintStatement *Parser::parse_print_statement() {
+PrintStmt *Parser::parse_print_statement() {
     get();
     expect(TT::LPAREN, "Error: Expected '(' after print");
 
@@ -586,5 +586,5 @@ PrintStatement *Parser::parse_print_statement() {
     expect(TT::RPAREN, "Error: Expected ')' after print arguments");
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of print statement");
 
-    return new PrintStatement(exprs);
+    return new PrintStmt(exprs);
 }
