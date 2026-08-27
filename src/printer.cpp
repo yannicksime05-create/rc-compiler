@@ -399,7 +399,7 @@ void Printer::visit(ReturnStmt& s) {
     }
 }
 
-void Printer::visit(PrintStmt& s) {
+void Printer::visit(PrintStatement& s) {
     indent(); std::cout << "node type: PrintStatement,\n";
     indent(); std::cout << "expressions: ";
     if(s.expressions.empty())  std::cout << "[]\n";
