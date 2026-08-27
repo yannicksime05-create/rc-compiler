@@ -129,3 +129,7 @@ void ForStmt::accept(Visitor& v) {
 void ReturnStmt::accept(Visitor& v) {
     v.visit(*this);
 }
+
+void PrintStatement::accept(Visitor& v) {
+    v.visit(*this);
+}

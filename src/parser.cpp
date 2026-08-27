@@ -227,20 +227,6 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
 
 
-//Decl *Parser::parseDeclaration() {
-//    TypeSpecifier *type = parse_type_specifier();
-//    expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
-//
-//    Token name = previous();
-//
-//    if( is(TT::LPAREN) )
-//        return parse_function_declaration(*type, name);
-//    else
-//        return parse_variable_declaration(*type, name);
-//
-//    return nullptr;
-//}
-
 Decl *Parser::parseDeclaration() {
     TypeSpecifier *type = parse_type_specifier();
     expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
@@ -354,6 +340,7 @@ Stmt *Parser::parseStatement() {
         case TT::KW_DO:     return parse_do_while_statement();
         case TT::KW_FOR:    return dispatch_for_statements();
         case TT::KW_RETURN: return parse_return_statement();
+        case TT::KW_PRINT:  return parse_print_statement();
 
         default:
             if( starts_declaration() ) return parse_declaration_statement();
@@ -581,4 +568,23 @@ ReturnStmt *Parser::parse_return_statement() {
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of return statement");
 
     return new ReturnStmt(t, e);
+}
+
+PrintStatement *Parser::parse_print_statement() {
+    get();
+    expect(TT::LPAREN, "Error: Expected '(' after print");
+
+    std::vector<Expr*> exprs;
+    if(!is(TT::RPAREN)) {
+        exprs.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+        while(is(TT::COMMA)) {
+            get();
+            exprs.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+
+        }
+    }
+    expect(TT::RPAREN, "Error: Expected ')' after print arguments");
+    expect(TT::SEMICOLON, "Error: Expected ';' at the end of print statement");
+
+    return new PrintStatement(exprs);
 }

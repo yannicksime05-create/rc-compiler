@@ -60,6 +60,7 @@ public:
     void visit(ForStmt& s) override;
     void visit(RangeForStmt& s) override;
     void visit(ReturnStmt& s) override;
+    void visit(PrintStatement& s) override;
 
 };
 

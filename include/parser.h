@@ -129,6 +129,7 @@ class Parser {
     VariableDecl        *parse_rangefor_variable();
     RangeForStmt        *parse_rangefor_statement();
     ReturnStmt          *parse_return_statement();
+    PrintStatement      *parse_print_statement();
 
 
 

@@ -26,6 +26,7 @@ const std::map<std::string, TokenType> keywords = {
     {"for",         TT::KW_FOR},
     {"if",          TT::KW_IF},
     {"int",         TT::KW_INT},
+    {"print",       TT::KW_PRINT},
     {"return",      TT::KW_RETURN},
     {"string",      TT::KW_STRING},
     {"switch",      TT::KW_SWITCH},
