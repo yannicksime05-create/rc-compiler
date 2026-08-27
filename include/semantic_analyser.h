@@ -48,6 +48,10 @@ class SemanticAnalyser : public Visitor {
     std::string type_mismatch(const Type *lt, Token& op, const Type *rt);
     std::string invalid_conversion(const Type *src_type, const Type *dest_type, const Token& where);
 
+    void warning(const std::string& msg) {
+        std::cout << msg;
+    }
+
     void check_stmts_condition(Expr *condition, const Token& where);
 
 
