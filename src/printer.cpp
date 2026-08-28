@@ -36,15 +36,15 @@ void Printer::visit(DecimalNumberExpr& e) {
 
 void Printer::visit(StringExpr& e) {
     indent(); std::cout << "node type: StringLiteral,\n";
-    indent(); std::cout << "value: " << e.value << "\n";
+    indent(); std::cout << "value: \"" << e.value << "\"\n";
 }
 
 void Printer::visit(ArrayLiteralExpr& e) {
     indent(); std::cout << "node type: ArrayLiteral,\n";
-    indent(); std::cout << "elements: [";
-    if(e.elements.empty()) std::cout << "]\n";
+    indent(); std::cout << "elements: ";
+    if(e.elements.empty()) std::cout << "[]\n";
     else {
-        std::cout << "\n";
+        std::cout << "[\n";
         for(Expr *expr : e.elements)
             exprs_printer_helper(expr);
 
@@ -396,6 +396,19 @@ void Printer::visit(ReturnStmt& s) {
         std::cout << "{\n";
         exprs_printer_helper(s.expression);
         indent(); std::cout << "}\n";
+    }
+}
+
+void Printer::visit(PrintStmt& s) {
+    indent(); std::cout << "node type: PrintStatement,\n";
+    indent(); std::cout << "expressions: ";
+    if(s.expressions.empty())  std::cout << "[]\n";
+    else {
+        std::cout << "[\n";
+        for(Expr *exp : s.expressions) {
+            exprs_printer_helper(exp);
+        }
+        indent(); std::cout << "]\n";
     }
 }
 

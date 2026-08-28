@@ -314,7 +314,6 @@ struct TypeSpecifier {
 struct VariableDeclarator {
     Token variable_name;
     Expr *initializer = nullptr;
-    //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
     VariableDeclarator(const Token& n, Expr *i = nullptr) : variable_name(n), initializer(i) {}
@@ -392,7 +391,6 @@ struct FunctionDecl : Decl {
     Token function_name;
     std::vector<Parameter *> parameters;
     CompoundStmt *body = nullptr;
-    //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
     FunctionDecl(const TypeSpecifier& rt, const Token& n, CompoundStmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
@@ -613,6 +611,28 @@ struct ReturnStmt : Stmt {
     }
 };
 
+struct PrintStmt : Stmt {
+    Token location;
+    std::vector<Expr*> expressions;
+
+    //The cpp generator needs these. They're set by the semantic analyser.
+    bool has_fmt = false;           //true when the first expressions is a string specifying the format.
+    int nb_placeholders;            //this should be equal to expressions.size() - 1 if has_fmt = true.
+
+    PrintStmt(Token& loc, const std::vector<Expr*>& exprs) : Stmt(ASTNodeType::PRINT_STMT_NODE), location(loc), expressions(exprs) {}
+
+    void accept(Visitor& v) override;
+
+    ~PrintStmt() {
+        for(const Expr *e : expressions) {
+            delete e;
+            e = nullptr;
+        }
+
+        std::cout << "Cleaned up PrintStmt node...\n";
+    }
+};
+
 class Visitor {
 public:
     virtual void visit(Program& p) = 0;
@@ -645,6 +665,7 @@ public:
     virtual void visit(ForStmt& s) = 0;
     virtual void visit(RangeForStmt& s) = 0;
     virtual void visit(ReturnStmt& s) = 0;
+    virtual void visit(PrintStmt& s) = 0;
 
 };
 

@@ -49,8 +49,7 @@ Token Lexer::strings() {
     Token t;
     t.start = {column - 1, line};
 
-    //Retirer l'initialisation de s pour enlever le ' " ' dans s.
-    std::string s(1, c);
+    std::string s;
     bool backslash_found = false;
     while(input.get(c)) {
         advance();
@@ -71,8 +70,6 @@ Token Lexer::strings() {
         return t;
     }
 
-    //Commentez la ligne suivante pour enlever ' " ' dans s.
-    s += c;
     t.value = s;
     t.end = {column, line};
     return t;

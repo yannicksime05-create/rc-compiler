@@ -18,7 +18,8 @@ int main(int argc, char *argv[]) {
 //    }
 
 
-    std::ifstream f("transpilation_test.rc");
+
+    std::ifstream f("tests/program.txt");
 
 
     Lexer lexer(f);

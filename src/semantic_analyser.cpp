@@ -755,10 +755,16 @@ void SemanticAnalyser::visit(VariableDecl& d) {
 
     std::stringstream ss;
     for(VariableDeclarator *vd : d.declarations) {
-        if( (t->is_constant || t->kind == TK::ANY || t->kind == TK::AUTO) && !vd->initializer ) {
+        if( (t->is_constant || t->kind == TK::ANY || t->kind == TK::AUTO) && !vd->initializer) {
             ss.str("");
             ss << "Missing initialization for const/any/auto types! Line: " << vd->variable_name.start.line << ", col: " << vd->variable_name.start.col+1 << "\n";
             throw SemanticError(ss.str());
+        }
+
+        if(manager.current()->get_type() == ScopeType::GLOBAL && !t->is_constant) {
+            ss << "Warning: Declaration of variable '" << vd->variable_name.value << "' happening in the global scope! Some other parts of your code might accidentally modify it. Either mark it const or remove it. Line: " << d.declared_type.type_name.start.line << "\n";
+            warning(ss.str());
+            ss.str("");
         }
 
         if(manager.lookup_current(vd->variable_name.value)) {
@@ -859,7 +865,7 @@ void SemanticAnalyser::visit(CompoundStmt& s) {
 }
 
 void SemanticAnalyser::visit(ExpressionStmt& s) {
-    s.expression->accept(*this);
+    if(s.expression) s.expression->accept(*this);
 }
 
 void SemanticAnalyser::visit(DeclarationStmt& s) {
@@ -941,6 +947,47 @@ void SemanticAnalyser::visit(ReturnStmt& s) {
     if(delete_ret_type) {
         delete ret_type;
         ret_type = nullptr;
+    }
+}
+
+void SemanticAnalyser::visit(PrintStmt& s) {
+    if(s.expressions.empty()) return;
+
+    for(Expr *e : s.expressions) {
+        if(e) e->accept(*this);
+    }
+
+    if(s.expressions[0] && s.expressions[0]->node_type == ASTNodeType::STRING_LIT_NODE) {
+        s.has_fmt = true;
+        std::string fmt = static_cast<StringExpr*>(s.expressions[0])->value;
+        size_t placeholders = 0, matching_expr_index = 1;
+
+        for(size_t i = 0; i < fmt.size(); ++i) {
+            if(fmt[i] == '{' && i+1 < fmt.size() && fmt[i+1] == '}') {
+                ++i;
+                if(matching_expr_index <= s.expressions.size()-1) {
+                    ++placeholders;
+                    ++matching_expr_index;
+                }
+            }
+        }
+
+        //print();                  good
+        //print(x);                 good
+        //print("x = {}", x);       good
+        //print("x = {");           good
+        //print("x = {}");          good
+        //print("x = ", x);         wrong
+        //print("x = {", x);        wrong
+
+        //The first element of the array is the format string so we need to do placeholders+1 or s.expressions.size()-1
+        if(placeholders < s.expressions.size()-1) {
+            std::stringstream ss;
+            ss << "";
+            throw SemanticError(ss.str());
+        }
+
+        s.nb_placeholders = placeholders;
     }
 }
 
