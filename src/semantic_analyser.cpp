@@ -676,10 +676,11 @@ void SemanticAnalyser::visit(CallExpr& e) {
             const BuiltinType *tmp_a = static_cast<const BuiltinType*>(arg_type);
             const BuiltinType *tmp_p = static_cast<const BuiltinType*>(param_type);
 
+            bool same_builtin = tmp_a->builtin == tmp_p->builtin;
             bool promotion = is_numeric_type(tmp_a) && is_numeric_type(tmp_p);
 
             tmp_a = tmp_p = nullptr;
-            valid_arg_type = valid_arg_type && promotion;
+            valid_arg_type = valid_arg_type && (same_builtin || promotion);
         }
 
         if(!valid_arg_type) {
@@ -951,43 +952,43 @@ void SemanticAnalyser::visit(ReturnStmt& s) {
 }
 
 void SemanticAnalyser::visit(PrintStmt& s) {
+    //print();                  good
     if(s.expressions.empty()) return;
 
     for(Expr *e : s.expressions) {
         if(e) e->accept(*this);
     }
 
-    if(s.expressions[0] && s.expressions[0]->node_type == ASTNodeType::STRING_LIT_NODE) {
-        s.has_fmt = true;
-        std::string fmt = static_cast<StringExpr*>(s.expressions[0])->value;
-        size_t placeholders = 0, matching_expr_index = 1;
+    if(!s.expressions[0] || s.expressions[0]->node_type != ASTNodeType::STRING_LIT_NODE) return;
 
-        for(size_t i = 0; i < fmt.size(); ++i) {
-            if(fmt[i] == '{' && i+1 < fmt.size() && fmt[i+1] == '}') {
-                ++i;
-                if(matching_expr_index <= s.expressions.size()-1) {
-                    ++placeholders;
-                    ++matching_expr_index;
-                }
+    s.has_fmt = true;
+    const std::string& fmt = static_cast<StringExpr*>(s.expressions[0])->value;
+    const size_t expected_placeholders = s.expressions.size() - 1;
+
+    size_t placeholders = 0, matching_expr_index = 1;
+    for(size_t i = 0; i < fmt.size(); ++i) {
+        if(fmt[i] == '{' && i+1 < fmt.size() && fmt[i+1] == '}') {
+            ++i;
+            if(matching_expr_index <= expected_placeholders) {
+                ++placeholders;
+                ++matching_expr_index;
             }
         }
-
-        //print();                  good
-        //print(x);                 good
-        //print("x = {}", x);       good
-        //print("x = {");           good
-        //print("x = {}");          good
-        //print("x = ", x);         wrong
-        //print("x = {", x);        wrong
-
-        //The first element of the array is the format string so we need to do placeholders+1 or s.expressions.size()-1
-        if(placeholders < s.expressions.size()-1) {
-            std::stringstream ss;
-            ss << "";
-            throw SemanticError(ss.str());
-        }
-
-        s.nb_placeholders = placeholders;
     }
+
+
+    //print(x);                 good
+    //print("x = {}", x);       good
+    //print("x = {");           good
+    //print("x = {}");          good
+    //print("x = ", x);         wrong
+    //print("x = {", x);        wrong
+    if(placeholders != expected_placeholders) {
+        std::stringstream ss;
+        ss << "print: format string has " << placeholders << " placeholder(s) but " << expected_placeholders << " placeholder(s) were expected! Line: " << s.location.start.line << ".\n";
+        throw SemanticError(ss.str());
+    }
+
+    s.nb_placeholders = placeholders;
 }
 
