@@ -612,9 +612,14 @@ struct ReturnStmt : Stmt {
 };
 
 struct PrintStmt : Stmt {
+    Token location;
     std::vector<Expr*> expressions;
 
-    PrintStmt(const std::vector<Expr*>& exprs) : Stmt(ASTNodeType::PRINT_STMT_NODE), expressions(exprs) {}
+    //The cpp generator needs these. They're set by the semantic analyser.
+    bool has_fmt = false;           //true when the first expressions is a string specifying the format.
+    int nb_placeholders;            //this should be equal to expressions.size() - 1 if has_fmt = true.
+
+    PrintStmt(Token& loc, const std::vector<Expr*>& exprs) : Stmt(ASTNodeType::PRINT_STMT_NODE), location(loc), expressions(exprs) {}
 
     void accept(Visitor& v) override;
 
@@ -624,7 +629,7 @@ struct PrintStmt : Stmt {
             e = nullptr;
         }
 
-        std::cout << "Cleaned up PrintStatement node...\n";
+        std::cout << "Cleaned up PrintStmt node...\n";
     }
 };
 

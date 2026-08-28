@@ -573,6 +573,7 @@ ReturnStmt *Parser::parse_return_statement() {
 PrintStmt *Parser::parse_print_statement() {
     get();
     expect(TT::LPAREN, "Error: Expected '(' after print");
+    Token loc = previous();
 
     std::vector<Expr*> exprs;
     if(!is(TT::RPAREN)) {
@@ -586,5 +587,5 @@ PrintStmt *Parser::parse_print_statement() {
     expect(TT::RPAREN, "Error: Expected ')' after print arguments");
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of print statement");
 
-    return new PrintStmt(exprs);
+    return new PrintStmt(loc, exprs);
 }
