@@ -36,7 +36,7 @@ void Printer::visit(DecimalNumberExpr& e) {
 
 void Printer::visit(StringExpr& e) {
     indent(); std::cout << "node type: StringLiteral,\n";
-    indent(); std::cout << "value: " << e.value << "\n";
+    indent(); std::cout << "value: \"" << e.value << "\"\n";
 }
 
 void Printer::visit(ArrayLiteralExpr& e) {
