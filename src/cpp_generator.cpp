@@ -25,7 +25,7 @@ void CppGenerator::visit(DecimalNumberExpr& e) {
 }
 
 void CppGenerator::visit(StringExpr& e) {
-    out << e.value;
+    out << "\"" << e.value << "\"";
 }
 
 void CppGenerator::visit(ArrayLiteralExpr& e) {
@@ -119,6 +119,7 @@ void CppGenerator::visit(VariableDecl& d) {
 }
 
 void CppGenerator::visit(FunctionDecl& d) {
+    is_function_parameter = true;
     out << map_type(d.return_type) << " " << d.function_name.value << "(";
     for(size_t i = 0; i < d.parameters.size(); ++i) {
         Parameter *p = d.parameters[i];

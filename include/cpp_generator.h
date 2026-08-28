@@ -13,6 +13,8 @@ class CppGenerator : public Visitor {
     int indent_level = 0;
     static const int TAB = 4;
 
+    bool is_function_parameter = false;
+
     void indent() {
         for(int i = 0; i < indent_level; ++i) out << " ";
     }
@@ -40,7 +42,14 @@ class CppGenerator : public Visitor {
             case TT::KW_DOUBLE:     s = "double";           break;
             case TT::KW_FLOAT:      s = "float";            break;
             case TT::KW_INT:        s = "int";              break;
-            case TT::KW_STRING:     s = "std::string";      break;
+            case TT::KW_STRING: {
+                if(is_function_parameter)
+                    s = "std::string&";
+                else
+                    s = "std::string";
+
+                break;
+            }
             case TT::KW_VOID:       s = "void";             break;
             default:                s = t.type_name.value;  break;
         }
