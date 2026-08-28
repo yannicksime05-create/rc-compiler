@@ -233,7 +233,6 @@ void CppGenerator::visit(ForStmt& s) {
     }
     out << ") ";
     s.body->accept(*this);
-
 }
 
 void CppGenerator::visit(RangeForStmt& s) {}
@@ -244,5 +243,41 @@ void CppGenerator::visit(ReturnStmt& s) {
         out << " ";
         s.expression->accept(*this);
     }
+    out << ";\n";
+}
+
+void CppGenerator::visit(PrintStmt& s) {
+    if(s.expressions.empty()) {
+        out << "std::cout << \"\";\n";
+        return;
+    }
+
+    out << "std::cout";
+    if(!s.has_fmt) {
+        for(Expr *e : s.expressions) {
+            out << " << ";
+            if(e) e->accept(*this);
+        }
+
+        out << ";\n";
+        return;
+    }
+
+    const std::string& fmt = static_cast<StringExpr*>(s.expressions[0])->value;
+    size_t start = 0, end = fmt.find("{}", start), i = 1;
+    int nb_placeholders = s.nb_placeholders;
+
+
+    while(nb_placeholders) {
+        out << " << \"" << fmt.substr(start, end - start) << "\" << ";
+        if(s.expressions[i]) s.expressions[i]->accept(*this);
+
+        start = end + 2;
+        end = fmt.find("{}", start);
+        --nb_placeholders;
+        ++i;
+    }
+    out << " << \"" << fmt.substr(start) << "\"";
+
     out << ";\n";
 }
