@@ -450,13 +450,13 @@ struct DeclarationStmt : Stmt {
 };
 
 struct IfStmt : Stmt {
-    Token condition_loc;
+    Token location;
     Expr *condition = nullptr;
     Stmt *then_statement = nullptr;
     Stmt *else_statement = nullptr;
 
     IfStmt(const Token& loc, Expr *c, Stmt *t = nullptr, Stmt *e = nullptr)
-        : Stmt(ASTNodeType::IF_STMT_NODE), condition_loc(loc), condition(c), then_statement(t), else_statement(e) {}
+        : Stmt(ASTNodeType::IF_STMT_NODE), location(loc), condition(c), then_statement(t), else_statement(e) {}
 
     void accept(Visitor& v) override;
 
@@ -509,11 +509,11 @@ struct SwitchStmt : Stmt {
 };
 
 struct WhileStmt : Stmt {
-    Token condition_loc;
+    Token location;
     Expr *condition = nullptr;
     Stmt *body = nullptr;
 
-    WhileStmt(const Token& loc, Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), condition_loc(loc), condition(c), body(b) {}
+    WhileStmt(const Token& loc, Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), location(loc), condition(c), body(b) {}
 
     void accept(Visitor& v) override;
 
@@ -528,11 +528,11 @@ struct WhileStmt : Stmt {
 };
 
 struct DoWhileStmt : Stmt {
-    Token condition_loc;
+    Token location;
     Stmt *body = nullptr;
     Expr *condition = nullptr;
 
-    DoWhileStmt(const Token& loc, Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), condition_loc(loc), body(b), condition(c) {}
+    DoWhileStmt(const Token& loc, Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), location(loc), body(b), condition(c) {}
 
     void accept(Visitor& v) override;
 
@@ -596,10 +596,10 @@ struct RangeForStmt : Stmt {
 
 struct ReturnStmt : Stmt {
     //We need this for the SemanticAnalyser when reporting an error on a ReturnStmt found outside of a function.
-    Token return_token;
+    Token location;
     Expr *expression = nullptr;
 
-    ReturnStmt(Token& t, Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), return_token(t), expression(e) {}
+    ReturnStmt(Token& t, Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), location(t), expression(e) {}
 
     void accept(Visitor& v) override;
 

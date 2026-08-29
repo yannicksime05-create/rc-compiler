@@ -27,6 +27,7 @@ class SemanticAnalyser : public Visitor {
     */
     bool is_function_scope = false;
     Symbol *current_function_symbol = nullptr;
+    std::vector<ReturnStmt*> current_function_return_stmts;
 
     bool is_builtin_type(const Type *t);
     bool is_integral_type(const BuiltinType *t);
@@ -39,7 +40,6 @@ class SemanticAnalyser : public Visitor {
     std::string builtintype_to_string(const BuiltinType *t);
     std::string arraytype_to_string(const ArrayType *t);
     std::string autotype_to_string(const AutoType *t);
-//    std::string functiontype_to_string(const FunctionType *t);
 
     BuiltinType *promote(const BuiltinType *left, const BuiltinType *right);
     Type *resolve_type_name(Token& t);
