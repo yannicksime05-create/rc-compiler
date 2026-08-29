@@ -821,6 +821,7 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
     d.symbol = f;
 
     manager.enter(ScopeType::FUNCTION);
+    //This allows recursion.
     manager.insert( new Symbol(d.function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type->clone(), &d) );
     for(Parameter *param : d.parameters) {
         if(manager.lookup_current(param->parameter_name.value)) {
@@ -841,6 +842,15 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
     is_function_scope = true;
 
     if(d.body) d.body->accept(*this);
+
+    if(current_function_return_stmts.empty() && return_type->kind == TK::BUILTIN && static_cast<BuiltinType*>(return_type)->builtin != BuiltinType::Types::VOID) {
+        ss.str("");
+        ss << "Error: No return statement in function returning non-void. Line: " << d.function_name.start.line << "\n";
+
+        throw SemanticError(ss.str());
+    }
+    current_function_return_stmts.clear();
+
     manager.exit();
 
     is_function_scope = false;
@@ -874,7 +884,7 @@ void SemanticAnalyser::visit(DeclarationStmt& s) {
 }
 
 void SemanticAnalyser::visit(IfStmt& s) {
-    check_stmts_condition(s.condition, s.condition_loc);
+    check_stmts_condition(s.condition, s.location);
     if(s.then_statement)    s.then_statement->accept(*this);
     if(s.else_statement)    s.else_statement->accept(*this);
 }
@@ -888,13 +898,13 @@ void SemanticAnalyser::visit(SwitchStmt& s) {
 }
 
 void SemanticAnalyser::visit(WhileStmt& s) {
-    check_stmts_condition(s.condition, s.condition_loc);
+    check_stmts_condition(s.condition, s.location);
     if(s.body)      s.body->accept(*this);
 }
 
 void SemanticAnalyser::visit(DoWhileStmt& s) {
     if(s.body)      s.body->accept(*this);
-    check_stmts_condition(s.condition, s.condition_loc);
+    check_stmts_condition(s.condition, s.location);
 }
 
 void SemanticAnalyser::visit(ForStmt& s) {
@@ -917,7 +927,7 @@ void SemanticAnalyser::visit(RangeForStmt& s) {
 void SemanticAnalyser::visit(ReturnStmt& s) {
     std::stringstream ss;
     if(!is_function_scope) {
-        ss << "Can't return outside of a function! Line: " << s.return_token.start.line << "\n";
+        ss << "Can't return outside of a function! Line: " << s.location.start.line << "\n";
         throw SemanticError(ss.str());
     }
 
@@ -933,7 +943,7 @@ void SemanticAnalyser::visit(ReturnStmt& s) {
     }
 
     Type *fn_ret_type = current_function_symbol->declared_type;
-    if(ret_type->kind != fn_ret_type->kind) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.return_token));
+    if(ret_type->kind != fn_ret_type->kind) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.location));
 
     if(ret_type->kind == TK::BUILTIN) {
         BuiltinType *r = static_cast<BuiltinType*>(ret_type);
@@ -942,13 +952,15 @@ void SemanticAnalyser::visit(ReturnStmt& s) {
         bool same_builtin = r->builtin == f->builtin;
         bool promotion = is_numeric_type(r) && is_numeric_type(f);
 
-        if(!same_builtin && !promotion) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.return_token));
+        if(!same_builtin && !promotion) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.location));
     }
 
     if(delete_ret_type) {
         delete ret_type;
         ret_type = nullptr;
     }
+
+    current_function_return_stmts.push_back(&s);
 }
 
 void SemanticAnalyser::visit(PrintStmt& s) {
