@@ -62,11 +62,12 @@ Type *SemanticAnalyser::resolve(TypeSpecifier& t) {
 
 //        //int[3]            (kind: ARRAY, size: 3, elem_type: (kind: BUILTIN, builtin: INT))
 //        //int[3][4]         (kind: ARRAY, size: 3, elem_type: (kind: ARRAY, size: 4, elem_type: (kind: BUILTIN, builtin: INT)))
-    while( !t.dimension.empty() ) {
+    size_t dimension = t.dimension.size();
+    while( dimension ) {
         Type *elem_type = tmp;
 
         tmp = new ArrayType(elem_type, t.dimension.back());
-        t.dimension.pop_back();
+        --dimension;
     }
 
     return tmp;
