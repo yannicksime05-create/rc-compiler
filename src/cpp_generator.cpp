@@ -119,8 +119,8 @@ void CppGenerator::visit(VariableDecl& d) {
 }
 
 void CppGenerator::visit(FunctionDecl& d) {
-    is_function_parameter = true;
     out << map_type(d.return_type) << " " << d.function_name.value << "(";
+    is_function_parameter = true;
     for(size_t i = 0; i < d.parameters.size(); ++i) {
         Parameter *p = d.parameters[i];
 
@@ -132,6 +132,7 @@ void CppGenerator::visit(FunctionDecl& d) {
 
         if(i + 1 < d.parameters.size()) out << ", ";
     }
+    is_function_parameter = false;
     out << ") ";
 
     if(d.body) d.body->accept(*this);
