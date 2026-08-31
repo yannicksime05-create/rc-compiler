@@ -29,6 +29,8 @@ class SemanticAnalyser : public Visitor {
     Symbol *current_function_symbol = nullptr;
     std::vector<ReturnStmt*> current_function_return_stmts;
 
+    int loop_depth = 0, switch_depth = 0;
+
     bool is_builtin_type(const Type *t);
     bool is_integral_type(const BuiltinType *t);
     bool is_floating_type(const BuiltinType *t);
@@ -96,6 +98,7 @@ public:
     void visit(RangeForStmt& s) override;
     void visit(ReturnStmt& s) override;
     void visit(PrintStmt& s) override;
+    void visit(BreakStmt& s) override;
 
 };
 

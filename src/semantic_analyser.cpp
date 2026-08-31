@@ -892,28 +892,38 @@ void SemanticAnalyser::visit(IfStmt& s) {
 
 void SemanticAnalyser::visit(SwitchStmt& s) {
     if(s.pattern) s.pattern->accept(*this);
+    ++switch_depth;
     for(CaseClause *c : s.cases) {
         if(c->expression)   c->expression->accept(*this);
         if(c->body)         c->body->accept(*this);
     }
+    --switch_depth;
 }
 
 void SemanticAnalyser::visit(WhileStmt& s) {
     check_stmts_condition(s.condition, s.location);
+    ++loop_depth;
     if(s.body)      s.body->accept(*this);
+    --loop_depth;
 }
 
 void SemanticAnalyser::visit(DoWhileStmt& s) {
+    ++loop_depth;
     if(s.body)      s.body->accept(*this);
+    --loop_depth;
     check_stmts_condition(s.condition, s.location);
 }
 
 void SemanticAnalyser::visit(ForStmt& s) {
     manager.enter(ScopeType::BLOCK);
+
     if(s.initialization) s.initialization->accept(*this);
     if(s.condition)      s.condition->accept(*this);
     if(s.increment)      s.increment->accept(*this);
+    ++loop_depth;
     if(s.body)           s.body->accept(*this);
+    --loop_depth;
+
     manager.exit();
 }
 
@@ -1003,5 +1013,13 @@ void SemanticAnalyser::visit(PrintStmt& s) {
     }
 
     s.nb_placeholders = placeholders;
+}
+
+void SemanticAnalyser::visit(BreakStmt& s) {
+    if(!loop_depth && !switch_depth) {
+        std::stringstream ss;
+        ss << "Error: Can't break outside of loops of switch! Line: " << s.location.start.line << "\n";
+        throw SemanticError(ss.str());
+    }
 }
 
