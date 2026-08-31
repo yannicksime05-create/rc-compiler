@@ -13,6 +13,7 @@ class CppGenerator : public Visitor {
     int indent_level = 0;
     static const int TAB = 4;
 
+    //We need this when a string is being passed as a parameter to a function, so that we translate it to std::string& instead of std::string.
     bool is_function_parameter = false;
 
     void indent() {
@@ -23,14 +24,16 @@ class CppGenerator : public Visitor {
         std::string base;
         for(const std::string& q : t.qualifiers) {
             base += q;
+            base += " ";
         }
 
-        size_t depth = 0;
         bool is_vector = false;
         if(!t.dimension.empty()) {
             is_vector = true;
 
-            for(depth = 1; depth <= t.dimension.size(); ++depth)  base += "std::vector<";
+            std::cout << "CppGenerator: mapped type is a vector\n";
+
+            for(size_t i = 0; i < t.dimension.size(); ++i)  base += "std::vector<";
         }
 
         std::string s;
@@ -55,11 +58,12 @@ class CppGenerator : public Visitor {
         }
 
         if(is_vector) {
-            std::string tmp(depth, '>');
+            std::string tmp(t.dimension.size(), '>');
             s += tmp;
         }
 
         base += s;
+        std::cout << "CppGenerator: mapped type = " << base << "\n";
         return base;
     }
 
@@ -102,6 +106,7 @@ public:
     void visit(RangeForStmt& s) override;
     void visit(ReturnStmt& s) override;
     void visit(PrintStmt& s) override;
+    void visit(BreakStmt& s) override;
 
 };
 
