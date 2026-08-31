@@ -130,6 +130,10 @@ void ReturnStmt::accept(Visitor& v) {
     v.visit(*this);
 }
 
-void PrintStatement::accept(Visitor& v) {
+void PrintStmt::accept(Visitor& v) {
+    v.visit(*this);
+}
+
+void BreakStmt::accept(Visitor& v) {
     v.visit(*this);
 }

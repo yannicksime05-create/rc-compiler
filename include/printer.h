@@ -61,6 +61,7 @@ public:
     void visit(RangeForStmt& s) override;
     void visit(ReturnStmt& s) override;
     void visit(PrintStmt& s) override;
+    void visit(BreakStmt& s) override;
 
 };
 

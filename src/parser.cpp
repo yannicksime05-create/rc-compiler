@@ -186,10 +186,10 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
         if( !is(TT::RPAREN) ) {
             std::vector<Expr *> args;
-            args.push_back(parseExpression(Precedence::PREC_POSTFIX));
+            args.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
             while( is(TT::COMMA) ) {
                 get();
-                args.push_back(parseExpression(Precedence::PREC_POSTFIX));
+                args.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
             }
             expect(TT::RPAREN, "Error: Expected ')' after argument list");
 
@@ -341,6 +341,7 @@ Stmt *Parser::parseStatement() {
         case TT::KW_FOR:    return dispatch_for_statements();
         case TT::KW_RETURN: return parse_return_statement();
         case TT::KW_PRINT:  return parse_print_statement();
+        case TT::KW_BREAK:  return parse_break_statement();
 
         default:
             if( starts_declaration() ) return parse_declaration_statement();
@@ -588,4 +589,11 @@ PrintStmt *Parser::parse_print_statement() {
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of print statement");
 
     return new PrintStmt(loc, exprs);
+}
+
+BreakStmt *Parser::parse_break_statement() {
+    Token loc = get();
+
+    expect(TT::SEMICOLON, "Error: Expected ';' after break statement!");
+    return new BreakStmt(loc);
 }

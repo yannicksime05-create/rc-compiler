@@ -130,6 +130,7 @@ class Parser {
     RangeForStmt        *parse_rangefor_statement();
     ReturnStmt          *parse_return_statement();
     PrintStmt           *parse_print_statement();
+    BreakStmt           *parse_break_statement();
 
 
 

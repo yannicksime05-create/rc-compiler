@@ -599,7 +599,7 @@ struct ReturnStmt : Stmt {
     Token location;
     Expr *expression = nullptr;
 
-    ReturnStmt(Token& t, Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), location(t), expression(e) {}
+    ReturnStmt(const Token& t, Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), location(t), expression(e) {}
 
     void accept(Visitor& v) override;
 
@@ -619,7 +619,7 @@ struct PrintStmt : Stmt {
     bool has_fmt = false;           //true when the first expressions is a string specifying the format.
     int nb_placeholders;            //this should be equal to expressions.size() - 1 if has_fmt = true.
 
-    PrintStmt(Token& loc, const std::vector<Expr*>& exprs) : Stmt(ASTNodeType::PRINT_STMT_NODE), location(loc), expressions(exprs) {}
+    PrintStmt(const Token& loc, const std::vector<Expr*>& exprs) : Stmt(ASTNodeType::PRINT_STMT_NODE), location(loc), expressions(exprs) {}
 
     void accept(Visitor& v) override;
 
@@ -630,6 +630,18 @@ struct PrintStmt : Stmt {
         }
 
         std::cout << "Cleaned up PrintStmt node...\n";
+    }
+};
+
+struct BreakStmt : Stmt {
+    Token location;
+
+    BreakStmt(const Token& loc) : Stmt(ASTNodeType::BREAK_STMT_NODE) {}
+
+    void accept(Visitor& v) override;
+
+    ~BreakStmt() {
+        std::cout << "Cleaned up BreakStmt node...\n";
     }
 };
 
@@ -666,6 +678,7 @@ public:
     virtual void visit(RangeForStmt& s) = 0;
     virtual void visit(ReturnStmt& s) = 0;
     virtual void visit(PrintStmt& s) = 0;
+    virtual void visit(BreakStmt& s) = 0;
 
 };
 
