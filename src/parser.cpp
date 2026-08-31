@@ -441,22 +441,39 @@ SwitchStmt *Parser::parse_switch_statement() {
     return new SwitchStmt(e, cases);
 }
 
+//This allows:
+// case a: case b: case c: {}
+// case a, b, c: {}
+//and
+// case a: case b, c: {}        (a combination of first ones)
 CaseClause *Parser::parse_case_clause() {
-    Expr *e = nullptr;
+    std::vector<Expr*> exprs;
 
-    //token = TT::KW_DEFAULT
-    if( !is(TT::KW_CASE) ) get();
-    else {
-        get();
-        e = parseExpression();
-        if(!e) {
-            std::cerr << "Error: Expected primary-expression after keyword 'case'" << std::endl;
-            return nullptr;
+    while(true) {
+        if( is(TT::KW_DEFAULT) ) {
+            get();
+            expect(TT::COLON, "Error: Expected ':' after 'default'");
         }
+        else {
+            get();
+            // comma-list form: case a, b, c:
+            exprs.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+            while( is(TT::COMMA) ) {
+                get();
+                Expr *e = parseExpression(Precedence::PREC_ASSIGNMENT);
+                if(!e) throw ParseError("Error: Expected expression after ',' in case label");
+                exprs.push_back(e);
+            }
+
+            expect(TT::COLON, "Error: Expected ':' after case label");
+        }
+
+        // stacked-keyword form: case a: case b: { ... }
+        if( is(TT::KW_CASE) || is(TT::KW_DEFAULT) ) continue;
+        break;
     }
 
-    expect(TT::COLON, "Error: Expected ':' after case/default label");
-    return new CaseClause(e, parse_compound_statement());
+    return new CaseClause(exprs, parse_compound_statement());
 }
 
 WhileStmt *Parser::parse_while_statement() {

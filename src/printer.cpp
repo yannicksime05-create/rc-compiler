@@ -304,9 +304,16 @@ void Printer::visit(SwitchStmt& s) {
     indent(); std::cout << "cases: [\n";
     nspace += tab_length;
     for(const CaseClause *c : s.cases) {
-        indent(); std::cout << "test: {\n";
-        exprs_printer_helper(c->expression);
-        indent(); std::cout << "}\n";
+        if(c->expressions.empty()) {
+            indent(); std::cout << "default:,\n";
+        }
+        else {
+            for(Expr *e : c->expressions) {
+                indent(); std::cout << "case: {\n";
+                exprs_printer_helper(e);
+                indent(); std::cout << "}\n";
+            }
+        }
         indent(); std::cout << "then: {\n";
         stmts_printer_helper(c->body);
         indent(); std::cout << "},\n";

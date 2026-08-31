@@ -473,14 +473,18 @@ struct IfStmt : Stmt {
 };
 
 struct CaseClause {
-    Expr *expression = nullptr;
+    std::vector<Expr *> expressions;
     CompoundStmt *body = nullptr;
 
-    CaseClause(Expr *e, CompoundStmt *b) : expression(e), body(b) {}
+    CaseClause(const std::vector<Expr*>& e, CompoundStmt *b) : expressions(e), body(b) {}
 
     ~CaseClause() {
-        delete expression;
-        expression = nullptr;
+        for(Expr *e : expressions) {
+            if(e) {
+                delete e;
+                e = nullptr;
+            }
+        }
         delete body;
         body = nullptr;
 
