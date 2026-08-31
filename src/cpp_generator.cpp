@@ -30,8 +30,9 @@ void CppGenerator::visit(StringExpr& e) {
 
 void CppGenerator::visit(ArrayLiteralExpr& e) {
     out << "{";
-    for(Expr *expr : e.elements) {
-        if(expr) expr->accept(*this);
+    for(size_t i = 0; i < e.elements.size(); ++i) {
+        e.elements[i]->accept(*this);
+        if(i + 1 < e.elements.size()) out << ", ";
     }
     out << "}";
 }
@@ -282,4 +283,8 @@ void CppGenerator::visit(PrintStmt& s) {
     out << " << \"" << fmt.substr(start) << "\"";
 
     out << ";\n";
+}
+
+void CppGenerator::visit(BreakStmt& s) {
+    out << "break;\n";
 }
