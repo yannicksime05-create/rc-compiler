@@ -189,20 +189,24 @@ void CppGenerator::visit(SwitchStmt& s) {
     out << ") {\n";
     indent_level += TAB;
     for(CaseClause *c : s.cases) {
-        indent();
-        if(c->expression) {
-            out << "case ";
-            c->expression->accept(*this);
-            out << ":";
+        if(c->expressions.empty()) {
+            indent();
+            out << "default: ";
         }
         else {
-            out << "default:";
+            for(Expr *e : c->expressions) {
+                indent(); out << "case ";
+                if(e) e->accept(*this);
+                out << ": ";
+
+                if(e != c->expressions.back()) out << "\n";
+            }
         }
 
         c->body->accept(*this);
     }
     indent_level -= TAB;
-    out << "}\n";
+    indent(); out << "}\n";
 }
 
 void CppGenerator::visit(WhileStmt& s) {
