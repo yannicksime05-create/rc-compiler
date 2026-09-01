@@ -171,6 +171,9 @@ int main() {
 
 ## Building & running
 
+The project ships a Code::Blocks project file (`test1_cpp_ver.cbp`, GCC, C++17), but
+it can be built directly with g++ as well:
+
 ```sh
 g++ -std=c++17 -Iinclude main.cpp src/*.cpp -o rc
 ```
