@@ -2,7 +2,7 @@
 
 `rc` is a small statically-typed toy language and its compiler, written in C++. Source
 written in `rc` is lexed, parsed into an AST, type-checked by a semantic analyser, and
-then **transpiled to C++**, which can be compiled with any C++17 compiler.
+then **transpiled to C++**, which can be compiled with any C++11 (or later) compiler.
 
 > This README describes the project as it currently stands, including parts that are
 > still work-in-progress. See [Known limitations / TODO](#known-limitations--todo) for

@@ -22,9 +22,9 @@ public:
     Scope(ScopeType t, Scope *p = nullptr) : type(t), parent(p) {}
 
     bool insert(Symbol *s) {
-        auto [it, inserted] = symbols.emplace(s->name, s);
+        auto result = symbols.emplace(s->name, s);
 
-        return inserted;
+        return result.second;
     }
 
     ScopeType get_type() const {
