@@ -16,6 +16,9 @@ class CppGenerator : public Visitor {
     //We need this when a string is being passed as a parameter to a function, so that we translate it to std::string& instead of std::string.
     bool is_function_parameter = false;
 
+    //This currently serves to prevent 'for(int i = 0; ...)' from being translated to 'for(int i = 0;\n ...)'.
+    bool need_newline = true;
+
     void indent() {
         for(int i = 0; i < indent_level; ++i) out << " ";
     }

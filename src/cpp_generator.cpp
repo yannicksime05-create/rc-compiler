@@ -116,7 +116,8 @@ void CppGenerator::visit(VariableDecl& d) {
 
         if(i + 1 < d.declarations.size()) out << ", ";
     }
-    out << ";\n";
+    out << ";";
+    if(need_newline) out << "\n";
 }
 
 void CppGenerator::visit(FunctionDecl& d) {
@@ -160,16 +161,12 @@ void CppGenerator::visit(CompoundStmt& s) {
 
 void CppGenerator::visit(ExpressionStmt& s) {
     if(s.expression) s.expression->accept(*this);
-    out << ";\n";
+    out << ";";
+    if(need_newline) out << "\n";
 }
 
 void CppGenerator::visit(DeclarationStmt& s) {
-    Decl *d = s.declaration;
-
-    bool is_var_decl = d->node_type == ASTNodeType::VAR_DECL_NODE;
-    d->accept(*this);
-
-//    if(is_var_decl) out << ";\n";
+    s.declaration->accept(*this);
 }
 
 void CppGenerator::visit(IfStmt& s) {
@@ -227,7 +224,9 @@ void CppGenerator::visit(DoWhileStmt& s) {
 void CppGenerator::visit(ForStmt& s) {
     out << "for(";
     //This is either an ExpressionStmt or a DeclarationStmt containing a VariableDecl and in both cases, the semicolon is automatically added, so no need to it here again.
+    need_newline = false;
     if(s.initialization) s.initialization->accept(*this);
+    need_newline = true;
     if(s.condition) {
         out << " ";
         s.condition->accept(*this);

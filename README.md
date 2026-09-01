@@ -172,7 +172,7 @@ int main() {
 ## Building & running
 
 ```sh
-g++ -std=c++17 -Iinclude main.cpp src/*.cpp -o rc
+g++ -Iinclude main.cpp src/*.cpp -o rc
 ```
 
 Currently `main.cpp` hard-codes its input file to `transpilation_test.rc` rather than
