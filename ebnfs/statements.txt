@@ -10,36 +10,36 @@ statement 					::= compound-statement
 								| break-statement
 								| continue-statement
 								| return-statement
+								| print-statement
 								| labeled-statement
 								
 								| empty-statement
 
-compound-statement 			::= "{" { statement } "}"
+compound-statement 			::= "{" statement* "}"
 
 expression-statement 		::= expression ";"
 
 declaration-statement		::= declaration ";"
 
-if-statement 				::= "if" "(" expression ")" statement [ "else" statement ]
+if-statement 				::= "if" "(" expression ")" statement ("else" statement)?
 
-switch-statement       		::= "switch" "(" expression ")" "{" { case-clause } "}"
-case-clause					::= "case" expression ":" compound-statement
+switch-statement       		::= "switch" "(" expression ")" "{" case-clause* "}"
+case-clause					::= case-label+ compound-statement
+
+case-label					::= "case" expression ("," expression)* ":"
+								| "default" ":"
 
 while-statement 			::= "while" "(" expression ")" statement
 
 do-while-statement 			::= "do" statement "while" "(" expression ")" ";"
 
 
-for-statement 				::=	"for" "(" [ init ] ";" [ expression ] ";" [ expression ] ")" statement
+for-statement 				::=	"for" "(" init? ";" expression? ";" expression? ")" statement
 init 						::=	expression | declaration-statement
-
-for-statement 				::= "for" "(" init ":" container [ ";" increment ] ")" statement
-
 
 range-for-statement			::= "for" "(" init ":" container ")" statement
 container					::= "[" expression "..." expression "]"
 								| identifier
-increment					::= expression
 
 
 
@@ -48,14 +48,27 @@ break-statement    			::= "break" ";"
 
 continue-statement 			::= "continue" ";"
 
-return-statement   			::= "return" [ expression ] ";"
+return-statement   			::= "return" expression? ";"
+
+print-statement    			::= "print" "(" (expression ("," expression)*)? ")" ";"
 
 empty-statement 			::= ";"
 
 
 switch() {
-	case expr: {
+	case 1:
+	case 2:
+	case 3: {
 
+	}
+
+	case 4, 5, 6: {
+
+	}
+
+	case 7:
+	case 8, 9: {
+	
 	}
 }
 

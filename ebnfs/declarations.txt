@@ -20,9 +20,9 @@ declaration 			::= variable-declaration
 							| enum-declaration
 							| alias-declaration
 
-variable-declaration 	::= type-specifier variable-declarator { "," variable-declarator } ";"
+variable-declaration 	::= type-specifier variable-declarator ("," variable-declarator)* ";"
 
-type-specifier        	::= [ type-qualifier ] ( base-type | identifier )
+type-specifier        	::= (type-qualifier)? ( base-type | identifier )
 
 type-qualifier        	::= "const"
 
@@ -39,16 +39,11 @@ base-type             	::= "int"
 	                        | "any"
 	                        | "auto"
 
-variable-declarator   ::= identifier [ "=" expression ] ;
+variable-declarator   	::= identifier ("=" expression)?
 
 
 
 
-function-declaration 	::= type-specifier identifier "(" [ parameter-list ] ")" [ function-body ]
-parameter-list       	::= parameter { "," parameter }
-parameter            	::= type-specifier identifier [ "=" expression ]
-function-body        	::= "=" expression-statement | compound-statement
-
-
-class-declaration		::= "class" identifier [] class-body
-class-body				::= compound-statement
+function-declaration 	::= type-specifier identifier "(" (parameter-list)? ")" compound-statement
+parameter-list       	::= parameter ("," parameter)*
+parameter            	::= type-specifier identifier ("=" expression)?
