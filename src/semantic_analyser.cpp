@@ -894,7 +894,7 @@ void SemanticAnalyser::visit(SwitchStmt& s) {
     if(s.pattern) s.pattern->accept(*this);
     ++switch_depth;
     for(CaseClause *c : s.cases) {
-        if(c->expression)   c->expression->accept(*this);
+        for(Expr *e : c->expressions) if(e) e->accept(*this);
         if(c->body)         c->body->accept(*this);
     }
     --switch_depth;
