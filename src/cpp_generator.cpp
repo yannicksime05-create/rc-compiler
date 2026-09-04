@@ -84,9 +84,18 @@ void CppGenerator::visit(CallExpr& e) {
     out << ")";
 }
 
-void CppGenerator::visit(MemberAccessExpr& e) {}
+void CppGenerator::visit(MemberAccessExpr& e) {
+    e.object->accept(*this);
+    out << ".";
+    out << e.member.value;
+}
 
-void CppGenerator::visit(SubscriptExpr& e) {}
+void CppGenerator::visit(SubscriptExpr& e) {
+    e.object->accept(*this);
+    out << "[";
+    e.index->accept(*this);
+    out << "]";
+}
 
 void CppGenerator::visit(SequenceExpr& e) {
     out << "(";
