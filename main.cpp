@@ -6,20 +6,16 @@
 #include <fstream>
 
 int main(int argc, char *argv[]) {
-//    if(argc < 2) {
-//        std::cerr << "Usage: " << argv[0] << "<filename>" << std::endl;
-//        return 1;
-//    }
-//
-//    std::ifstream f(argv[1]);
-//    if(!f.is_open()) {
-//        std::cerr << "Error: Could not open file " << argv[1] << std::endl;
-//        return 1;
-//    }
+    if(argc < 2) {
+        std::cerr << "Usage: " << argv[0] << "<filename>" << std::endl;
+        return 1;
+    }
 
-
-
-    std::ifstream f("tests/program.txt");
+    std::ifstream f(argv[1]);
+    if(!f.is_open()) {
+        std::cerr << "Error: Could not open file " << argv[1] << std::endl;
+        return 1;
+    }
 
 
     Lexer lexer(f);
@@ -42,7 +38,7 @@ int main(int argc, char *argv[]) {
     output << gen.generate(p);
     output.close();
 
-    system("g++ -std=c++17 out.cpp -o out");
+//    system("g++ -std=c++17 out.cpp -o out");
 
     return 0;
 }

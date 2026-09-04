@@ -217,8 +217,6 @@ out.cpp                    – last generated output (checked in as a working ex
 This section exists so the README doesn't overstate what's implemented. Pulled
 directly from gaps in the current source:
 
-- **CLI arguments are disabled.** `main.cpp` reads a hard-coded `transpilation_test.rc`
-  instead of `argv[1]`; the real argument-handling code is present but commented out.
 - **`MemberAccessExpr` and `SubscriptExpr` don't transpile yet.** Both have empty
   bodies in `CppGenerator` (`.` and `[]` parse and type-check, but generate no C++).
 - **`RangeForStmt` isn't implemented in `CppGenerator`** (empty body), and its grammar
@@ -240,7 +238,6 @@ directly from gaps in the current source:
 
 ## Roadmap ideas
 
-- Re-enable CLI usage (`rc <file.rc>`) instead of the hard-coded input.
 - Implement `MemberAccessExpr`/`SubscriptExpr` codegen.
 - Decide on and implement range-for syntax.
 - Add `continue`, and align the parser with (or trim down) the EBNF files so they
