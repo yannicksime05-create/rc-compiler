@@ -18,9 +18,9 @@ enum class TokenType {
     KW_RETURN, KW_STRING, KW_SWITCH, KW_TRUE, KW_VOID, KW_WHILE,
 
     // ===== Literals =====
-    INTEGER,                                                             // 42, 0xFF, 010, 0b1010, etc.
+    INTEGER,                                                            // 42, 0xFF, 010, 0b1010, etc.
     FLOAT,                                                              // 3.14, 1e-9
-    //CHAR,                                                             // 'a'
+    CHAR,                                                               // 'a'
     STRING,                                                             // "hello"
 
     // ===== Operators =====

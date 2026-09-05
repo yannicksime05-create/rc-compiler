@@ -86,6 +86,7 @@ class Lexer {
 
     Token comments_or_div_operator();
     Token strings();
+    Token chars();
     Token keywords_and_identifiers();
     Token numbers();
     Token next_token();

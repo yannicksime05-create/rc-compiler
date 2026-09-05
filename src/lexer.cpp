@@ -50,12 +50,12 @@ Token Lexer::strings() {
     t.start = {column - 1, line};
 
     std::string s;
-    bool backslash_found = false;
+    bool found_backslash = false;
     while(input.get(c)) {
         advance();
-        if(backslash_found) backslash_found = false;
-        else if(c == '\\')  backslash_found = true;
-        else if(c == '"' || c == '\'') {
+        if(found_backslash) found_backslash = false;
+        else if(c == '\\')  found_backslash = true;
+        else if(c == '"') {
 //            advance();
             std::cout << "String found!" << std::endl;
             t.type = TT::STRING;
@@ -66,7 +66,48 @@ Token Lexer::strings() {
     }
 
     if(input.eof()) {
-        error(t, s, "Error: Unterminated string literal! Missing enclosing \"");
+        error(t, s, "Error: Unterminated string literal! Missing closing \"");
+        return t;
+    }
+
+    t.value = s;
+    t.end = {column, line};
+    return t;
+}
+
+Token Lexer::chars() {
+    Token t;
+    t.start = {column - 1, line};
+
+    if(input.peek() == '\'') {
+        get();
+        error(t, "", "Error: Empty character literal!");
+        return t;
+    }
+
+    std::string s;
+    bool found_backslash = false, first = true;
+    int remaining_chars = 2;                                            //The character itself + the closing '.
+    while(input.get(c) && remaining_chars) {
+        advance();
+
+        if(found_backslash)         found_backslash = false;
+        else if(c == '\\' && first) found_backslash = true;
+        else if(c == '\'' && remaining_chars == 1) {                    //We reached the closing '.
+            std::cout << "Character literal found!" << std::endl;
+            t.type = TT::CHAR;
+            --remaining_chars;
+            break;
+        }
+
+        if(!found_backslash) --remaining_chars;
+        first = false;
+        s += c;
+    }
+
+    if(t.type != TT::CHAR) {
+        std::string msg = input.eof() ? "Error: Unterminated character literal! Missing closing '" : "Error: Character literal must contain exactly one character!";
+        error(t, s, msg);
         return t;
     }
 
@@ -598,8 +639,12 @@ Token Lexer::next_token() {
             break;
         default:
             //=============== STRING LITERALS ===============
-            if(c == '"' || c == '\'') {
+            if(c == '"') {
                 t = strings();
+                return t;
+            }
+            else if(c == '\'') {
+                t = chars();
                 return t;
             }
             //=============== KEYWORDS & IDENTIFIERS ===============
