@@ -97,10 +97,22 @@ struct DecimalNumberExpr : Expr {
     }
 };
 
+struct CharExpr : Expr {
+    std::string value;   // raw content between the quotes — 1 char, or a 2-char escape like \n
+
+    CharExpr(const std::string& v) : Expr(ASTNodeType::CHAR_LIT_NODE), value(v) {}
+
+    void accept(Visitor& v) override;
+
+    ~CharExpr() {
+        std::cout << "Cleaning up CharExpr node...\n";
+    }
+};
+
 struct StringExpr : Expr {
     std::string value;
 
-    StringExpr(std::string& v) : Expr(ASTNodeType::STRING_LIT_NODE), value(std::move(v)) {}
+    StringExpr(const std::string& v) : Expr(ASTNodeType::STRING_LIT_NODE), value(v) {}
 
     void accept(Visitor& v) override;
 
@@ -656,6 +668,7 @@ public:
     virtual void visit(BoolExpr& e) = 0;
     virtual void visit(IntNumberExpr& e) = 0;
     virtual void visit(DecimalNumberExpr& e) = 0;
+    virtual void visit(CharExpr& e) = 0;
     virtual void visit(StringExpr& e) = 0;
     virtual void visit(ArrayLiteralExpr& e) = 0;
     virtual void visit(IdentifierExpr& e) = 0;

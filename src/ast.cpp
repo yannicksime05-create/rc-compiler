@@ -25,6 +25,10 @@ void DecimalNumberExpr::accept(Visitor& v) {
     v.visit(*this);
 }
 
+void CharExpr::accept(Visitor& v) {
+    v.visit(*this);
+}
+
 void StringExpr::accept(Visitor& v) {
     v.visit(*this);
 }

@@ -35,6 +35,7 @@ public:
     void visit(BoolExpr& e) override;
     void visit(IntNumberExpr& e) override;
     void visit(DecimalNumberExpr& e) override;
+    void visit(CharExpr& e) override;
     void visit(StringExpr& e) override;
     void visit(ArrayLiteralExpr& e) override;
     void visit(IdentifierExpr& e) override;

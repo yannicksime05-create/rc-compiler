@@ -142,6 +142,7 @@ Expr *Parser::parse_primary() {
         case TT::INTEGER:       return new IntNumberExpr( std::stoi(get().value) );
         case TT::FLOAT:         return new DecimalNumberExpr( std::stod(get().value) );
         case TT::STRING:        return new StringExpr( get().value );
+        case TT::CHAR:          return new CharExpr( get().value );
 
         case TT::KW_TRUE:
         case TT::KW_FALSE:
