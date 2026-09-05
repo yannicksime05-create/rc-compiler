@@ -616,9 +616,12 @@ void SemanticAnalyser::visit(ConditionalExpr& e) {
 void SemanticAnalyser::visit(CallExpr& e) {
     if(!e.callee) throw SemanticError("Missing callee in function call expression!");
 
+    if(e.callee->node_type != ASTNodeType::IDENTIFIER_EXPR_NODE) {
+        throw SemanticError("Error: Calling a non-function expression is not supported yet; only direct calls to a named function are allowed.");
+    }
+
     std::stringstream ss;
 
-    //callee is only an IdentifierExpr for now.
     IdentifierExpr *callee = static_cast<IdentifierExpr*>(e.callee);
     Symbol *s = manager.lookup(callee->name.value);
     if(!s) {
