@@ -26,6 +26,10 @@ bool SemanticAnalyser::is_string_type(const BuiltinType *t) {
     return t && t->builtin == BuiltinType::Types::STRING;
 }
 
+bool SemanticAnalyser::is_char_type(const BuiltinType *t) {
+    return t && t->builtin == BuiltinType::Types::CHAR;
+}
+
 bool SemanticAnalyser::is_bool_type(const BuiltinType *t) {
     return t && t->builtin == BuiltinType::Types::BOOL;
 }
@@ -84,7 +88,9 @@ Type *SemanticAnalyser::resolve_type_name(Token& t) {
         case TT::KW_FLOAT:
         case TT::KW_DOUBLE: return new BuiltinType(BuiltinType::Types::FLOAT);
 
+        case TT::KW_CHAR:   return new BuiltinType(BuiltinType::Types::CHAR);
         case TT::KW_STRING: return new BuiltinType(BuiltinType::Types::STRING);
+
         case TT::KW_VOID:   return new BuiltinType(BuiltinType::Types::VOID);
         default: {
             std::stringstream ss;
@@ -131,6 +137,7 @@ std::string SemanticAnalyser::builtintype_to_string(const BuiltinType *t) {
         case BuiltinType::Types::BOOL:    return "bool";
         case BuiltinType::Types::FLOAT:   return "float";
         case BuiltinType::Types::INT:     return "int";
+        case BuiltinType::Types::CHAR:    return "char";
         case BuiltinType::Types::STRING:  return "string";
         case BuiltinType::Types::VOID:    return "void";
     }
@@ -205,6 +212,10 @@ void SemanticAnalyser::visit(IntNumberExpr& e) {
 
 void SemanticAnalyser::visit(DecimalNumberExpr& e) {
     e.resolved_type = new BuiltinType(BuiltinType::Types::FLOAT);
+}
+
+void SemanticAnalyser::visit(CharExpr& e) {
+    e.resolved_type = new BuiltinType(BuiltinType::Types::CHAR);
 }
 
 void SemanticAnalyser::visit(StringExpr& e) {
@@ -377,6 +388,7 @@ void SemanticAnalyser::visit(BinaryExpr& e) {
         case TT::NOT_EQUAL: {
             bool valid =    (is_bool_type(lt) && is_bool_type(rt))          ||
                             (is_string_type(lt) && is_string_type(rt))      ||
+                            (is_char_type(lt) && is_char_type(rt))          ||
                             (is_numeric_type(lt) && is_numeric_type(rt));
 
             if(!valid)  throw SemanticError(type_mismatch(lt, e.op, rt));
@@ -517,6 +529,8 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
     switch(e.op.type) {
         case TT::ASSIGN: {
             if( (is_string_type(target_type) && !is_string_type(value_type)) ||
+                (is_char_type(target_type) && !is_char_type(value_type))     ||
+                (is_bool_type(target_type) && !is_bool_type(value_type))     ||
                 (is_numeric_type(target_type) && !is_numeric_type(value_type))
               ) throw SemanticError(type_mismatch(target_type, e.op, value_type));
 
@@ -529,7 +543,7 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
             bool valid = ( is_numeric_type(target_type) && is_numeric_type(value_type) )                                 ||
                          ( e.op.type == TT::MINUS_ASSIGN && is_string_type(target_type) && is_string_type(value_type) )  ||
                          ( e.op.type == TT::STAR_ASSIGN && is_string_type(target_type) && is_integral_type(value_type) ) ||
-                         ( e.op.type == TT::PLUS_ASSIGN && is_string_type(target_type) && (is_string_type(value_type) || is_numeric_type(value_type)) );
+                         ( e.op.type == TT::PLUS_ASSIGN && is_string_type(target_type) && (is_string_type(value_type) || is_numeric_type(value_type) || is_char_type(value_type)) );
             if(valid) {
                 e.resolved_type = target_type->clone();
                 break;
@@ -792,11 +806,10 @@ void SemanticAnalyser::visit(VariableDecl& d) {
                 const BuiltinType *tmp1 = static_cast<const BuiltinType*>(t);
                 const BuiltinType *tmp2 = static_cast<const BuiltinType *>(vd->initializer->resolved_type);
 
-                bool valid = ( is_numeric_type(tmp1) && is_numeric_type(tmp2) ) || ( is_string_type(tmp1) && is_string_type(tmp2) );
+                bool valid = ( is_numeric_type(tmp1) && is_numeric_type(tmp2) ) || ( is_string_type(tmp1) && is_string_type(tmp2) ) || ( is_char_type(tmp1) && is_char_type(tmp2) );
 
                 if(!valid) {
                     ss.str("");
-//                    ss << "Invalid conversion from: '" << type_to_string(tmp2) << "' to: '" << type_to_string(tmp1) << "'. Line: " << d.declared_type.type_name.start.line << "\n";
                     throw SemanticError(invalid_conversion(tmp2, tmp1, d.declared_type.type_name));
                 }
 

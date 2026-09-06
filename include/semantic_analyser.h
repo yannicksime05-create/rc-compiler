@@ -36,6 +36,7 @@ class SemanticAnalyser : public Visitor {
     bool is_floating_type(const BuiltinType *t);
     bool is_numeric_type(const BuiltinType *t);
     bool is_string_type(const BuiltinType *t);
+    bool is_char_type(const BuiltinType *t);
     bool is_bool_type(const BuiltinType *t);
 
     std::string type_to_string(const Type *t);
@@ -72,6 +73,7 @@ public:
     void visit(BoolExpr& e) override;
     void visit(IntNumberExpr& e) override;
     void visit(DecimalNumberExpr& e) override;
+    void visit(CharExpr& e) override;
     void visit(StringExpr& e) override;
     void visit(ArrayLiteralExpr& e) override;
     void visit(IdentifierExpr& e) override;
