@@ -24,6 +24,10 @@ void CppGenerator::visit(DecimalNumberExpr& e) {
     out << e.value;
 }
 
+void CppGenerator::visit(CharExpr& e) {
+    out << "'" << e.value << "'";
+}
+
 void CppGenerator::visit(StringExpr& e) {
     out << "\"" << e.value << "\"";
 }
