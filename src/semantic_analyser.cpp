@@ -4,194 +4,6 @@
 using TT = TokenType;
 using TK = TypeKind;
 
-bool SemanticAnalyser::is_builtin_type(const Type *t) {
-    return t && t->kind == TK::BUILTIN;
-}
-
-//For now it checks only int, but later, we'll add short, long, ...
-bool SemanticAnalyser::is_integral_type(const BuiltinType *t) {
-    return t && t->builtin == BuiltinType::Types::INT;
-}
-
-//Same as is_integral_type, but for float, double and long double.
-bool SemanticAnalyser::is_floating_type(const BuiltinType *t) {
-    return t && t->builtin == BuiltinType::Types::FLOAT;
-}
-
-bool SemanticAnalyser::is_numeric_type(const BuiltinType *t) {
-    return is_integral_type(t) || is_floating_type(t);
-}
-
-bool SemanticAnalyser::is_string_type(const BuiltinType *t) {
-    return t && t->builtin == BuiltinType::Types::STRING;
-}
-
-bool SemanticAnalyser::is_char_type(const BuiltinType *t) {
-    return t && t->builtin == BuiltinType::Types::CHAR;
-}
-
-bool SemanticAnalyser::is_bool_type(const BuiltinType *t) {
-    return t && t->builtin == BuiltinType::Types::BOOL;
-}
-
-BuiltinType *SemanticAnalyser::promote(const BuiltinType *left, const BuiltinType *right) {
-    if(!is_numeric_type(left) || !is_numeric_type(right)) return nullptr;
-
-    if(left->builtin == BuiltinType::Types::FLOAT || right->builtin == BuiltinType::Types::FLOAT)
-        return new BuiltinType(BuiltinType::Types::FLOAT);
-
-    return new BuiltinType(BuiltinType::Types::INT);
-}
-
-std::string SemanticAnalyser::type_mismatch(const Type *lt, Token& op, const Type *rt) {
-    std::stringstream ss;
-    ss << "Operands' types mismatch for operator '" << op.value << "' at line: " << op.start.line
-    << ".\n Left is: '" << type_to_string(lt) << "', right is: '" << type_to_string(rt) << "'.\n";
-
-    return ss.str();
-}
-
-std::string SemanticAnalyser::invalid_conversion(const Type *src_type, const Type *dest_type, const Token& where) {
-    std::stringstream ss;
-    ss << "Invalid conversion from '" << type_to_string(src_type) << "' to '" << type_to_string(dest_type) << "'. Line: " << where.start.line << "\n";
-
-    return ss.str();
-}
-
-
-Type *SemanticAnalyser::resolve(TypeSpecifier& t) {
-    Type *tmp = resolve_type_name(t.type_name);
-//    //for now it only constains 'const'
-    tmp->is_constant = !t.qualifiers.empty();
-
-//        //int[3]            (kind: ARRAY, size: 3, elem_type: (kind: BUILTIN, builtin: INT))
-//        //int[3][4]         (kind: ARRAY, size: 3, elem_type: (kind: ARRAY, size: 4, elem_type: (kind: BUILTIN, builtin: INT)))
-    size_t dimension = t.dimension.size();
-    while( dimension ) {
-        Type *elem_type = tmp;
-
-        tmp = new ArrayType(elem_type, t.dimension.back());
-        --dimension;
-    }
-
-    return tmp;
-}
-
-Type *SemanticAnalyser::resolve_type_name(Token& t) {
-    switch(t.type) {
-//        case TT::KW_ANY:    return new Type(TK::ANY);
-        case TT::KW_AUTO:   return new Type(TK::AUTO);
-
-        case TT::KW_BOOL:   return new BuiltinType(BuiltinType::Types::BOOL);
-        case TT::KW_INT:    return new BuiltinType(BuiltinType::Types::INT);
-
-        case TT::KW_FLOAT:
-        case TT::KW_DOUBLE: return new BuiltinType(BuiltinType::Types::FLOAT);
-
-        case TT::KW_CHAR:   return new BuiltinType(BuiltinType::Types::CHAR);
-        case TT::KW_STRING: return new BuiltinType(BuiltinType::Types::STRING);
-
-        case TT::KW_VOID:   return new BuiltinType(BuiltinType::Types::VOID);
-        default: {
-            std::stringstream ss;
-            ss << "undefined type '" << t.value << "'";
-            return new UnknownType(ss.str());
-        }
-    }
-}
-
-std::string SemanticAnalyser::type_to_string(const Type *t) {
-    if(!t) return "unknown";
-
-    std::stringstream ss;
-    if(t->is_constant) ss << "const ";
-
-    switch(t->kind) {
-        case TK::ARRAY: {
-            const ArrayType *at = static_cast<const ArrayType*>(t);
-            ss << arraytype_to_string(at);
-            break;
-        }
-        case TK::BUILTIN: {
-            const BuiltinType *bt = static_cast<const BuiltinType*>(t);
-            ss << builtintype_to_string(bt);
-            break;
-        }
-        case TK::AUTO: {
-            const AutoType *at = static_cast<const AutoType*>(t);
-            ss << autotype_to_string(at);
-            break;
-        }
-//        case TK::FUNCTION: {
-//            const FunctionType *ft = static_cast<const FunctionType*>(t);
-//            ss << functiontype_to_string(ft);
-//        }
-        default: ss << "unknown";
-    }
-
-    return ss.str();
-}
-
-std::string SemanticAnalyser::builtintype_to_string(const BuiltinType *t) {
-    switch(t->builtin) {
-        case BuiltinType::Types::BOOL:    return "bool";
-        case BuiltinType::Types::FLOAT:   return "float";
-        case BuiltinType::Types::INT:     return "int";
-        case BuiltinType::Types::CHAR:    return "char";
-        case BuiltinType::Types::STRING:  return "string";
-        case BuiltinType::Types::VOID:    return "void";
-    }
-
-    return "unknown";
-}
-
-std::string SemanticAnalyser::arraytype_to_string(const ArrayType *t) {
-//    ARRAY(size=3, element: ARRAY(size=4, element: INT))
-//  int[3][4]
-    const ArrayType *tmp = t;
-    while(tmp->element_type->kind == TK::ARRAY) tmp = static_cast<const ArrayType*>(tmp->element_type);
-
-    std::stringstream ss;
-    ss << type_to_string(tmp->element_type);
-
-    tmp = t;
-    ss << "[" << tmp->size << "]";
-    while(tmp->element_type->kind == TK::ARRAY) {
-        tmp = static_cast<const ArrayType*>(tmp->element_type);
-        ss << "[" << tmp->size << "]";
-    }
-    tmp = nullptr;
-
-    return ss.str();
-}
-
-std::string SemanticAnalyser::autotype_to_string(const AutoType *t) {
-    return type_to_string(t->underlying_type);
-}
-
-void SemanticAnalyser::check_stmts_condition(Expr *condition, const Token& where) {
-    Type *cond_type = nullptr;
-
-    if(condition) {
-        condition->accept(*this);
-        cond_type = condition->resolved_type;
-    }
-
-    if(!is_builtin_type(cond_type)) {
-        std::stringstream ss;
-        ss << "Error: Condition must be of a builtin type, found '" << type_to_string(cond_type) << "'. Line: " << where.start.line << ".\n";
-        throw SemanticError(ss.str());
-    }
-
-    const BuiltinType *ct = static_cast<const BuiltinType*>(cond_type);
-    if( !is_bool_type(ct) && !is_numeric_type(ct)) {
-        std::stringstream ss;
-        ss << "Error: Condition must be a numeric or boolean expression, found '" << type_to_string(ct) << "'. Line: " << where.start.line << ".\n";
-        throw SemanticError(ss.str());
-    }
-}
-
-
 void SemanticAnalyser::visit(Program& p) {
     manager.enter(ScopeType::GLOBAL);
 
@@ -203,23 +15,28 @@ void SemanticAnalyser::visit(Program& p) {
 }
 
 void SemanticAnalyser::visit(BoolExpr& e) {
-    e.resolved_type = new BuiltinType(BuiltinType::Types::BOOL);
+    Type *tmp = new BuiltinType(BuiltinType::Types::BOOL);
+    e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(IntNumberExpr& e) {
-    e.resolved_type = new BuiltinType(BuiltinType::Types::INT);
+    Type *tmp = new BuiltinType(BuiltinType::Types::INT);
+    e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(DecimalNumberExpr& e) {
-    e.resolved_type = new BuiltinType(BuiltinType::Types::FLOAT);
+    Type *tmp = new BuiltinType(BuiltinType::Types::FLOAT);
+    e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(CharExpr& e) {
-    e.resolved_type = new BuiltinType(BuiltinType::Types::CHAR);
+    Type *tmp = new BuiltinType(BuiltinType::Types::CHAR);
+    e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(StringExpr& e) {
-    e.resolved_type = new BuiltinType(BuiltinType::Types::STRING);
+   Type *tmp = new BuiltinType(BuiltinType::Types::STRING);
+    e.resolved_type = tmp ? tmp : nullptr;
 }
 
 //[1, 2, 3]
@@ -231,19 +48,18 @@ void SemanticAnalyser::visit(ArrayLiteralExpr& e) {
     }
 
     std::stringstream ss;
-    Type *first = e.elements[0]->resolved_type, *t = nullptr;
+    const Type *first = e.elements[0]->resolved_type;
     for(size_t i = 1; i < e.elements.size(); ++i) {
-        t = e.elements[i]->resolved_type;
+        const Type *t = e.elements[i]->resolved_type;
 
-        if(!t || t->kind != first->kind) {
+        if( !checker.are_equals(first, t) ) {
             ss.str("");
             ss << "Error: Mixed types in array literal — expected all '"
-               << type_to_string(first) << "' but found '"
-               << type_to_string(t) << "' instead at element " << i+1 << "!";
+               << checker.to_string(first) << "' but found '"
+               << checker.to_string(t) << "' instead at element " << i+1 << "!";
             throw SemanticError(ss.str());
         }
     }
-    t = nullptr;
 
     e.resolved_type = new ArrayType(first->clone(), static_cast<int>(e.elements.size()));
     first = nullptr;
@@ -260,332 +76,59 @@ void SemanticAnalyser::visit(IdentifierExpr& e) {
     e.symbol = s;
     e.resolved_type = s->declared_type->clone();
 
-    std::cout << "identifier expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
+    std::cout << "identifier expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(BinaryExpr& e) {
     if(e.left)  e.left->accept(*this);
     if(e.right) e.right->accept(*this);
 
-    const Type *tmp1 = e.left->resolved_type;
-    const Type *tmp2 = e.right->resolved_type;
+    const Type *lt = e.left->resolved_type;
+    const Type *rt = e.right->resolved_type;
 
-    //op: +
-    //if int and int,          type = int
-    //if float and float,      type = float
-    //if float and int,        type = float
-    //if string and string,    type = string
-    //iff string and int,      type = string
-    //iff string and float,    type = string
+    Type *result = checker.resolve_binary(lt, rt, e.op.type);
+    if(!result) throw SemanticError(checker.type_mismatch(lt, rt, e.op));
 
-    //op: -
-    //if int and int,       type = int
-    //if float and float,   type = float
-    //if float and int,     type = float
-    //if string and string, type = string
-
-    //op: *
-    //if int and int,        type = int
-    //if float and float,    type = float
-    //if float and int,      type = float
-    //iff string and int,    type = string
-
-    //op: /
-    //if int and int,        type = int
-    //if float and float,    type = float
-    //if float and int,      type = float
-    //if string and string,  type = array of strings
-    //iff string and int,    type = array of strings
-
-    //op: %
-    //if int and int,        type = int
-
-    std::stringstream ss;
-    if( !is_builtin_type(tmp1) || !is_builtin_type(tmp2) ) {
-        ss << "Non builtin type not supported yet" << e.op.start.line << ".\n";
-        throw SemanticError(ss.str());
-
-    }
-
-    const BuiltinType *lt = static_cast<const BuiltinType*>(tmp1);
-    const BuiltinType *rt = static_cast<const BuiltinType*>(tmp2);
-    tmp1 = tmp2 = nullptr;
-
-    switch(e.op.type) {
-        // --- Arithmetic: + - * / %
-        case TT::PLUS: {
-            if( is_string_type(lt) && ( is_string_type(rt) || is_numeric_type(rt) ) ) {
-                e.resolved_type = new BuiltinType(BuiltinType::Types::STRING);
-                break;
-            }
-
-            BuiltinType *result = promote(lt, rt);
-            if(!result) throw SemanticError(type_mismatch(lt, e.op, rt));
-
-            e.resolved_type = result;
-            break;
-        }
-        case TT::MINUS: {
-            if(is_string_type(lt) && is_string_type(rt)) {
-                e.resolved_type = new BuiltinType(BuiltinType::Types::STRING);
-                break;
-            }
-
-            BuiltinType *result = promote(lt, rt);
-            if(!result) throw SemanticError(type_mismatch(lt, e.op, rt));
-
-            e.resolved_type = result;
-            break;
-        }
-        case TT::STAR: {
-            if(is_string_type(lt) && is_integral_type(rt)) {
-                e.resolved_type = new BuiltinType(BuiltinType::Types::STRING);
-                break;
-            }
-
-            BuiltinType *result = promote(lt, rt);
-            if(!result) throw SemanticError(type_mismatch(lt, e.op, rt));
-
-            e.resolved_type = result;
-            break;
-        }
-        case TT::SLASH: {
-            if(is_string_type(lt) && (is_string_type(rt) || is_integral_type(rt))) {
-                e.resolved_type = new ArrayType(lt->clone(), -1);
-                break;
-            }
-
-            BuiltinType *result = promote(lt, rt);
-            if(!result) throw SemanticError(type_mismatch(lt, e.op, rt));
-
-            e.resolved_type = result;
-            break;
-        }
-        case TT::MOD: {
-            if(!is_integral_type(lt) || !is_integral_type(rt)) {
-                ss.str("");
-                ss << "Operator: '" << e.op.value << "' requires integral type operands, found '"
-                << type_to_string(lt) << "' and '" << type_to_string(rt) << "' instead. Line: " << e.op.start.line << ".";
-                throw SemanticError(ss.str());
-            }
-
-            e.resolved_type = lt->clone();
-            break;
-        }
-
-        // --- Comparison: < <= > >= == !=
-        case TT::LESS:
-        case TT::LESS_EQUAL:
-        case TT::GREATER:
-        case TT::GREATER_EQUAL: {
-            bool valid = ( is_numeric_type(lt) && is_numeric_type(rt) ) || ( is_string_type(lt) && is_string_type(rt) );
-            if(!valid) throw SemanticError(type_mismatch(lt, e.op, rt));
-
-            e.resolved_type = new BuiltinType(BuiltinType::Types::BOOL);
-            break;
-        }
-        case TT::EQUAL:
-        case TT::NOT_EQUAL: {
-            bool valid =    (is_bool_type(lt) && is_bool_type(rt))          ||
-                            (is_string_type(lt) && is_string_type(rt))      ||
-                            (is_char_type(lt) && is_char_type(rt))          ||
-                            (is_numeric_type(lt) && is_numeric_type(rt));
-
-            if(!valid)  throw SemanticError(type_mismatch(lt, e.op, rt));
-
-            e.resolved_type = new BuiltinType(BuiltinType::Types::BOOL);
-            break;
-        }
-
-        // --- Logical: && ||
-        case TT::AND:
-        case TT::OR: {
-//            if(!is_bool_type(lt) || !is_bool_type(rt)) {
-//                ss.str("");
-//                ss << "Operator: '" << e.op.value << "' requires boolean type operands, found '"
-//                << type_to_string(lt) << "' and '" << type_to_string(rt) << "' instead. Line: " << e.op.start.line << ".";
-//                throw SemanticError(ss.str());
-//            }
-
-            e.resolved_type = new BuiltinType(BuiltinType::Types::BOOL);
-            break;
-        }
-
-        // --- Bitwise: & | ^ << >>
-        case TT::BIT_AND:
-        case TT::BIT_OR:
-        case TT::BIT_XOR:
-        case TT::LEFT_SHIFT:
-        case TT::RIGHT_SHIFT: {
-            if(!is_integral_type(lt) || !is_integral_type(rt)) {
-                ss.str("");
-                ss << "Operator: '" << e.op.value << "' requires operands of type 'int', found '"
-                << type_to_string(lt) << "' and '" << type_to_string(rt) << "' instead. Line: " << e.op.start.line << ".";
-                throw SemanticError(ss.str());
-            }
-
-            e.resolved_type = new BuiltinType(BuiltinType::Types::INT);
-            break;
-        }
-        default:
-            ss.str("");
-            ss << "'" << e.op.value << "' is not a binary operator. Found at line: " << e.op.start.line << ".";
-            throw SemanticError(ss.str());
-    }
-
-    std::cout << "binary expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
+    e.resolved_type = result;
+    std::cout << "binary expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(UnaryExpr& e) {
     if(e.expr) e.expr->accept(*this);
-    const Type *tmp = e.expr->resolved_type;
 
-    std::stringstream ss;
-    if( !is_builtin_type(tmp) ) {
-        ss << "Non builtin type not supported yet" << e.op.start.line << ".\n";
+    const Type *operand = e.expr->resolved_type;
+
+    Type *result = checker.resolve_unary(operand, e.op.type);
+    if(!result) {
+        std::stringstream ss;
+        ss << "Error: Operator '" << e.op.value
+           << "' cannot be applied to type '" << checker.to_string(operand)
+           << "'. Line: " << e.op.start.line << ".\n";
         throw SemanticError(ss.str());
     }
 
-    const BuiltinType *t = static_cast<const BuiltinType*>(tmp);
-    tmp = nullptr;
-
-    switch(e.op.type) {
-        // --- - +
-        case TT::PLUS:
-        case TT::MINUS: {
-            if(!is_numeric_type(t)) {
-                ss.str("");
-                ss << "Operator: '" << e.op.value << "' requires numeric type operand, found '"
-                << type_to_string(t) << "' instead. Line: " << e.op.start.line << ".";
-                throw SemanticError(ss.str());
-            }
-
-            e.resolved_type = t->clone();
-            break;
-        }
-        // --- !
-        case TT::NOT: {
-            if( !is_bool_type(t) && !is_numeric_type(t) ) {
-                ss.str("");
-                ss << "Operator: '" << e.op.value << "' requires boolean type operand, found '"
-                << type_to_string(t) << "' instead. Line: " << e.op.start.line << ".";
-                throw SemanticError(ss.str());
-            }
-
-            e.resolved_type = new BuiltinType(BuiltinType::Types::BOOL);
-            break;
-        }
-        // --- ++ --
-        case TT::INCREMENT:
-        case TT::DECREMENT: {
-            if(!is_numeric_type(t)) {
-                ss.str("");
-                ss << "Operator: '" << e.op.value << "' requires numeric type operand, found '"
-                << type_to_string(t) << "' instead. Line: " << e.op.start.line << ".";
-                throw SemanticError(ss.str());
-            }
-
-            e.resolved_type = t->clone();
-            break;
-        }
-        // --- ~
-        case TT::BIT_NOT: {
-            if(!is_integral_type(t)) {
-                ss.str("");
-                ss << "Operator: '" << e.op.value << "' requires integral type operand, found '"
-                << type_to_string(t) << "' instead. Line: " << e.op.start.line << ".";
-                throw SemanticError(ss.str());
-            }
-
-            e.resolved_type = t->clone();
-            break;
-        }
-        default:
-            ss.str("");
-            ss << "'" << e.op.value << "' is not an unary operator. Found at line: " << e.op.start.line << ".";
-            throw SemanticError(ss.str());
-    }
-
-    std::cout << "unary expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
+    e.resolved_type = result;
+    std::cout << "unary expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(AssignmentExpr& e) {
     if(e.target) e.target->accept(*this);
     if(e.value)  e.value->accept(*this);
 
-    const Type *tmp1 = e.target->resolved_type;
-    const Type *tmp2 = e.value->resolved_type;
+    const Type *target_type = e.target->resolved_type;
+    const Type *value_type = e.value->resolved_type;
 
-    std::stringstream ss;
-    if( !is_builtin_type(tmp1) || !is_builtin_type(tmp2) ) {
-        ss << "Non builtin type not supported yet" << e.op.start.line << ".\n";
+    if(target_type && target_type->is_constant) {
+        std::stringstream ss;
+        ss << "Error: Cannot assign to a const variable. Line: " << e.op.start.line << ".\n";
         throw SemanticError(ss.str());
     }
 
-    const BuiltinType *target_type = static_cast<const BuiltinType*>(tmp1);
-    const BuiltinType *value_type = static_cast<const BuiltinType*>(tmp2);
-    tmp1 = tmp2 = nullptr;
+    Type *result = checker.resolve_assignment(target_type, value_type, e.op.type);
+    if(!result) throw SemanticError(checker.invalid_conversion(value_type, target_type, e.op));
 
-    switch(e.op.type) {
-        case TT::ASSIGN: {
-            if( (is_string_type(target_type) && !is_string_type(value_type)) ||
-                (is_char_type(target_type) && !is_char_type(value_type))     ||
-                (is_bool_type(target_type) && !is_bool_type(value_type))     ||
-                (is_numeric_type(target_type) && !is_numeric_type(value_type))
-              ) throw SemanticError(type_mismatch(target_type, e.op, value_type));
-
-            e.resolved_type = target_type->clone();
-            break;
-        }
-        case TT::PLUS_ASSIGN:
-        case TT::MINUS_ASSIGN:
-        case TT::STAR_ASSIGN: {
-            bool valid = ( is_numeric_type(target_type) && is_numeric_type(value_type) )                                 ||
-                         ( e.op.type == TT::MINUS_ASSIGN && is_string_type(target_type) && is_string_type(value_type) )  ||
-                         ( e.op.type == TT::STAR_ASSIGN && is_string_type(target_type) && is_integral_type(value_type) ) ||
-                         ( e.op.type == TT::PLUS_ASSIGN && is_string_type(target_type) && (is_string_type(value_type) || is_numeric_type(value_type) || is_char_type(value_type)) );
-            if(valid) {
-                e.resolved_type = target_type->clone();
-                break;
-            }
-
-            throw SemanticError(type_mismatch(target_type, e.op, value_type));
-        }
-        case TT::SLASH_ASSIGN: {
-            if(is_string_type(target_type) && (is_string_type(value_type) || is_integral_type(value_type))) {
-//                e.resolved_type = new Type(TK::ARRAY, target_type); //array of strings
-                e.resolved_type = new ArrayType(target_type->clone(), -1);
-                break;
-            }
-
-            if(is_numeric_type(target_type) && is_numeric_type(value_type)) {
-                e.resolved_type = target_type->clone();
-                break;
-            }
-
-            throw SemanticError(type_mismatch(target_type, e.op, value_type));
-        }
-        case TT::MOD_ASSIGN:
-        case TT::BIT_OR_ASSIGN:
-        case TT::BIT_AND_ASSIGN:
-        case TT::BIT_XOR_ASSIGN:
-        case TT::LEFT_SHIFT_ASSIGN:
-        case TT::RIGHT_SHIFT_ASSIGN: {
-            if(is_integral_type(target_type) && is_integral_type(value_type)) {
-                e.resolved_type = target_type->clone();
-                break;
-            }
-
-            throw SemanticError(type_mismatch(target_type, e.op, value_type));
-        }
-
-        default:
-            ss.str("");
-            ss << "'" << e.op.value << "' is not an assignment operator. Found at line: " << e.op.start.line << ".";
-            throw SemanticError(ss.str());
-    }
-
-    std::cout << "assignment expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
+    e.resolved_type = result;
+    std::cout << "assignment expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(ConditionalExpr& e) {
@@ -593,34 +136,19 @@ void SemanticAnalyser::visit(ConditionalExpr& e) {
     if(e.if_true)   e.if_true->accept(*this);
     if(e.if_false)  e.if_false->accept(*this);
 
-    const Type *tmp1 = e.condition->resolved_type;
-    const Type *tmp2 = e.if_true->resolved_type;
-    const Type *tmp3 = e.if_false->resolved_type;
+    const Type *cond_type     = e.condition->resolved_type;
+    const Type *if_true_type  = e.if_true->resolved_type;
+    const Type *if_false_type = e.if_false->resolved_type;
 
     std::stringstream ss;
-    if( !is_builtin_type(tmp1) || !is_builtin_type(tmp2) || !is_builtin_type(tmp3) ) {
-        ss << "Non builtin type not supported yet.\n";
+    if(!checker.is_bool(cond_type) && !checker.is_numeric(cond_type)) {
+        ss << "Error: Ternary condition must be bool or numeric, found '"
+           << checker.to_string(cond_type) << "'!\n";
         throw SemanticError(ss.str());
     }
 
-    const BuiltinType *condition_type = static_cast<const BuiltinType*>(tmp1);
-    const BuiltinType *if_true_type = static_cast<const BuiltinType*>(tmp2);
-    const BuiltinType *if_false_type = static_cast<const BuiltinType*>(tmp3);
-    tmp1 = tmp2 = tmp3 = nullptr;
-
-    if(!is_bool_type(condition_type)) {
-        ss.str("");
-        ss << "Error: Ternary condition must be bool, found '" << type_to_string(condition_type) << "'!";
-        throw SemanticError(ss.str());
-    }
-
-    bool both_numeric = is_numeric_type(if_true_type) && is_numeric_type(if_false_type);
-    bool both_string  = is_string_type(if_true_type)  && is_string_type(if_false_type);
-    bool both_bool    = is_bool_type(if_true_type)    && is_bool_type(if_false_type);
-
-    if(!both_numeric && !both_string && !both_bool) {
-        ss.str("");
-        ss << "Error: Ternary branches must have compatible types, found '" << type_to_string(if_true_type) << "' and '" << type_to_string(if_false_type) << "'!";
+    if(!checker.are_compatibles(if_true_type, if_false_type)) {
+        ss << "Error: Ternary branches must have compatible types, found '" << checker.to_string(if_true_type) << "' and '" << checker.to_string(if_false_type) << "'!\n";
         throw SemanticError(ss.str());
     }
 
@@ -630,13 +158,11 @@ void SemanticAnalyser::visit(ConditionalExpr& e) {
 void SemanticAnalyser::visit(CallExpr& e) {
     if(!e.callee) throw SemanticError("Missing callee in function call expression!");
 
-    if(e.callee->node_type != ASTNodeType::IDENTIFIER_EXPR_NODE) {
-        throw SemanticError("Error: Calling a non-function expression is not supported yet; only direct calls to a named function are allowed.");
-    }
+    if(e.callee->node_type != ASTNodeType::IDENTIFIER_EXPR_NODE) throw SemanticError("Error: Only direct calls to named functions are supported.\n");
 
     std::stringstream ss;
-
     IdentifierExpr *callee = static_cast<IdentifierExpr*>(e.callee);
+
     Symbol *s = manager.lookup(callee->name.value);
     if(!s) {
         ss << "Error: Call to undefined function '" << callee->name.value << "'. Line: " << callee->name.start.line << ".";
@@ -648,7 +174,6 @@ void SemanticAnalyser::visit(CallExpr& e) {
         ss << "Error: '" << callee->name.value << "' is not a function! Line: " << callee->name.start.line << ".";
         throw SemanticError(ss.str());
     }
-
     e.symbol = s;
 
     for(Expr *arg : e.arguments) {
@@ -661,12 +186,12 @@ void SemanticAnalyser::visit(CallExpr& e) {
         throw SemanticError(ss.str());
     }
 
-    size_t expected_args = 0, provided_args = e.arguments.size();
+    size_t expected_args = 0, provided_args = e.arguments.size(), max_args = decl->parameters.size();
     for(Parameter *param : decl->parameters)  {
         if(!param->default_value) ++expected_args;
     }
 
-    bool too_few_args = provided_args < expected_args, too_many_args = provided_args > decl->parameters.size();
+    bool too_few_args = provided_args < expected_args, too_many_args = provided_args > max_args;
     if(too_few_args || too_many_args) {
         ss  << "Error: ";
 
@@ -677,7 +202,7 @@ void SemanticAnalyser::visit(CallExpr& e) {
             << callee->name.value << "', expected ";
 
         if(too_few_args)        ss << expected_args << " at least, but only ";
-        else if(too_many_args)  ss << decl->parameters.size() << " at most, but ";
+        else if(too_many_args)  ss << max_args << " at most, but ";
 
         ss  << provided_args << " were provided."
             << " Line: "
@@ -689,33 +214,17 @@ void SemanticAnalyser::visit(CallExpr& e) {
         const Type *arg_type = e.arguments[i]->resolved_type;
         const Type *param_type = decl->parameters[i]->symbol->declared_type;
 
-        bool valid_arg_type = arg_type->kind == param_type->kind;
-        if( is_builtin_type(arg_type) && is_builtin_type(param_type) ) {
-            const BuiltinType *tmp_a = static_cast<const BuiltinType*>(arg_type);
-            const BuiltinType *tmp_p = static_cast<const BuiltinType*>(param_type);
-
-            bool same_builtin = tmp_a->builtin == tmp_p->builtin;
-            bool promotion = is_numeric_type(tmp_a) && is_numeric_type(tmp_p);
-
-            tmp_a = tmp_p = nullptr;
-            valid_arg_type = valid_arg_type && (same_builtin || promotion);
-        }
-
-        if(!valid_arg_type) {
+        //This will throw an error if param_type is auto or any.
+        if(!checker.are_compatibles(arg_type, param_type)) {
             ss << "Error: Argument " << i+1 << " of '" << callee->name.value
-               << "' expects '" << type_to_string(param_type)
-               << "' but got '" << type_to_string(arg_type)
+               << "' expects '" << checker.to_string(param_type)
+               << "' but got '" << checker.to_string(arg_type)
                << "'. Line: " << callee->name.start.line << ".\n";
             throw SemanticError(ss.str());
         }
-        arg_type = param_type = nullptr;
     }
-    decl = nullptr;
-    callee = nullptr;
 
     e.resolved_type = s->declared_type->clone();
-    s = nullptr;
-
 }
 
 void SemanticAnalyser::visit(MemberAccessExpr& e) {
@@ -726,31 +235,21 @@ void SemanticAnalyser::visit(SubscriptExpr& e) {
     if(e.object) e.object->accept(*this);
     if(e.index)  e.index->accept(*this);
 
-    const Type *tmp1 = e.object->resolved_type;
+    const Type *obj_type = e.object->resolved_type;
     std::stringstream ss;
-    if(tmp1->kind != TK::ARRAY) {
-        ss.str("");
-        ss << "Error: Subscript operator '[]' requires an array type, found '" << type_to_string(tmp1) << "' instead!";
-        tmp1 = nullptr;
+    if(!checker.is_array(obj_type)) {
+        ss << "Error: Subscript operator '[]' requires an array type, found '" << checker.to_string(obj_type) << "' instead!";
         throw SemanticError(ss.str());
     }
 
-    const Type *tmp2 = e.index->resolved_type;
-    if( !is_builtin_type(tmp2) ) {
-
-    }
-
-    const ArrayType *obj_type = static_cast<const ArrayType*>(tmp1);
-    const BuiltinType *index_type = static_cast<const BuiltinType*>(tmp2);
-
-    if(!is_integral_type(index_type)) {
-        ss.str("");
-        ss << "Error: Array index must be an integer, found '" << type_to_string(index_type) << "' instead!";
+    const Type *index_type = e.index->resolved_type;
+    if(!checker.is_integral(index_type)) {
+        ss << "Error: Array index must be an integer, found '" << checker.to_string(index_type) << "' instead!";
         throw SemanticError(ss.str());
     }
 
-    e.resolved_type = obj_type->element_type->clone();
-    std::cout << "subscript expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
+    e.resolved_type = static_cast<const ArrayType*>(obj_type)->element_type->clone();
+    std::cout << "subscript expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(SequenceExpr& e) {
@@ -759,7 +258,7 @@ void SemanticAnalyser::visit(SequenceExpr& e) {
     }
 
     e.resolved_type = e.expressions.back()->resolved_type->clone();
-    std::cout << "sequence expression's resolved type = " << type_to_string(e.resolved_type) << "\n";
+    std::cout << "sequence expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 
@@ -770,18 +269,20 @@ void SemanticAnalyser::visit(SequenceExpr& e) {
 
 
 void SemanticAnalyser::visit(VariableDecl& d) {
-    Type *t = resolve(d.declared_type);
+    Type *t = checker.resolve(d.declared_type);
 
     std::stringstream ss;
     for(VariableDeclarator *vd : d.declarations) {
-        if( (t->is_constant || t->kind == TK::ANY || t->kind == TK::AUTO) && !vd->initializer) {
+        if( (t->is_constant || checker.is_any(t) || checker.is_auto(t)) && !vd->initializer) {
             ss.str("");
             ss << "Missing initialization for const/any/auto types! Line: " << vd->variable_name.start.line << ", col: " << vd->variable_name.start.col+1 << "\n";
             throw SemanticError(ss.str());
         }
 
         if(manager.current()->get_type() == ScopeType::GLOBAL && !t->is_constant) {
-            ss << "Warning: Declaration of variable '" << vd->variable_name.value << "' happening in the global scope! Some other parts of your code might accidentally modify it. Either mark it const or remove it. Line: " << d.declared_type.type_name.start.line << "\n";
+            ss << "Warning: Declaration of variable '" << vd->variable_name.value
+               << "' happening in the global scope! Some other parts of your code might accidentally modify it. Either mark it const or remove it. Line: "
+               << d.declared_type.type_name.start.line << "\n";
             warning(ss.str());
             ss.str("");
         }
@@ -795,25 +296,14 @@ void SemanticAnalyser::visit(VariableDecl& d) {
 
         if(vd->initializer) {
             vd->initializer->accept(*this);
+            const Type *init_type = vd->initializer->resolved_type;
 
-            if(t->kind == TK::AUTO && vd->initializer->resolved_type) {
-                AutoType *tmp = static_cast<AutoType*>(t);
-                tmp->underlying_type = vd->initializer->resolved_type->clone();
-                t = tmp;
-                tmp = nullptr;
+            if(checker.is_auto(t)) {
+                AutoType *at = static_cast<AutoType*>(t);
+                at->resolved = init_type->clone();
             }
-            else if(is_builtin_type(t) && is_builtin_type(vd->initializer->resolved_type)) {
-                const BuiltinType *tmp1 = static_cast<const BuiltinType*>(t);
-                const BuiltinType *tmp2 = static_cast<const BuiltinType *>(vd->initializer->resolved_type);
-
-                bool valid = ( is_numeric_type(tmp1) && is_numeric_type(tmp2) ) || ( is_string_type(tmp1) && is_string_type(tmp2) ) || ( is_char_type(tmp1) && is_char_type(tmp2) );
-
-                if(!valid) {
-                    ss.str("");
-                    throw SemanticError(invalid_conversion(tmp2, tmp1, d.declared_type.type_name));
-                }
-
-                tmp1 = tmp2 = nullptr;
+            else if(!checker.is_assignable(init_type, t)) {
+                throw SemanticError(checker.invalid_conversion(init_type, t, d.declared_type.type_name));
             }
         }
 
@@ -822,9 +312,31 @@ void SemanticAnalyser::visit(VariableDecl& d) {
         vd->symbol = s;
     }
 
-    std::cout << "declared variable(s)' resolved type = " << type_to_string(t) << "\n";
+    std::cout << "declared variable(s)' resolved type = " << checker.to_string(t) << "\n";
 }
 
+void SemanticAnalyser::fn(const Type *t) {
+    std::stringstream ss;
+
+    if(current_function_return_stmts.empty() && !checker.is_void(t)) {
+//        ss.str("");
+        ss << "Error: No return statement in function returning non-void. Line: " << d.function_name.start.line << "\n";
+
+        throw SemanticError(ss.str());
+    }
+
+    if(checker.is_auto(t)) {
+        const Type *first_retstmt_type = current_function_return_stmts[0]->expression->resolved_type;
+        for(size_t i = 1; i < current_function_return_stmts.size(); ++i) {
+            const Type *tmp = current_function_return_stmts[i];
+            if( !checker.are_compatibles(tmp, t) ) {
+
+            }
+        }
+    }
+}
+
+//If return_type is any or auto, this function does nothing.
 void SemanticAnalyser::visit(FunctionDecl& d) {
     std::stringstream ss;
     if(manager.lookup_current(d.function_name.value)) {
@@ -832,7 +344,7 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
         throw SemanticError(ss.str());
     }
 
-    Type *return_type = resolve(d.return_type);
+    Type *return_type = checker.resolve(d.return_type);
     Symbol *f = new Symbol(d.function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type, &d);
     manager.insert(f);
     d.symbol = f;
@@ -847,7 +359,7 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
             throw SemanticError(ss.str());
         }
 
-        Type *param_type = resolve(param->type_name);
+        Type *param_type = checker.resolve(param->type_name);
         Symbol *p = new Symbol(param->parameter_name.value, SymbolType::PARAMETER, param_type->is_constant, param_type, &d);
         manager.insert(p);
         param->symbol = p;
@@ -860,7 +372,7 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
 
     if(d.body) d.body->accept(*this);
 
-    if(current_function_return_stmts.empty() && return_type->kind == TK::BUILTIN && static_cast<BuiltinType*>(return_type)->builtin != BuiltinType::Types::VOID) {
+    if(current_function_return_stmts.empty() && !checker.is_void(return_type)) {
         ss.str("");
         ss << "Error: No return statement in function returning non-void. Line: " << d.function_name.start.line << "\n";
 
@@ -898,6 +410,27 @@ void SemanticAnalyser::visit(ExpressionStmt& s) {
 
 void SemanticAnalyser::visit(DeclarationStmt& s) {
     s.declaration->accept(*this);
+}
+
+void SemanticAnalyser::check_stmts_condition(Expr *condition, const Token& where) {
+    Type *cond_type = nullptr;
+
+    if(condition) {
+        condition->accept(*this);
+        cond_type = condition->resolved_type;
+    }
+
+    if( !checker.is_builtin(cond_type) ) {
+        std::stringstream ss;
+        ss << "Error: Condition must be of a builtin type, found '" << checker.to_string(cond_type) << "'. Line: " << where.start.line << ".\n";
+        throw SemanticError(ss.str());
+    }
+
+    if( !checker.is_bool(cond_type) && !checker.is_numeric(cond_type) ) {
+        std::stringstream ss;
+        ss << "Error: Condition must be a numeric or boolean expression, found '" << checker.to_string(cond_type) << "'. Line: " << where.start.line << ".\n";
+        throw SemanticError(ss.str());
+    }
 }
 
 void SemanticAnalyser::visit(IfStmt& s) {
@@ -958,33 +491,18 @@ void SemanticAnalyser::visit(ReturnStmt& s) {
         throw SemanticError(ss.str());
     }
 
-    Type *ret_type = nullptr;
-    bool delete_ret_type = false;
+    const Type *fn_ret_type = current_function_symbol->declared_type;
     if(s.expression) {
         s.expression->accept(*this);
-        ret_type = s.expression->resolved_type;
+        const Type *ret_type = s.expression->resolved_type;
+
+        if(!checker.are_compatibles(ret_type, fn_ret_type)) throw SemanticError(checker.invalid_conversion(ret_type, fn_ret_type, s.location));
     }
     else {
-        delete_ret_type = true;
-        ret_type = new BuiltinType(BuiltinType::Types::VOID);
-    }
-
-    Type *fn_ret_type = current_function_symbol->declared_type;
-    if(ret_type->kind != fn_ret_type->kind) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.location));
-
-    if(ret_type->kind == TK::BUILTIN) {
-        BuiltinType *r = static_cast<BuiltinType*>(ret_type);
-        BuiltinType *f = static_cast<BuiltinType*>(fn_ret_type);
-
-        bool same_builtin = r->builtin == f->builtin;
-        bool promotion = is_numeric_type(r) && is_numeric_type(f);
-
-        if(!same_builtin && !promotion) throw SemanticError(invalid_conversion(ret_type, fn_ret_type, s.location));
-    }
-
-    if(delete_ret_type) {
-        delete ret_type;
-        ret_type = nullptr;
+        if(!checker.is_void(fn_ret_type)) {
+            ss << "Error: Missing return value in non-void function. Line: " << s.location.start.line << ".\n";
+            throw SemanticError(ss.str());
+        }
     }
 
     current_function_return_stmts.push_back(&s);
