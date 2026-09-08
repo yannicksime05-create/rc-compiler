@@ -315,27 +315,6 @@ void SemanticAnalyser::visit(VariableDecl& d) {
     std::cout << "declared variable(s)' resolved type = " << checker.to_string(t) << "\n";
 }
 
-void SemanticAnalyser::fn(const Type *t) {
-    std::stringstream ss;
-
-    if(current_function_return_stmts.empty() && !checker.is_void(t)) {
-//        ss.str("");
-        ss << "Error: No return statement in function returning non-void. Line: " << d.function_name.start.line << "\n";
-
-        throw SemanticError(ss.str());
-    }
-
-    if(checker.is_auto(t)) {
-        const Type *first_retstmt_type = current_function_return_stmts[0]->expression->resolved_type;
-        for(size_t i = 1; i < current_function_return_stmts.size(); ++i) {
-            const Type *tmp = current_function_return_stmts[i];
-            if( !checker.are_compatibles(tmp, t) ) {
-
-            }
-        }
-    }
-}
-
 //If return_type is any or auto, this function does nothing.
 void SemanticAnalyser::visit(FunctionDecl& d) {
     std::stringstream ss;

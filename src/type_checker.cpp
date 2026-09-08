@@ -174,24 +174,11 @@ Type *TypeChecker::resolve_type_name(Token& t) {
 BuiltinType *TypeChecker::promote(const Type *left, const Type *right) {
     if(!left || !right) return nullptr;
 
-    bool left_is_float = is_floating(left), right_is_float = is_floating(right);
-    if(left_is_float || right_is_float) {
-        const BuiltinType *bl = to_builtin(left), *br = to_builtin(right);
+    if(!is_numeric(left) || !is_numeric(right)) return nullptr;
 
-        if(right_is_float) return new BuiltinType(br->builtin);
-    }
+    if(is_floating(left) || is_floating(right)) return new BuiltinType(BT::FLOAT);
 
-    if( !is_integral(left) || !is_integral(right) ) return nullptr;
-
-    const BuiltinType *bl = to_builtin(left), *br = to_builtin(right);
-//    if(!is_numeric_type(left) || !is_numeric_type(right)) return nullptr;
-//
-//    if(left->builtin == BT::FLOAT || right->builtin == BT::FLOAT)
-//        return new BuiltinType(BT::FLOAT);
-//
-//    return new BuiltinType(BT::INT);
-
-    return nullptr;
+    return new BuiltinType(BT::INT);
 }
 
 Type *TypeChecker::resolve_binary(const Type *left, const Type *right, TokenType op) {

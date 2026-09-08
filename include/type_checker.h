@@ -13,6 +13,10 @@ class TypeChecker {
     const ArrayType    *to_array(const Type *t);
     const AutoType     *to_auto(const Type *t);
 
+    /**
+    *   This is a helper function for are_compatibles and is_assignable.
+    *   Special cases apart, those functions do the same work, so this helper does it for them.
+    */
     bool assign_compat_helper(const Type *a, const Type *b);
 
 public:
