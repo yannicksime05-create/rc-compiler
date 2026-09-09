@@ -106,11 +106,11 @@ bool TypeChecker::are_compatibles(const Type *a, const Type *b) {
 
     if(a->kind == TK::AUTO) {
         const AutoType *aa = to_auto(a);
-        return are_compatibles(aa->resolved, b);
+        return aa->resolved ? are_compatibles(aa->resolved, b) : true;
     }
     if(b->kind == TK::AUTO) {
         const AutoType *ab = to_auto(b);
-        return are_compatibles(ab->resolved, a);
+        return ab->resolved ? are_compatibles(ab->resolved, a) : true;
     }
 
     if(a->kind != b->kind)  return false;
@@ -414,7 +414,7 @@ std::string TypeChecker::autotype_to_string(const AutoType *t) {
 
 std::string TypeChecker::type_mismatch(const Type *left, const Type *right, const Token& op) {
     std::stringstream ss;
-    ss << "Operands' types mismatch for operator '" << op.value << "' at line: " << op.start.line
+    ss << "Error: Operands' types mismatch for operator '" << op.value << "' at line: " << op.start.line
     << ".\n Left is: '" << to_string(left) << "', right is: '" << to_string(right) << "'.\n";
 
     return ss.str();
@@ -422,7 +422,7 @@ std::string TypeChecker::type_mismatch(const Type *left, const Type *right, cons
 
 std::string TypeChecker::invalid_conversion(const Type *from, const Type *to, const Token& where) {
     std::stringstream ss;
-    ss << "Invalid conversion from '" << to_string(from) << "' to '" << to_string(to) << "'. Line: " << where.start.line << "\n";
+    ss << "Error: Invalid conversion from '" << to_string(from) << "' to '" << to_string(to) << "'. Line: " << where.start.line << "\n";
 
     return ss.str();
 }
