@@ -77,7 +77,7 @@ void SemanticAnalyser::visit(IdentifierExpr& e) {
     e.symbol = s;
     e.resolved_type = s->declared_type->clone();
 
-    std::cout << "identifier expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
+//    std::cout << "identifier expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(BinaryExpr& e) {
@@ -343,19 +343,23 @@ void SemanticAnalyser::check_fn_return_types(Type *ret_type, const Token& fn_nam
 
 void SemanticAnalyser::visit(FunctionDecl& d) {
     std::stringstream ss;
+
     if(manager.lookup_current(d.function_name.value)) {
         ss << "Error: Redefinition of function: '" << d.function_name.value << "'. Line: " << d.function_name.start.line << ".\n";
         throw SemanticError(ss.str());
     }
 
     Type *return_type = checker.resolve(d.return_type);
+
     Symbol *f = new Symbol(d.function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type, &d);
     manager.insert(f);
     d.symbol = f;
 
     manager.enter(ScopeType::FUNCTION);
+
     //This allows recursion.
     manager.insert( new Symbol(d.function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type->clone(), &d) );
+
     for(Parameter *param : d.parameters) {
         if(manager.lookup_current(param->parameter_name.value)) {
             ss.str("");
@@ -364,6 +368,12 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
         }
 
         Type *param_type = checker.resolve(param->type_name);
+        if( checker.is_auto(param_type) ) {
+            ss << "Error: auto is forbidden as a parameter's type. Line: " << param->parameter_name.start.line << "\n";
+            error(ss.str(), false);
+            ss.str("");
+        }
+
         Symbol *p = new Symbol(param->parameter_name.value, SymbolType::PARAMETER, param_type->is_constant, param_type, &d);
         manager.insert(p);
         param->symbol = p;
@@ -380,7 +390,6 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
     current_function_return_stmts.clear();
 
     manager.exit();
-
     is_function_scope = false;
     current_function_symbol = nullptr;
 }

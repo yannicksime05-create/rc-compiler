@@ -61,8 +61,7 @@ public:
     }
 
     Scope *current() const {
-        if(!scopes.empty()) return scopes.back();
-        return nullptr;
+        return scopes.empty() ? nullptr : scopes.back();
     }
 
     void enter(ScopeType type) {
@@ -73,7 +72,7 @@ public:
     void exit() {
         if(!scopes.empty()) {
             delete scopes.back();
-            scopes.pop_back();;
+            scopes.pop_back();
         }
     }
 
