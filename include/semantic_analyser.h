@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include "scope.h"
 #include "ast.h"
+#include "type_checker.h"
 //#include "symbol.h"           //symbol.h already comes in with scope.h and ast.h
 
 
@@ -21,6 +22,7 @@ public:
 
 class SemanticAnalyser : public Visitor {
     ScopeManager manager;
+    TypeChecker checker;
     Program& program;
 
     /**
@@ -28,31 +30,18 @@ class SemanticAnalyser : public Visitor {
     bool is_function_scope = false;
     Symbol *current_function_symbol = nullptr;
     std::vector<ReturnStmt*> current_function_return_stmts;
+    void check_fn_return_types(Type *t, const Token& fn_name);
 
     int loop_depth = 0, switch_depth = 0;
 
-    bool is_builtin_type(const Type *t);
-    bool is_integral_type(const BuiltinType *t);
-    bool is_floating_type(const BuiltinType *t);
-    bool is_numeric_type(const BuiltinType *t);
-    bool is_string_type(const BuiltinType *t);
-    bool is_char_type(const BuiltinType *t);
-    bool is_bool_type(const BuiltinType *t);
-
-    std::string type_to_string(const Type *t);
-    std::string builtintype_to_string(const BuiltinType *t);
-    std::string arraytype_to_string(const ArrayType *t);
-    std::string autotype_to_string(const AutoType *t);
-
-    BuiltinType *promote(const BuiltinType *left, const BuiltinType *right);
-    Type *resolve_type_name(Token& t);
-    Type *resolve(TypeSpecifier& t);
-
-    std::string type_mismatch(const Type *lt, Token& op, const Type *rt);
-    std::string invalid_conversion(const Type *src_type, const Type *dest_type, const Token& where);
-
     void warning(const std::string& msg) {
         std::cout << msg;
+    }
+
+    void error(const std::string& msg, bool _throw = true) {
+        if(_throw) throw SemanticError(msg);
+
+        std::cerr << msg;
     }
 
     void check_stmts_condition(Expr *condition, const Token& where);

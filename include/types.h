@@ -1,7 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <vector>
+//#include <vector>
 
 enum class TypeKind {
     BUILTIN,
@@ -26,9 +26,8 @@ struct Type {
 struct BuiltinType : Type {
     enum class Types {
         BOOL,
-        INT,
-        FLOAT,
-        STRING,
+        INT, FLOAT,
+        CHAR, STRING,
         VOID
     };
 
@@ -79,20 +78,20 @@ struct ArrayType : Type {
 };
 
 struct AutoType : Type {
-    Type *underlying_type = nullptr;
+    Type *resolved = nullptr;
 
-    AutoType(Type *t, bool c = false) : Type(TypeKind::AUTO, c) {}
+    AutoType(Type *t = nullptr, bool c = false) : Type(TypeKind::AUTO, c) {}
 
     AutoType(const AutoType& t) : Type(TypeKind::AUTO, t.is_constant) {
-        underlying_type = t.underlying_type ? t.underlying_type->clone() : nullptr;
+        resolved = t.resolved ? t.resolved->clone() : nullptr;
     }
 
     AutoType& operator=(const AutoType& t) {
         if(this != &t) {
             is_constant = t.is_constant;
-            delete underlying_type;
+            delete resolved;
 
-            underlying_type = t.underlying_type ? t.underlying_type->clone() : nullptr;
+            resolved = t.resolved ? t.resolved->clone() : nullptr;
         }
 
         return *this;
@@ -101,8 +100,8 @@ struct AutoType : Type {
     AutoType *clone() const override { return new AutoType(*this); }
 
     ~AutoType() {
-        delete underlying_type;
-        underlying_type = nullptr;
+        delete resolved;
+        resolved = nullptr;
     }
 };
 
