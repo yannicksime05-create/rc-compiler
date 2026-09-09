@@ -57,12 +57,13 @@ void SemanticAnalyser::visit(ArrayLiteralExpr& e) {
             ss << "Error: Mixed types in array literal — expected all '"
                << checker.to_string(first) << "' but found '"
                << checker.to_string(t) << "' instead at element " << i+1 << "!";
-            throw SemanticError(ss.str());
+
+            error(ss.str(), false);
+//            throw SemanticError(ss.str());
         }
     }
 
     e.resolved_type = new ArrayType(first->clone(), static_cast<int>(e.elements.size()));
-    first = nullptr;
 }
 
 void SemanticAnalyser::visit(IdentifierExpr& e) {
@@ -90,7 +91,7 @@ void SemanticAnalyser::visit(BinaryExpr& e) {
     if(!result) throw SemanticError(checker.type_mismatch(lt, rt, e.op));
 
     e.resolved_type = result;
-    std::cout << "binary expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
+//    std::cout << "binary expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(UnaryExpr& e) {
@@ -108,7 +109,7 @@ void SemanticAnalyser::visit(UnaryExpr& e) {
     }
 
     e.resolved_type = result;
-    std::cout << "unary expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
+//    std::cout << "unary expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(AssignmentExpr& e) {
@@ -128,7 +129,7 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
     if(!result) throw SemanticError(checker.invalid_conversion(value_type, target_type, e.op));
 
     e.resolved_type = result;
-    std::cout << "assignment expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
+//    std::cout << "assignment expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(ConditionalExpr& e) {
@@ -220,7 +221,8 @@ void SemanticAnalyser::visit(CallExpr& e) {
                << "' expects '" << checker.to_string(param_type)
                << "' but got '" << checker.to_string(arg_type)
                << "'. Line: " << callee->name.start.line << ".\n";
-            throw SemanticError(ss.str());
+
+            error(ss.str(), false);
         }
     }
 
@@ -258,7 +260,7 @@ void SemanticAnalyser::visit(SequenceExpr& e) {
     }
 
     e.resolved_type = e.expressions.back()->resolved_type->clone();
-    std::cout << "sequence expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
+//    std::cout << "sequence expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 
@@ -312,10 +314,33 @@ void SemanticAnalyser::visit(VariableDecl& d) {
         vd->symbol = s;
     }
 
-    std::cout << "declared variable(s)' resolved type = " << checker.to_string(t) << "\n";
+//    std::cout << "declared variable(s)' resolved type = " << checker.to_string(t) << "\n";
 }
 
-//If return_type is any or auto, this function does nothing.
+void SemanticAnalyser::check_fn_return_types(Type *ret_type, const Token& fn_name) {
+    if(current_function_return_stmts.empty() && !checker.is_void(ret_type)) {
+        std::stringstream ss;
+        ss << "Error: No return statement in function returning non-void. Line: " << fn_name.start.line << "\n";
+
+        throw SemanticError(ss.str());
+    }
+
+    if(checker.is_auto(ret_type)) {
+        const Type *first_retstmt_type = current_function_return_stmts[0]->expression->resolved_type;
+
+        for(size_t i = 1; i < current_function_return_stmts.size(); ++i) {
+            const ReturnStmt *stmt = current_function_return_stmts[i];
+            const Type *t = stmt->expression->resolved_type;
+
+            if( !checker.are_compatibles(t, first_retstmt_type) ) error(checker.invalid_conversion(t, first_retstmt_type, stmt->location), false);
+        }
+
+        AutoType *tmp = static_cast<AutoType*>(ret_type);
+        tmp->resolved = first_retstmt_type->clone();
+        ret_type = tmp;
+    }
+}
+
 void SemanticAnalyser::visit(FunctionDecl& d) {
     std::stringstream ss;
     if(manager.lookup_current(d.function_name.value)) {
@@ -351,12 +376,7 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
 
     if(d.body) d.body->accept(*this);
 
-    if(current_function_return_stmts.empty() && !checker.is_void(return_type)) {
-        ss.str("");
-        ss << "Error: No return statement in function returning non-void. Line: " << d.function_name.start.line << "\n";
-
-        throw SemanticError(ss.str());
-    }
+    check_fn_return_types(return_type, d.function_name);
     current_function_return_stmts.clear();
 
     manager.exit();

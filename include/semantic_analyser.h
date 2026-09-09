@@ -30,11 +30,18 @@ class SemanticAnalyser : public Visitor {
     bool is_function_scope = false;
     Symbol *current_function_symbol = nullptr;
     std::vector<ReturnStmt*> current_function_return_stmts;
+    void check_fn_return_types(Type *t, const Token& fn_name);
 
     int loop_depth = 0, switch_depth = 0;
 
     void warning(const std::string& msg) {
         std::cout << msg;
+    }
+
+    void error(const std::string& msg, bool _throw = true) {
+        if(_throw) throw SemanticError(msg);
+
+        std::cerr << msg;
     }
 
     void check_stmts_condition(Expr *condition, const Token& where);
