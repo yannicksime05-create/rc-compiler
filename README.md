@@ -206,7 +206,7 @@ ebnfs/
   declarations.txt, expressions.txt, statements.txt – grammar notes (partly aspirational,
   see limitations below)
 tests/
-  small .rc/.txt snippets used while developing the lexer/parser
+  
 main.cpp                   – wires the pipeline together
 transpilation_test.rc      – current scratch input file for main.cpp
 out.cpp                    – last generated output (checked in as a working example)
@@ -217,14 +217,9 @@ out.cpp                    – last generated output (checked in as a working ex
 This section exists so the README doesn't overstate what's implemented. Pulled
 directly from gaps in the current source:
 
-- **`MemberAccessExpr` and `SubscriptExpr` don't transpile yet.** Both have empty
-  bodies in `CppGenerator` (`.` and `[]` parse and type-check, but generate no C++).
 - **`RangeForStmt` isn't implemented in `CppGenerator`** (empty body), and its grammar
   isn't settled yet — `ebnfs/statements.txt` still has scratch notes debating syntax
   like `for(int i : [1..100])` vs `for(int i : <1..100>)`.
-- **`char` doesn't work as a type yet.** It's a recognized keyword (`KW_CHAR`) in the
-  lexer, but `Parser::is_primitive_type()` doesn't include it, so `char x;` currently
-  fails to parse.
 - **Grammar files describe more than the parser implements.** `ebnfs/declarations.txt`
   lists `class`, `struct`, `enum`, `namespace`, `typedef`/`using`, `template`,
   `concept`, `import`/`export`, `friend`, and `static_assert` declarations, and
@@ -238,7 +233,6 @@ directly from gaps in the current source:
 
 ## Roadmap ideas
 
-- Implement `MemberAccessExpr`/`SubscriptExpr` codegen.
 - Decide on and implement range-for syntax.
 - Add `continue`, and align the parser with (or trim down) the EBNF files so they
   stay a source of truth rather than aspirational notes.
