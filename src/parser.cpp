@@ -620,6 +620,6 @@ BreakStmt *Parser::parse_break_statement() {
 ContinueStmt *Parser::parse_continue_statement() {
     Token loc = get();
 
-    expect(TT::SEMICOLON, "Error: Expected ';' after break statement!");
+    expect(TT::SEMICOLON, "Error: Expected ';' after continue statement!");
     return new ContinueStmt(loc);
 }
