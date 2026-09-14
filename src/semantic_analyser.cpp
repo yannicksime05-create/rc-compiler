@@ -48,6 +48,7 @@ void SemanticAnalyser::visit(ArrayLiteralExpr& e) {
     }
 
     std::stringstream ss;
+    bool has_error = false;
     const Type *first = e.elements[0]->resolved_type;
     for(size_t i = 1; i < e.elements.size(); ++i) {
         const Type *t = e.elements[i]->resolved_type;
@@ -58,12 +59,13 @@ void SemanticAnalyser::visit(ArrayLiteralExpr& e) {
                << checker.to_string(first) << "' but found '"
                << checker.to_string(t) << "' instead at element " << i+1 << "!";
 
+            has_error = true;
             error(ss.str(), false);
 //            throw SemanticError(ss.str());
         }
     }
 
-    e.resolved_type = new ArrayType(first->clone(), static_cast<int>(e.elements.size()));
+    if(!has_error) e.resolved_type = new ArrayType(first->clone(), static_cast<int>(e.elements.size()));
 }
 
 void SemanticAnalyser::visit(IdentifierExpr& e) {
@@ -211,22 +213,24 @@ void SemanticAnalyser::visit(CallExpr& e) {
         throw SemanticError(ss.str());
     }
 
+    bool has_error = false;
     for(size_t i = 0; i < provided_args; ++i) {
         const Type *arg_type = e.arguments[i]->resolved_type;
         const Type *param_type = decl->parameters[i]->symbol->declared_type;
 
-        //This will throw an error if param_type is auto or any.
+        //This will print an error if param_type is auto or any.
         if(!checker.are_compatibles(arg_type, param_type)) {
             ss << "Error: Argument " << i+1 << " of '" << callee->name.value
                << "' expects '" << checker.to_string(param_type)
                << "' but got '" << checker.to_string(arg_type)
                << "'. Line: " << callee->name.start.line << ".\n";
 
+            has_error = true;
             error(ss.str(), false);
         }
     }
 
-    e.resolved_type = s->declared_type->clone();
+    if(!has_error) e.resolved_type = s->declared_type->clone();
 }
 
 void SemanticAnalyser::visit(MemberAccessExpr& e) {
@@ -326,18 +330,24 @@ void SemanticAnalyser::check_fn_return_types(Type *ret_type, const Token& fn_nam
     }
 
     if(checker.is_auto(ret_type)) {
+        bool has_error = false;
         const Type *first_retstmt_type = current_function_return_stmts[0]->expression->resolved_type;
 
         for(size_t i = 1; i < current_function_return_stmts.size(); ++i) {
             const ReturnStmt *stmt = current_function_return_stmts[i];
             const Type *t = stmt->expression->resolved_type;
 
-            if( !checker.are_compatibles(t, first_retstmt_type) ) error(checker.invalid_conversion(t, first_retstmt_type, stmt->location), false);
+            if( !checker.are_compatibles(t, first_retstmt_type) ) {
+                has_error = true;
+                error(checker.invalid_conversion(t, first_retstmt_type, stmt->location), false);
+            }
         }
 
-        AutoType *tmp = static_cast<AutoType*>(ret_type);
-        tmp->resolved = first_retstmt_type->clone();
-        ret_type = tmp;
+        if(!has_error) {
+            AutoType *tmp = static_cast<AutoType*>(ret_type);
+            tmp->resolved = first_retstmt_type->clone();
+            ret_type = tmp;
+        }
     }
 }
 
