@@ -111,6 +111,7 @@ public:
     void visit(ReturnStmt& s) override;
     void visit(PrintStmt& s) override;
     void visit(BreakStmt& s) override;
+    void visit(ContinueStmt& s) override;
 
 };
 

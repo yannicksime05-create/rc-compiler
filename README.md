@@ -339,5 +339,3 @@ directly from gaps in the current source:
 ## Roadmap ideas
 
 - Decide on and implement range-for syntax.
-- Add `continue`, and align the parser with (or trim down) the EBNF files so they
-  stay a source of truth rather than aspirational notes.

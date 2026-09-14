@@ -428,6 +428,10 @@ void Printer::visit(BreakStmt& s) {
     indent(); std::cout << "node type: BreakStatement,\n";
 }
 
+void Printer::visit(ContinueStmt& s) {
+    indent(); std::cout << "node type: ContinueStatement,\n";
+}
+
 
 
 

@@ -304,3 +304,7 @@ void CppGenerator::visit(PrintStmt& s) {
 void CppGenerator::visit(BreakStmt& s) {
     out << "break;\n";
 }
+
+void CppGenerator::visit(ContinueStmt& s) {
+    out << "continue;\n";
+}

@@ -334,15 +334,16 @@ Parameter *Parser::parse_function_parameters() {
 
 Stmt *Parser::parseStatement() {
     switch(current().type) {
-        case TT::LBRACE:    return parse_compound_statement();
-        case TT::KW_IF:     return parse_if_statement();
-        case TT::KW_SWITCH: return parse_switch_statement();
-        case TT::KW_WHILE:  return parse_while_statement();
-        case TT::KW_DO:     return parse_do_while_statement();
-        case TT::KW_FOR:    return dispatch_for_statements();
-        case TT::KW_RETURN: return parse_return_statement();
-        case TT::KW_PRINT:  return parse_print_statement();
-        case TT::KW_BREAK:  return parse_break_statement();
+        case TT::LBRACE:        return parse_compound_statement();
+        case TT::KW_IF:         return parse_if_statement();
+        case TT::KW_SWITCH:     return parse_switch_statement();
+        case TT::KW_WHILE:      return parse_while_statement();
+        case TT::KW_DO:         return parse_do_while_statement();
+        case TT::KW_FOR:        return dispatch_for_statements();
+        case TT::KW_RETURN:     return parse_return_statement();
+        case TT::KW_PRINT:      return parse_print_statement();
+        case TT::KW_BREAK:      return parse_break_statement();
+        case TT::KW_CONTINUE:   return parse_continue_statement();
 
         default:
             if( starts_declaration() ) return parse_declaration_statement();
@@ -614,4 +615,11 @@ BreakStmt *Parser::parse_break_statement() {
 
     expect(TT::SEMICOLON, "Error: Expected ';' after break statement!");
     return new BreakStmt(loc);
+}
+
+ContinueStmt *Parser::parse_continue_statement() {
+    Token loc = get();
+
+    expect(TT::SEMICOLON, "Error: Expected ';' after break statement!");
+    return new ContinueStmt(loc);
 }

@@ -575,3 +575,11 @@ void SemanticAnalyser::visit(BreakStmt& s) {
     }
 }
 
+void SemanticAnalyser::visit(ContinueStmt& s) {
+    if(!loop_depth) {
+        std::stringstream ss;
+        ss << "Error: Continue statement not within a loop! Line: " << s.location.start.line << "\n";
+        throw SemanticError(ss.str());
+    }
+}
+

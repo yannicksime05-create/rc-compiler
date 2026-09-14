@@ -661,6 +661,18 @@ struct BreakStmt : Stmt {
     }
 };
 
+struct ContinueStmt : Stmt {
+    Token location;
+
+    ContinueStmt(const Token& loc) : Stmt(ASTNodeType::CONTINUE_STMT_NODE) {}
+
+    void accept(Visitor& v) override;
+
+    ~ContinueStmt() {
+        std::cout << "Cleaned up ContinueStmt node...\n";
+    }
+};
+
 class Visitor {
 public:
     virtual void visit(Program& p) = 0;
@@ -696,6 +708,7 @@ public:
     virtual void visit(ReturnStmt& s) = 0;
     virtual void visit(PrintStmt& s) = 0;
     virtual void visit(BreakStmt& s) = 0;
+    virtual void visit(ContinueStmt& s) = 0;
 
 };
 

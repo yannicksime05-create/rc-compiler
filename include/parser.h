@@ -132,6 +132,7 @@ class Parser {
     ReturnStmt          *parse_return_statement();
     PrintStmt           *parse_print_statement();
     BreakStmt           *parse_break_statement();
+    ContinueStmt        *parse_continue_statement();
 
 
 

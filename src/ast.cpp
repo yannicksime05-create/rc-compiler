@@ -141,3 +141,7 @@ void PrintStmt::accept(Visitor& v) {
 void BreakStmt::accept(Visitor& v) {
     v.visit(*this);
 }
+
+void ContinueStmt::accept(Visitor& v) {
+    v.visit(*this);
+}
