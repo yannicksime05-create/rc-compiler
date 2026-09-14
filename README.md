@@ -1,4 +1,4 @@
-# rc
+# RC
 
 `rc` is a small statically-typed toy language and its compiler, written in C++. Source
 written in `rc` is lexed, parsed into an AST, type-checked by a semantic analyser, and
@@ -64,14 +64,8 @@ Full C-like precedence chain: comma, assignment (`= += -= *= /= %= &= |= ^= <<= 
 ternary `?:`, `||`, `&&`, bitwise `| ^ &`, equality, comparison, shift, `+ -`, `* / %`,
 prefix `! ~ - ++ --`, and postfix `() [] . ++ --`.
 
-String values get a few overloaded operators when transpiled (see
-`include/string_overloads.h`):
-
-```rc
-string s = "  hi  ";
-s = s - " ";        // trim
-string r = s * 3;    // repeat
-```
+String values get a few overloaded operators when transpiled — see the
+[String operators](#string-operators) section below.
 
 ### Statements
 `{}` compound blocks, expression statements, `if`/`else`, `switch`/`case` (including
@@ -79,11 +73,126 @@ multi-label cases like `case 1, 2, 3:`), `while`, `do...while`, `for`, `break`, 
 `return`.
 
 `print(...)` supports a format-string form validated at semantic-analysis time by
-counting `{}` placeholders against the number of arguments:
+counting `{}` placeholders against the number of arguments - see the [print](#print-placeholders-must-match) section below.
+
+## String operators
+
+`string` gets four extra operators, backed by overloads in
+`include/string_overloads.h` (which every generated `.cpp` file `#include`s):
+
+| Operator | Meaning | Left | Right | Result |
+|---|---|---|---|---|
+| `-` | trim | `string` | `string` | `string` |
+| `*` | repeat | `string` | `int` | `string` |
+| `/` | split | `string` | `string` or `int` | array of `string` |
+| `+` | concatenate | `string` | `string`, `char`, or numeric | `string` |
+
+`-`, `*=`, `/=` (and their `=`-suffixed compound-assignment forms) behave the same
+way as the binary operator, just written in-place:
 
 ```rc
-print("n = {}, m = {}\n", n, m);
+string s = "  hi  ";
+s = s - " ";                   // trim: "hi"
+
+string r = s * 3;              // repeat: "hihihi"
+
+string[3] parts = s / 2;      // split using an int (the length of the chunks) → array of string: ["hi", "hi", "hi"]
+                              // split can also take a string (see string_overloads.h)
+
+string t = s + 5;             // concatenate (numeric side is widened to double)
 ```
+
+### Quirks worth knowing
+
+These came up while cross-checking `type_checker.cpp`'s rules against the actual
+`operator` implementations in `string_overloads.h` — they're real, verified behavior,
+not just theoretical edge cases:
+
+- since **`/`** returns an array, you can't use **`/=`** on a string. Always use **` array = string / (string | int)`**
+- c++ will show an **ambiguous overload** if you try this: **`string += numeric`** so for now you can only do: **`string = string + numeric`**
+- **for all these operators, the left operand must be a named variable, not a literal.** Something like:
+  `"  hi  " - " "` (trim
+  applied directly to a string literal) won't compile; assign the literal to a
+  variable first.
+
+## Semantic rules & syntax notes
+
+A few behaviors are enforced by `SemanticAnalyser` and aren't obvious just from the
+grammar. These are the ones worth knowing before you hit them as an error message.
+
+### `print` placeholders must match
+
+If the **first argument to `print` is a string literal**, it's treated as a format
+string: every `{}` in it must line up with one extra argument, in order, and every
+extra argument must have a `{}` for it. Get this wrong and semantic analysis throws.
+
+```rc
+print();                // ok   – prints nothing
+print(x);               // ok   – no format string, just streams x
+print("x = {}", x);     // ok   – 1 placeholder, 1 argument
+print("x = {");         // ok   – unmatched "{" alone isn't a placeholder
+print("x = {}");        // ok   – "{}" present but no argument requested for it,
+                        //        so it's ignored and printed as literal text
+print("x = ", x);       // error – 0 placeholders but 1 argument provided
+print("x = {", x);      // error – 0 placeholders but 1 argument provided
+```
+
+If the first argument **isn't** a string literal, no placeholder checking happens at
+all — every argument is just streamed to `std::cout` in order.
+
+### `auto` in functions
+
+- `auto` is **forbidden as a parameter type**. `void f(auto x)` is a semantic error.
+- `auto` **is** allowed as a return type. The type of the function's *first* `return`
+  statement fixes what `auto` resolves to for the rest of the function; every later
+  `return` must be type-compatible with that first one.
+
+```rc
+auto pick(bool b) {
+    if(b) return 1;       // first return seen → auto resolves to int
+    return 2.0;           // ok, downcasting from double to int
+
+    return "oops";         // reported as a type mismatch against int
+}
+```
+
+Note the asymmetry with most other checks in this codebase: mismatched later
+`return`s are reported as non-fatal errors (printed to stderr), not thrown — so
+compilation continues rather than aborting on the first bad `return`. Also, an
+`auto`-returning function still needs **at least one** `return` statement; with zero
+returns, analysis throws (same as any other non-`void` return type).
+
+### `switch` case syntax
+
+`switch` supports two ways of grouping case labels onto a shared body, and they can
+be mixed:
+
+- **Stacked keywords**, C-style fallthrough grouping: `case a: case b: { ... }`
+- **Comma list**, all in one label: `case a, b, c: { ... }`
+
+```rc
+switch(n) {
+    case 0:
+    case 1: {           // stacked: 0 and 1 share this body
+        break;
+    }
+
+    case 3, 4: {         // comma list: 3 and 4 share this body
+        break;
+    }
+
+    case 5, 6:
+    case 7, 8: {          // both forms combined: 5, 6, 7, 8 share this body
+        break;
+    }
+
+    default: { break; }
+}
+```
+
+Each `case` clause (stacked group or comma list) owns exactly one compound-statement
+body — you can't attach a label without a `{ }` after it. As in C++, if a clause's
+body doesn't `break`, execution falls through into the next clause.
 
 ## Example
 
@@ -175,11 +284,6 @@ int main() {
 g++ -Iinclude main.cpp src/*.cpp -o rc
 ```
 
-Currently `main.cpp` hard-codes its input file to `transpilation_test.rc` rather than
-reading `argv[1]` (the CLI-argument handling is written but commented out). Until
-that's re-enabled, running the compiler means editing `transpilation_test.rc` and
-rebuilding, or manually restoring the `argv` handling in `main.cpp`.
-
 Running the compiler:
 1. Lexes and parses `transpilation_test.rc`.
 2. Prints the AST to stdout via `Printer` (debug output).
@@ -196,7 +300,8 @@ include/
   lexer.h                  – Lexer class
   parser.h                 – Parser class (Pratt/precedence-climbing expression parser)
   printer.h                – AST dump for debugging
-  semantic_analyser.h       – scope-aware type checker
+  semantic_analyser.h      – scope-aware
+  type_checker.h           – all types-related operations
   cpp_generator.h          – AST → C++ source
   scope.h, symbol.h, types.h – scope/symbol tables and the Type hierarchy
   string_overloads.h       – helper operators (trim/repeat/split) used by generated code
@@ -208,7 +313,7 @@ ebnfs/
 tests/
   
 main.cpp                   – wires the pipeline together
-transpilation_test.rc      – current scratch input file for main.cpp
+test.rc                    – current scratch input file for main.cpp
 out.cpp                    – last generated output (checked in as a working example)
 ```
 

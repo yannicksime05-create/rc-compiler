@@ -9,6 +9,11 @@ inline std::string operator+(const std::string& s, double n) {
     return s + std::to_string(n);
 }
 
+inline std::string& operator+=(std::string& s, double n) {
+    s = s + n;
+    return s;
+}
+
 //The trim method
 inline std::string operator-(const std::string& s, const std::string& trim) {
     if(s.empty()) return "";
@@ -20,6 +25,11 @@ inline std::string operator-(const std::string& s, const std::string& trim) {
     return s.substr(start, end - start + 1);
 }
 
+inline std::string& operator-=(std::string& s, const std::string& trim) {
+    s = s - trim;
+    return s;
+}
+
 inline std::string operator*(const std::string& s, const int n) {
     if(s.empty() || n <= 0) return "";
 
@@ -28,6 +38,11 @@ inline std::string operator*(const std::string& s, const int n) {
     for(int i = 1; i <= n; ++i) result += s;
 
     return result;
+}
+
+inline std::string& operator*=(std::string& s, const int n) {
+    s = s * n;
+    return s;
 }
 
 //The split method
