@@ -106,10 +106,11 @@ class Parser {
 
     Decl                    *parseDeclaration();
     TypeSpecifier           *parse_type_specifier();
-    VariableDecl            *parse_variable_declaration(const TypeSpecifier& type);
     VariableDeclarator      *parse_variable_declarator(const Token& name);
-    FunctionDecl            *parse_function_declaration(const TypeSpecifier& type);
+    VariableDecl            *parse_variable_declaration(const TypeSpecifier& type);
     Parameter               *parse_function_parameters();
+    FunctionPrototype       *parse_function_prototype(const TypeSpecifier& type);
+    FunctionDecl            *parse_function_declaration(const TypeSpecifier& type);
 
 
 

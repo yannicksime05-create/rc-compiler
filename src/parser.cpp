@@ -263,6 +263,16 @@ TypeSpecifier *Parser::parse_type_specifier() {
     return new TypeSpecifier(qualifiers, base_type, dimension);
 }
 
+VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
+    Expr *init = nullptr;
+    if( is(TT::ASSIGN) ) {
+        get();
+        init = parseExpression(Precedence::PREC_ASSIGNMENT);
+    }
+
+    return new VariableDeclarator(name, init);
+}
+
 VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
     Token name = previous();
 
@@ -277,36 +287,6 @@ VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
-}
-
-VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
-    Expr *init = nullptr;
-    if( is(TT::ASSIGN) ) {
-        get();
-        init = parseExpression(Precedence::PREC_ASSIGNMENT);
-    }
-
-    return new VariableDeclarator(name, init);
-}
-
-FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
-    Token name = previous();
-
-    expect(TT::LPAREN, "Error: Expected '(' after function's name");
-    if( !is(TT::RPAREN) ) {
-        std::vector<Parameter *> parameters;
-        parameters.push_back(parse_function_parameters());
-        while( is(TT::COMMA) ) {
-            get();
-            parameters.push_back(parse_function_parameters());
-        }
-        expect(TT::RPAREN, "Error: Expected ')' after parameter list");
-
-        return new FunctionDecl(type, name, parse_compound_statement(), parameters);
-    }
-    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
-
-    return new FunctionDecl(type, name, parse_compound_statement());
 }
 
 Parameter *Parser::parse_function_parameters() {
@@ -324,6 +304,32 @@ Parameter *Parser::parse_function_parameters() {
 
     return new Parameter(type, name);
 }
+
+FunctionPrototype *Parser::parse_function_prototype(const TypeSpecifier& type) {
+    Token name = previous();
+    expect(TT::LPAREN, "Error: Expected '(' after function's name");
+
+    std::vector<Parameter *> parameters;
+    if( !is(TT::RPAREN) ) {
+        parameters.push_back(parse_function_parameters());
+        while( is(TT::COMMA) ) {
+            get();
+            parameters.push_back(parse_function_parameters());
+        }
+    }
+    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+
+    return new FunctionPrototype(type, name, parameters);
+}
+
+FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
+    FunctionPrototype *proto = parse_function_prototype(type);
+    if(!proto) throw ParseError("Missing function's prototype!");
+
+    return new FunctionDecl(proto, parse_compound_statement());
+}
+
+
 
 
 
