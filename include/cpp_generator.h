@@ -24,56 +24,73 @@ class CppGenerator : public Visitor {
     }
 
     std::string map_type(const TypeSpecifier& t) {
-        std::string base;
+        std::string s;
         for(const std::string& q : t.qualifiers) {
-            base += q;
-            base += " ";
+            s += q;
+            s += " ";
         }
 
         bool is_vector = false;
         if(!t.dimension.empty()) {
             is_vector = true;
 
-            std::cout << "CppGenerator: mapped type is a vector\n";
-
-            for(size_t i = 0; i < t.dimension.size(); ++i)  base += "std::vector<";
+            for(size_t i = 0; i < t.dimension.size(); ++i)  s += "std::array<";
         }
 
-        std::string s;
         switch(t.type_name.type) {
-            case TT::KW_ANY:        s = "std::any";         break;
-            case TT::KW_AUTO:       s = "auto";             break;
-            case TT::KW_BOOL:       s = "bool";             break;
-            case TT::KW_CHAR:       s = "char";             break;
-            case TT::KW_DOUBLE:     s = "double";           break;
-            case TT::KW_FLOAT:      s = "float";            break;
-            case TT::KW_INT:        s = "int";              break;
+            case TT::KW_ANY:        s += "std::any";         break;
+            case TT::KW_AUTO:       s += "auto";             break;
+            case TT::KW_BOOL:       s += "bool";             break;
+            case TT::KW_CHAR:       s += "char";             break;
+            case TT::KW_DOUBLE:     s += "double";           break;
+            case TT::KW_FLOAT:      s += "float";            break;
+            case TT::KW_INT:        s += "int";              break;
             case TT::KW_STRING: {
                 if(is_function_parameter)
-                    s = "std::string&";
+                    s += "std::string&";
                 else
-                    s = "std::string";
+                    s += "std::string";
 
                 break;
             }
-            case TT::KW_VOID:       s = "void";             break;
-            default:                s = t.type_name.value;  break;
+            case TT::KW_VOID:       s += "void";             break;
+            default:                s += t.type_name.value;  break;
         }
 
         if(is_vector) {
-            std::string tmp(t.dimension.size(), '>');
-            s += tmp;
+            std::stringstream tmp;
+
+            for(size_t i = t.dimension.size(); i > 0; --i) tmp << ", " << t.dimension[i-1] << ">";
+
+            s += tmp.str();
         }
 
-        base += s;
-        std::cout << "CppGenerator: mapped type = " << base << "\n";
-        return base;
+        std::cout << "CppGenerator: mapped type = " << s << "\n";
+        return s;
+    }
+
+    void translate_function_prototype(const FunctionPrototype *proto) {
+        out << map_type(proto->return_type) << " " << proto->function_name.value << "(";
+        is_function_parameter = true;
+        for(size_t i = 0; i < proto->parameters.size(); ++i) {
+            Parameter *p = proto->parameters[i];
+
+            out << map_type(p->type_name) << " " << p->parameter_name.value;
+            if(p->default_value) {
+                out << " = ";
+                p->default_value->accept(*this);
+            }
+
+            if(i + 1 < proto->parameters.size()) out << ", ";
+        }
+        is_function_parameter = false;
+        out << ") ";
     }
 
 public:
     std::string generate(Program& p) {
         out.str("");
-        out << "#include <iostream>\n#include \"include/string_overloads.h\"\n#include <any>\n\n";
+        out << "#include <iostream>\n#include \"include/string_overloads.h\"\n#include <array>\n#include <any>\n\n";
         visit(p);
         return out.str();
     }
@@ -111,6 +128,7 @@ public:
     void visit(ReturnStmt& s) override;
     void visit(PrintStmt& s) override;
     void visit(BreakStmt& s) override;
+    void visit(ContinueStmt& s) override;
 
 };
 

@@ -256,7 +256,7 @@ int main() {
     greet("Yannick");
     int n = factoriel(5);
     std::cout << "n = " << n << "\n";
-    std::vector<int> arr = {1, 2, 3};
+    std::array<int, 3> arr = {1, 2, 3};
     switch(n) {
         case 0: 
         case 1: {
@@ -339,5 +339,3 @@ directly from gaps in the current source:
 ## Roadmap ideas
 
 - Decide on and implement range-for syntax.
-- Add `continue`, and align the parser with (or trim down) the EBNF files so they
-  stay a source of truth rather than aspirational notes.
