@@ -134,24 +134,10 @@ void CppGenerator::visit(VariableDecl& d) {
 }
 
 void CppGenerator::visit(FunctionDecl& d) {
-    out << map_type(d.return_type) << " " << d.function_name.value << "(";
-    is_function_parameter = true;
-    for(size_t i = 0; i < d.parameters.size(); ++i) {
-        Parameter *p = d.parameters[i];
-
-        out << map_type(p->type_name) << " " << p->parameter_name.value;
-        if(p->default_value) {
-            out << " = ";
-            p->default_value->accept(*this);
-        }
-
-        if(i + 1 < d.parameters.size()) out << ", ";
-    }
-    is_function_parameter = false;
-    out << ") ";
+    translate_function_prototype(d.prototype);
 
     if(d.body) d.body->accept(*this);
-    else out << "{}\n";
+    else out << ";\n";
 
     out << "\n";
 }
@@ -303,4 +289,8 @@ void CppGenerator::visit(PrintStmt& s) {
 
 void CppGenerator::visit(BreakStmt& s) {
     out << "break;\n";
+}
+
+void CppGenerator::visit(ContinueStmt& s) {
+    out << "continue;\n";
 }

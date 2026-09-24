@@ -70,6 +70,24 @@ class CppGenerator : public Visitor {
         return base;
     }
 
+    void translate_function_prototype(const FunctionPrototype *proto) {
+        out << map_type(proto->return_type) << " " << proto->function_name.value << "(";
+        is_function_parameter = true;
+        for(size_t i = 0; i < proto->parameters.size(); ++i) {
+            Parameter *p = proto->parameters[i];
+
+            out << map_type(p->type_name) << " " << p->parameter_name.value;
+            if(p->default_value) {
+                out << " = ";
+                p->default_value->accept(*this);
+            }
+
+            if(i + 1 < proto->parameters.size()) out << ", ";
+        }
+        is_function_parameter = false;
+        out << ") ";
+    }
+
 public:
     std::string generate(Program& p) {
         out.str("");
@@ -111,6 +129,7 @@ public:
     void visit(ReturnStmt& s) override;
     void visit(PrintStmt& s) override;
     void visit(BreakStmt& s) override;
+    void visit(ContinueStmt& s) override;
 
 };
 

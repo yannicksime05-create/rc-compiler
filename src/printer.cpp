@@ -195,42 +195,7 @@ void Printer::visit(VariableDecl& d) {
 
 void Printer::visit(FunctionDecl& d) {
     indent(); std::cout << "node type: FunctionDeclaration,\n";
-    indent(); std::cout << "name: " << d.function_name.value << ",\n";
-    indent(); std::cout << "qualifiers: ";
-    if(d.return_type.qualifiers.empty()) std::cout << "none,\n";
-    else {
-        for(const std::string& q : d.return_type.qualifiers) std::cout << q << ",";
-        std::cout << "\n";
-    }
-    print_type_specifier(d.return_type, "return type: ");
-//    indent(); std::cout << "return type: " << d.return_type.type_name << ",\n";
-
-
-    indent(); std::cout << "parameters: ";
-    if(d.parameters.empty()) std::cout << "[],\n";
-    else {
-        std::cout << "[\n";
-        nspace += tab_length;
-        for(const Parameter *p : d.parameters) {
-            indent(); std::cout << "identifier: {\n";
-            nspace += tab_length;
-            indent(); std::cout << "name: " << p->parameter_name.value<< ",\n";
-            indent(); std::cout << "type: " << p->type_name.type_name.value << ",\n";
-            indent(); std::cout << "const: ";
-//            p->type_name.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
-//            indent(); std::cout << "default value: ";
-            if(p->default_value) {
-                std::cout << "{\n";
-                exprs_printer_helper(p->default_value);
-                indent(); std::cout << "}\n";
-            }
-            else std::cout << "null\n";
-            nspace -= tab_length;
-            indent(); std::cout << "},\n";
-        }
-        nspace -= tab_length;
-        indent(); std::cout << "],\n";
-    }
+    print_function_prototype(d.prototype);
     indent(); std::cout << "body: ";
     if(d.body) {
         std::cout << "{\n";
@@ -428,17 +393,6 @@ void Printer::visit(BreakStmt& s) {
     indent(); std::cout << "node type: BreakStatement,\n";
 }
 
-
-
-
-void Printer::exprs_printer_helper(Expr *e) {
-    nspace += tab_length;
-    e->accept(*this);
-    nspace -= tab_length;
-}
-
-void Printer::stmts_printer_helper(Stmt *s) {
-    nspace += tab_length;
-    s->accept(*this);
-    nspace -= tab_length;
+void Printer::visit(ContinueStmt& s) {
+    indent(); std::cout << "node type: ContinueStatement,\n";
 }

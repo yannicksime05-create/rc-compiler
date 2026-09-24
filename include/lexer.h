@@ -17,6 +17,7 @@ const std::map<std::string, TokenType> keywords = {
     {"case",        TT::KW_CASE},
     {"char",        TT::KW_CHAR},
     {"const",       TT::KW_CONST},
+    {"continue",    TT::KW_CONTINUE},
     {"default",     TT::KW_DEFAULT},
     {"do",          TT::KW_DO},
     {"double",      TT::KW_DOUBLE},
