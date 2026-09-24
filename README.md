@@ -87,6 +87,8 @@ counting `{}` placeholders against the number of arguments - see the [print](#pr
 | `/` | split | `string` | `string` or `int` | array of `string` |
 | `+` | concatenate | `string` | `string`, `char`, or numeric | `string` |
 
+**Note:**  There is currently no way to represent a dynamic array so the `/` operator is disabled.
+
 `-`, `*=`, `/=` (and their `=`-suffixed compound-assignment forms) behave the same
 way as the binary operator, just written in-place:
 
@@ -95,9 +97,6 @@ string s = "  hi  ";
 s = s - " ";                   // trim: "hi"
 
 string r = s * 3;              // repeat: "hihihi"
-
-string[3] parts = s / 2;      // split using an int (the length of the chunks) → array of string: ["hi", "hi", "hi"]
-                              // split can also take a string (see string_overloads.h)
 
 string t = s + 5;             // concatenate (numeric side is widened to double)
 ```
@@ -108,7 +107,6 @@ These came up while cross-checking `type_checker.cpp`'s rules against the actual
 `operator` implementations in `string_overloads.h` — they're real, verified behavior,
 not just theoretical edge cases:
 
-- since **`/`** returns an array, you can't use **`/=`** on a string. Always use **` array = string / (string | int)`**
 - c++ will show an **ambiguous overload** if you try this: **`string += numeric`** so for now you can only do: **`string = string + numeric`**
 - **for all these operators, the left operand must be a named variable, not a literal.** Something like:
   `"  hi  " - " "` (trim
@@ -256,7 +254,7 @@ int main() {
     greet("Yannick");
     int n = factoriel(5);
     std::cout << "n = " << n << "\n";
-    std::vector<int> arr = {1, 2, 3};
+    std::array<int, 3> arr = {1, 2, 3};
     switch(n) {
         case 0: 
         case 1: {
@@ -339,5 +337,4 @@ directly from gaps in the current source:
 ## Roadmap ideas
 
 - Decide on and implement range-for syntax.
-- Add `continue`, and align the parser with (or trim down) the EBNF files so they
-  stay a source of truth rather than aspirational notes.
+- Add a List/DynamicArrayType and re-enable string split.

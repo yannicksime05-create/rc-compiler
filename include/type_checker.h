@@ -1,7 +1,7 @@
 #ifndef TYPE_CHECKER_H
 #define TYPE_CHECKER_H
 
-#include <stdexcept>
+//#include <stdexcept>
 #include <sstream>
 #include "ast.h"
 #include "token.h"
