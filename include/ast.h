@@ -397,24 +397,36 @@ struct Parameter {
     }
 };
 
-// --- Function Declaration Node ---
-struct FunctionDecl : Decl {
+struct FunctionPrototype {
     TypeSpecifier return_type;
     Token function_name;
     std::vector<Parameter *> parameters;
-    CompoundStmt *body = nullptr;
-    Symbol *symbol = nullptr;
 
-    FunctionDecl(const TypeSpecifier& rt, const Token& n, CompoundStmt *b, const std::vector<Parameter *>& p = std::vector<Parameter *>())
-        : Decl(ASTNodeType::FUNC_DECL_NODE), return_type(rt), function_name(n), parameters(std::move(p)), body(std::move(b)) {}
+    FunctionPrototype(const TypeSpecifier& rt, const Token& n, const std::vector<Parameter *>& p) : return_type(rt), function_name(n), parameters(p) {}
 
-    void accept(Visitor& v) override;
-
-    ~FunctionDecl() {
+    ~FunctionPrototype() {
         for(const Parameter *p : parameters) {
             delete p;
             p = nullptr;
         }
+
+        std::cout << "Cleaned up FunctionPrototype...\n";
+    }
+};
+
+// --- Function Declaration Node ---
+struct FunctionDecl : Decl {
+    FunctionPrototype *prototype = nullptr;
+    CompoundStmt *body = nullptr;
+    Symbol *symbol = nullptr;
+
+    FunctionDecl(FunctionPrototype *proto, CompoundStmt *b) : Decl(ASTNodeType::FUNC_DECL_NODE), prototype(proto), body(b) {}
+
+    void accept(Visitor& v) override;
+
+    ~FunctionDecl() {
+        delete prototype;
+        prototype = nullptr;
         delete body;
         body = nullptr;
         delete symbol;
@@ -661,6 +673,18 @@ struct BreakStmt : Stmt {
     }
 };
 
+struct ContinueStmt : Stmt {
+    Token location;
+
+    ContinueStmt(const Token& loc) : Stmt(ASTNodeType::CONTINUE_STMT_NODE) {}
+
+    void accept(Visitor& v) override;
+
+    ~ContinueStmt() {
+        std::cout << "Cleaned up ContinueStmt node...\n";
+    }
+};
+
 class Visitor {
 public:
     virtual void visit(Program& p) = 0;
@@ -696,6 +720,7 @@ public:
     virtual void visit(ReturnStmt& s) = 0;
     virtual void visit(PrintStmt& s) = 0;
     virtual void visit(BreakStmt& s) = 0;
+    virtual void visit(ContinueStmt& s) = 0;
 
 };
 

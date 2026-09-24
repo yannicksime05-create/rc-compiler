@@ -205,7 +205,12 @@ Type *TypeChecker::resolve_binary(const Type *left, const Type *right, TokenType
         }
         case TT::SLASH: {
             // string / (string | integral) → array of strings (split)
-            if( is_string(left) && (is_string(right) || is_integral(right)) ) return new ArrayType(new BuiltinType(BT::STRING), -1);
+            if( is_string(left) && (is_string(right) || is_integral(right)) ) {
+//                return new ArrayType(new BuiltinType(BT::STRING), -1);
+
+                // TODO: requires dynamic array support
+                return nullptr;
+            }
 
             return promote(left, right);
         }
@@ -231,7 +236,8 @@ Type *TypeChecker::resolve_binary(const Type *left, const Type *right, TokenType
             bool valid = (is_numeric(left) && is_numeric(right)) ||
                          (is_string(left)  && is_string(right))  ||
                          (is_char(left)    && is_char(right))    ||
-                         (is_bool(left)    && is_bool(right));
+                         (is_bool(left)    && is_bool(right))    ||
+                         (is_array(left)   && is_array(right) && are_equals(left, right));
 
             if(!valid) return nullptr;
 
@@ -305,7 +311,7 @@ Type *TypeChecker::resolve_assignment(const Type *target, const Type *value, Tok
             return target->clone();
         }
         // numeric += numeric
-        // string += (string | char)
+        // string += (string | numeric | char)
         case TT::PLUS_ASSIGN: {
             bool valid = ( is_numeric(target) && is_numeric(value) ) || ( is_string(target) && (is_string(value) || is_numeric(value) || is_char(value)) );
             if(!valid) return nullptr;
@@ -326,7 +332,12 @@ Type *TypeChecker::resolve_assignment(const Type *target, const Type *value, Tok
         }
         // string /= (string | integral) → array of strings
         case TT::SLASH_ASSIGN: {
-            if( is_string(target) && (is_string(value) || is_integral(value)) ) return new ArrayType(new BuiltinType(BT::STRING), -1);
+            if( is_string(target) && (is_string(value) || is_integral(value)) ) {
+//                return new ArrayType(new BuiltinType(BT::STRING), -1);
+
+                // TODO: requires dynamic array support
+                return nullptr;
+            }
 
             if( is_numeric(target) && is_numeric(value) ) return target->clone();
 

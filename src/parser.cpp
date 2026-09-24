@@ -263,6 +263,16 @@ TypeSpecifier *Parser::parse_type_specifier() {
     return new TypeSpecifier(qualifiers, base_type, dimension);
 }
 
+VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
+    Expr *init = nullptr;
+    if( is(TT::ASSIGN) ) {
+        get();
+        init = parseExpression(Precedence::PREC_ASSIGNMENT);
+    }
+
+    return new VariableDeclarator(name, init);
+}
+
 VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
     Token name = previous();
 
@@ -277,36 +287,6 @@ VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
     expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
 
     return new VariableDecl(type, decls);
-}
-
-VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
-    Expr *init = nullptr;
-    if( is(TT::ASSIGN) ) {
-        get();
-        init = parseExpression(Precedence::PREC_ASSIGNMENT);
-    }
-
-    return new VariableDeclarator(name, init);
-}
-
-FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
-    Token name = previous();
-
-    expect(TT::LPAREN, "Error: Expected '(' after function's name");
-    if( !is(TT::RPAREN) ) {
-        std::vector<Parameter *> parameters;
-        parameters.push_back(parse_function_parameters());
-        while( is(TT::COMMA) ) {
-            get();
-            parameters.push_back(parse_function_parameters());
-        }
-        expect(TT::RPAREN, "Error: Expected ')' after parameter list");
-
-        return new FunctionDecl(type, name, parse_compound_statement(), parameters);
-    }
-    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
-
-    return new FunctionDecl(type, name, parse_compound_statement());
 }
 
 Parameter *Parser::parse_function_parameters() {
@@ -325,6 +305,32 @@ Parameter *Parser::parse_function_parameters() {
     return new Parameter(type, name);
 }
 
+FunctionPrototype *Parser::parse_function_prototype(const TypeSpecifier& type) {
+    Token name = previous();
+    expect(TT::LPAREN, "Error: Expected '(' after function's name");
+
+    std::vector<Parameter *> parameters;
+    if( !is(TT::RPAREN) ) {
+        parameters.push_back(parse_function_parameters());
+        while( is(TT::COMMA) ) {
+            get();
+            parameters.push_back(parse_function_parameters());
+        }
+    }
+    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+
+    return new FunctionPrototype(type, name, parameters);
+}
+
+FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
+    FunctionPrototype *proto = parse_function_prototype(type);
+    if(!proto) throw ParseError("Missing function's prototype!");
+
+    return new FunctionDecl(proto, parse_compound_statement());
+}
+
+
+
 
 
 
@@ -334,15 +340,16 @@ Parameter *Parser::parse_function_parameters() {
 
 Stmt *Parser::parseStatement() {
     switch(current().type) {
-        case TT::LBRACE:    return parse_compound_statement();
-        case TT::KW_IF:     return parse_if_statement();
-        case TT::KW_SWITCH: return parse_switch_statement();
-        case TT::KW_WHILE:  return parse_while_statement();
-        case TT::KW_DO:     return parse_do_while_statement();
-        case TT::KW_FOR:    return dispatch_for_statements();
-        case TT::KW_RETURN: return parse_return_statement();
-        case TT::KW_PRINT:  return parse_print_statement();
-        case TT::KW_BREAK:  return parse_break_statement();
+        case TT::LBRACE:        return parse_compound_statement();
+        case TT::KW_IF:         return parse_if_statement();
+        case TT::KW_SWITCH:     return parse_switch_statement();
+        case TT::KW_WHILE:      return parse_while_statement();
+        case TT::KW_DO:         return parse_do_while_statement();
+        case TT::KW_FOR:        return dispatch_for_statements();
+        case TT::KW_RETURN:     return parse_return_statement();
+        case TT::KW_PRINT:      return parse_print_statement();
+        case TT::KW_BREAK:      return parse_break_statement();
+        case TT::KW_CONTINUE:   return parse_continue_statement();
 
         default:
             if( starts_declaration() ) return parse_declaration_statement();
@@ -614,4 +621,11 @@ BreakStmt *Parser::parse_break_statement() {
 
     expect(TT::SEMICOLON, "Error: Expected ';' after break statement!");
     return new BreakStmt(loc);
+}
+
+ContinueStmt *Parser::parse_continue_statement() {
+    Token loc = get();
+
+    expect(TT::SEMICOLON, "Error: Expected ';' after continue statement!");
+    return new ContinueStmt(loc);
 }

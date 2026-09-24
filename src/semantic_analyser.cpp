@@ -189,8 +189,8 @@ void SemanticAnalyser::visit(CallExpr& e) {
         throw SemanticError(ss.str());
     }
 
-    size_t expected_args = 0, provided_args = e.arguments.size(), max_args = decl->parameters.size();
-    for(Parameter *param : decl->parameters)  {
+    size_t expected_args = 0, provided_args = e.arguments.size(), max_args = decl->prototype->parameters.size();
+    for(Parameter *param : decl->prototype->parameters)  {
         if(!param->default_value) ++expected_args;
     }
 
@@ -216,7 +216,7 @@ void SemanticAnalyser::visit(CallExpr& e) {
     bool has_error = false;
     for(size_t i = 0; i < provided_args; ++i) {
         const Type *arg_type = e.arguments[i]->resolved_type;
-        const Type *param_type = decl->parameters[i]->symbol->declared_type;
+        const Type *param_type = decl->prototype->parameters[i]->symbol->declared_type;
 
         //This will print an error if param_type is auto or any.
         if(!checker.are_compatibles(arg_type, param_type)) {
@@ -354,23 +354,23 @@ void SemanticAnalyser::check_fn_return_types(Type *ret_type, const Token& fn_nam
 void SemanticAnalyser::visit(FunctionDecl& d) {
     std::stringstream ss;
 
-    if(manager.lookup_current(d.function_name.value)) {
-        ss << "Error: Redefinition of function: '" << d.function_name.value << "'. Line: " << d.function_name.start.line << ".\n";
+    if(manager.lookup_current(d.prototype->function_name.value)) {
+        ss << "Error: Redefinition of function: '" << d.prototype->function_name.value << "'. Line: " << d.prototype->function_name.start.line << ".\n";
         throw SemanticError(ss.str());
     }
 
-    Type *return_type = checker.resolve(d.return_type);
+    Type *return_type = checker.resolve(d.prototype->return_type);
 
-    Symbol *f = new Symbol(d.function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type, &d);
+    Symbol *f = new Symbol(d.prototype->function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type, &d);
     manager.insert(f);
     d.symbol = f;
 
     manager.enter(ScopeType::FUNCTION);
 
     //This allows recursion.
-    manager.insert( new Symbol(d.function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type->clone(), &d) );
+    manager.insert( new Symbol(d.prototype->function_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type->clone(), &d) );
 
-    for(Parameter *param : d.parameters) {
+    for(Parameter *param : d.prototype->parameters) {
         if(manager.lookup_current(param->parameter_name.value)) {
             ss.str("");
             ss << "Error: Duplicate parameter name: '" << param->parameter_name.value << "'. Line: " << param->parameter_name.start.line << ".\n";
@@ -396,7 +396,7 @@ void SemanticAnalyser::visit(FunctionDecl& d) {
 
     if(d.body) d.body->accept(*this);
 
-    check_fn_return_types(return_type, d.function_name);
+    check_fn_return_types(return_type, d.prototype->function_name);
     current_function_return_stmts.clear();
 
     manager.exit();
@@ -571,6 +571,14 @@ void SemanticAnalyser::visit(BreakStmt& s) {
     if(!loop_depth && !switch_depth) {
         std::stringstream ss;
         ss << "Error: Can't break outside of loops of switch! Line: " << s.location.start.line << "\n";
+        throw SemanticError(ss.str());
+    }
+}
+
+void SemanticAnalyser::visit(ContinueStmt& s) {
+    if(!loop_depth) {
+        std::stringstream ss;
+        ss << "Error: Continue statement not within a loop! Line: " << s.location.start.line << "\n";
         throw SemanticError(ss.str());
     }
 }
