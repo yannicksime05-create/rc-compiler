@@ -237,6 +237,24 @@ void SemanticAnalyser::visit(MemberAccessExpr& e) {
     if(e.object) e.object->accept(*this);
 }
 
+bool SemanticAnalyser::unaryexpr_tiny_constant_folder(Expr *e, int& v) {
+    if(e->node_type == ASTNodeType::INT_LIT_NODE) {
+        v = static_cast<IntNumberExpr*>(e)->value;
+        return true;
+    }
+
+    if(e->node_type == ASTNodeType::UNARY_EXP_NODE) {
+        UnaryExpr *tmp = static_cast<UnaryExpr*>(e);
+
+        if(tmp->op.type == TT::MINUS && unaryexpr_tiny_constant_folder(tmp->expr, v)) {
+            v = -v;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void SemanticAnalyser::visit(SubscriptExpr& e) {
     if(e.object) e.object->accept(*this);
     if(e.index)  e.index->accept(*this);
@@ -251,6 +269,12 @@ void SemanticAnalyser::visit(SubscriptExpr& e) {
     const Type *index_type = e.index->resolved_type;
     if(!checker.is_integral(index_type)) {
         ss << "Error: Array index must be an integer, found '" << checker.to_string(index_type) << "' instead!";
+        throw SemanticError(ss.str());
+    }
+
+    int index, length = static_cast<const ArrayType*>(obj_type)->size;
+    if( unaryexpr_tiny_constant_folder(e.index, index) && (index < 0 || index >= length) ) {
+        ss << "Error: Index out of bounds!";
         throw SemanticError(ss.str());
     }
 
