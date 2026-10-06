@@ -13,6 +13,8 @@ class TypeChecker {
     const ArrayType    *to_array(const Type *t);
     const AutoType     *to_auto(const Type *t);
 
+    int numeric_rank(const BuiltinType *t);
+
     /**
     *   This is a helper function for are_compatibles and is_assignable.
     *   Special cases apart, those functions do the same work, so this helper does it for them.
@@ -36,6 +38,8 @@ public:
 
     // --- BuiltinType classification (all return false if t is not a BuiltinType)
     bool is_integral(const Type *t);
+    bool is_unsigned(const Type *t);
+    bool is_signed(const Type *t);
     bool is_floating(const Type *t);
     bool is_numeric(const Type *t);
     bool is_string(const Type *t);

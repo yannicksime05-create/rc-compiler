@@ -22,12 +22,34 @@ const AutoType *TypeChecker::to_auto(const Type *t) {
     return static_cast<const AutoType*>(t);
 }
 
+int TypeChecker::numeric_rank(const BuiltinType *t) {
+    switch(t->builtin) {
+        case BT::INT8:
+        case BT::UINT8:     return 1;
+
+        case BT::INT16:
+        case BT::UINT16:    return 2;
+
+        case BT::INT32:
+        case BT::UINT32:    return 3;
+
+        case BT::INT64:
+        case BT::UINT64:    return 4;
+
+        case BT::FLOAT32:   return 5;
+        case BT::FLOAT64:   return 6;
+//        case BT::FLOAT128:  return 7;
+
+        default:            return -1;
+    }
+}
+
 bool TypeChecker::assign_compat_helper(const Type *a, const Type *b) {
     switch(a->kind) {
         case TK::ANY:       return true;
         case TK::ARRAY:     return are_equals(a, b);
         case TK::BUILTIN: {
-            if(is_numeric(a))  return is_numeric(b);
+            if(is_numeric(a) && is_numeric(b)) return ( is_unsigned(a) && is_unsigned(b) ) || ( is_signed(a) && is_signed(b) );
 
             // char, string, bool are only assignable from themselves
             return are_equals(a, b);
@@ -43,16 +65,54 @@ bool TypeChecker::is_any(const Type *t)            {   return t && t->kind == TK
 bool TypeChecker::is_unknown(const Type *t)        {   return t && t->kind == TK::UNKNOWN;     }
 
 
-//For now it checks only int, but later, we'll add short, long, ...
 bool TypeChecker::is_integral(const Type *t) {
     const BuiltinType *bt = to_builtin(t);
-    return bt && bt->builtin == BT::INT;
+    if(!bt) return false;
+
+    switch(bt->builtin) {
+        case BT::INT8:
+        case BT::INT16:
+        case BT::INT32:
+        case BT::INT64:
+        case BT::UINT8:
+        case BT::UINT16:
+        case BT::UINT32:
+        case BT::UINT64:    return true;
+
+        default:            return false;
+    }
+}
+
+bool TypeChecker::is_unsigned(const Type *t) {
+    const BuiltinType *bt = to_builtin(t);
+    if(!bt) return false;
+
+    switch(bt->builtin) {
+        case BT::UINT8:
+        case BT::UINT16:
+        case BT::UINT32:
+        case BT::UINT64:    return true;
+
+        default:            return false;
+    }
+}
+
+bool TypeChecker::is_signed(const Type *t) {
+    return !is_unsigned(t);
 }
 
 //Same as is_integral_type, but for float, double and long double.
 bool TypeChecker::is_floating(const Type *t) {
     const BuiltinType *bt = to_builtin(t);
-    return bt && bt->builtin == BT::FLOAT;
+    if(!bt) return false;
+
+    switch(bt->builtin) {
+        case BT::FLOAT32:
+        case BT::FLOAT64:
+        /* case BT::FLOAT128:*/  return true;
+
+        default:            return false;
+    }
 }
 
 bool TypeChecker::is_numeric(const Type *t) {
@@ -154,10 +214,18 @@ Type *TypeChecker::resolve_type_name(Token& t) {
         case TT::KW_AUTO:   return new AutoType();
 
         case TT::KW_BOOL:   return new BuiltinType(BT::BOOL);
-        case TT::KW_INT:    return new BuiltinType(BT::INT);
+        case TT::KW_BYTE:   return new BuiltinType(BT::INT8);
+        case TT::KW_UBYTE:  return new BuiltinType(BT::UINT8);
+        case TT::KW_SHORT:  return new BuiltinType(BT::INT16);
+        case TT::KW_USHORT: return new BuiltinType(BT::UINT16);
+        case TT::KW_INT:    return new BuiltinType(BT::INT32);
+        case TT::KW_UINT:   return new BuiltinType(BT::UINT32);
+        case TT::KW_LONG:   return new BuiltinType(BT::INT64);
+        case TT::KW_ULONG:  return new BuiltinType(BT::UINT64);
 
-        case TT::KW_FLOAT:
-        case TT::KW_DOUBLE: return new BuiltinType(BT::FLOAT);
+        case TT::KW_FLOAT:  return new BuiltinType(BT::FLOAT32);
+        case TT::KW_DOUBLE: return new BuiltinType(BT::FLOAT64);
+//        case TT::KW_QUAD:   return new BuiltinType(BT::FLOAT128);
 
         case TT::KW_CHAR:   return new BuiltinType(BT::CHAR);
         case TT::KW_STRING: return new BuiltinType(BT::STRING);
@@ -172,13 +240,18 @@ Type *TypeChecker::resolve_type_name(Token& t) {
 }
 
 BuiltinType *TypeChecker::promote(const Type *left, const Type *right) {
-    if(!left || !right) return nullptr;
-
+    if(!left || !right)                         return nullptr;
     if(!is_numeric(left) || !is_numeric(right)) return nullptr;
 
-    if(is_floating(left) || is_floating(right)) return new BuiltinType(BT::FLOAT);
+    bool left_is_unsigned = is_unsigned(left), right_is_unsigned = is_unsigned(right);
+    if(left_is_unsigned != right_is_unsigned) {
+        std::cerr << "Error: mixing signed and unsigned types!";
+        return nullptr;
+    }
 
-    return new BuiltinType(BT::INT);
+    const BuiltinType *lbt = to_builtin(left), *rbt = to_builtin(right);
+
+    return numeric_rank(lbt) >= numeric_rank(rbt) ? lbt->clone() : rbt->clone();
 }
 
 Type *TypeChecker::resolve_binary(const Type *left, const Type *right, TokenType op) {
@@ -388,12 +461,21 @@ std::string TypeChecker::to_string(const Type *t) {
 
 std::string TypeChecker::builtintype_to_string(const BuiltinType *t) {
     switch(t->builtin) {
-        case BT::BOOL:    return "bool";
-        case BT::FLOAT:   return "float";
-        case BT::INT:     return "int";
-        case BT::CHAR:    return "char";
-        case BT::STRING:  return "string";
-        case BT::VOID:    return "void";
+        case BT::BOOL:      return "bool";
+        case BT::CHAR:      return "char";
+        case BT::INT8:      return "byte";
+        case BT::INT16:     return "short";
+        case BT::INT32:     return "int";
+        case BT::INT64:     return "long";
+        case BT::FLOAT32:   return "float";
+        case BT::FLOAT64:   return "double";
+//        case BT::FLOAT128:  return "quad";
+        case BT::UINT8:     return "ubyte";
+        case BT::UINT16:    return "ushort";
+        case BT::UINT32:    return "uint";
+        case BT::UINT64:    return "ulong";
+        case BT::STRING:    return "string";
+        case BT::VOID:      return "void";
     }
 
     return "unknown";
