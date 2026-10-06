@@ -14,6 +14,7 @@ const std::map<std::string, TokenType> keywords = {
     {"auto",        TT::KW_AUTO},
     {"bool",        TT::KW_BOOL},
     {"break",       TT::KW_BREAK},
+    {"byte",        TT::KW_BYTE},
     {"case",        TT::KW_CASE},
     {"char",        TT::KW_CHAR},
     {"const",       TT::KW_CONST},
@@ -27,11 +28,18 @@ const std::map<std::string, TokenType> keywords = {
     {"for",         TT::KW_FOR},
     {"if",          TT::KW_IF},
     {"int",         TT::KW_INT},
+    {"long",        TT::KW_LONG},
     {"print",       TT::KW_PRINT},
+//    {"quad",        TT::KW_QUAD},
     {"return",      TT::KW_RETURN},
+    {"short",       TT::KW_SHORT},
     {"string",      TT::KW_STRING},
     {"switch",      TT::KW_SWITCH},
     {"true",        TT::KW_TRUE},
+    {"ubyte",       TT::KW_UBYTE},
+    {"uint",        TT::KW_UINT},
+    {"ulong",       TT::KW_ULONG},
+    {"ushort",      TT::KW_USHORT},
     {"void",        TT::KW_VOID},
     {"while",       TT::KW_WHILE}
 };
@@ -46,10 +54,12 @@ class Lexer {
     //current character in the file.
     char c;
 
+    // TODO: find a way to get the actual tab size instead of assuming it's 4
     void advance() {
         if(c == '\n') {
             ++line; column = 1;
         }
+        else if(c == '\t') column += 4;
         else    ++column;
     }
 
@@ -109,7 +119,7 @@ public:
 
     void print(Token& t) {
         std::cout << "token value = " << t.value << "\n" << std::endl;
-//        std::cout << "token value = " << t.value << ", ends at: line: " << t.end.line << ", col: " << t.end.col << std::endl;
+//        std::cout << "token value = " << t.value << ", starts at line: " << t.start.line << ", col: " << t.start.col << ", ends at: line: " << t.end.line << ", col: " << t.end.col << std::endl;
     }
 
 };
