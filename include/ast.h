@@ -74,9 +74,25 @@ struct BoolExpr : Expr {
 };
 
 struct IntNumberExpr : Expr {
-    int value;
+    Token raw_value;
+    long long value;
+    std::string suffix; //The analyser sets this so that we don't recompute it in the generator.
 
-    IntNumberExpr(int v) : Expr(ASTNodeType::INT_LIT_NODE), value(v) {}
+    // NOTE: value in only needed in array bounds check in the analyser, so setting it here is probably not necessary.
+    IntNumberExpr(const Token& rv) : Expr(ASTNodeType::INT_LIT_NODE), raw_value(rv) {
+        std::string prefix;
+        int base = 10;
+
+        prefix += rv.value[0];
+        prefix += std::tolower(rv.value[1]);
+
+        if(prefix == "0b")      base = 2;
+        else if(prefix == "0o") base = 8;
+        else if(prefix == "0x") base = 16;
+
+
+        value = std::stoll(rv.value, nullptr, base);
+    }
 
     void accept(Visitor& v) override;
 
@@ -86,9 +102,10 @@ struct IntNumberExpr : Expr {
 };
 
 struct DecimalNumberExpr : Expr {
+    Token raw_value;
     double value;
 
-    DecimalNumberExpr(double v) : Expr(ASTNodeType::DECIMAL_LIT_NODE), value(v) {}
+    DecimalNumberExpr(const Token& rv) : Expr(ASTNodeType::DECIMAL_LIT_NODE), raw_value(rv), value( std::stod(rv.value) ) {}
 
     void accept(Visitor& v) override;
 
