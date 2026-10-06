@@ -3,6 +3,7 @@
 
 using TT = TokenType;
 using TK = TypeKind;
+using BT = BuiltinType::Types;
 
 void SemanticAnalyser::visit(Program& p) {
     manager.enter(ScopeType::GLOBAL);
@@ -15,27 +16,61 @@ void SemanticAnalyser::visit(Program& p) {
 }
 
 void SemanticAnalyser::visit(BoolExpr& e) {
-    Type *tmp = new BuiltinType(BuiltinType::Types::BOOL);
+    BuiltinType *tmp = new BuiltinType(BT::BOOL);
     e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(IntNumberExpr& e) {
-    Type *tmp = new BuiltinType(BuiltinType::Types::INT);
+    const std::string& raw = e.raw_value.value;
+    std::string suffix;
+
+    size_t i = raw.size() - 1, count = 2;
+    while(count > 0 && std::isalpha(raw[i])) {
+        char c = std::tolower(raw[i]);
+        if( !std::isxdigit(c) ) suffix = c + suffix;
+        --count;
+        --i;
+    }
+
+    e.suffix = suffix;
+
+    BuiltinType::Types t;
+    if(suffix == "")                            t = BT::INT32;
+    else if(suffix == "o")                      t = BT::INT8;
+    else if(suffix == "s")                      t = BT::INT16;
+    else if(suffix == "l")                      t = BT::INT64;
+    else if(suffix == "u")                      t = BT::UINT32;
+    else if(suffix == "uo")                     t = BT::UINT8;
+    else if(suffix == "us")                     t = BT::UINT16;
+    else if(suffix == "ul")                     t = BT::UINT64;
+    else {
+        std::stringstream ss;
+        ss << "Unknown integer suffix '" << suffix << "' found at line: " << e.raw_value.end.line << ", col: " << e.raw_value.end.col << "\n";
+        throw SemanticError(ss.str());
+    }
+
+    BuiltinType *tmp = new BuiltinType(t);
     e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(DecimalNumberExpr& e) {
-    Type *tmp = new BuiltinType(BuiltinType::Types::FLOAT);
+    char suffix = std::tolower(e.raw_value.value.back());
+    BuiltinType::Types t;
+
+    if(suffix == 'f')   t = BT::FLOAT32;
+    else                t = BT::FLOAT64;
+
+    BuiltinType *tmp = new BuiltinType(t);
     e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(CharExpr& e) {
-    Type *tmp = new BuiltinType(BuiltinType::Types::CHAR);
+    BuiltinType *tmp = new BuiltinType(BT::CHAR);
     e.resolved_type = tmp ? tmp : nullptr;
 }
 
 void SemanticAnalyser::visit(StringExpr& e) {
-   Type *tmp = new BuiltinType(BuiltinType::Types::STRING);
+    BuiltinType *tmp = new BuiltinType(BT::STRING);
     e.resolved_type = tmp ? tmp : nullptr;
 }
 
@@ -237,6 +272,24 @@ void SemanticAnalyser::visit(MemberAccessExpr& e) {
     if(e.object) e.object->accept(*this);
 }
 
+bool SemanticAnalyser::unaryexpr_tiny_constant_folder(Expr *e, int& v) {
+    if(e->node_type == ASTNodeType::INT_LIT_NODE) {
+        v = static_cast<IntNumberExpr*>(e)->value;
+        return true;
+    }
+
+    if(e->node_type == ASTNodeType::UNARY_EXP_NODE) {
+        UnaryExpr *tmp = static_cast<UnaryExpr*>(e);
+
+        if(tmp->op.type == TT::MINUS && unaryexpr_tiny_constant_folder(tmp->expr, v)) {
+            v = -v;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void SemanticAnalyser::visit(SubscriptExpr& e) {
     if(e.object) e.object->accept(*this);
     if(e.index)  e.index->accept(*this);
@@ -251,6 +304,12 @@ void SemanticAnalyser::visit(SubscriptExpr& e) {
     const Type *index_type = e.index->resolved_type;
     if(!checker.is_integral(index_type)) {
         ss << "Error: Array index must be an integer, found '" << checker.to_string(index_type) << "' instead!";
+        throw SemanticError(ss.str());
+    }
+
+    int index, length = static_cast<const ArrayType*>(obj_type)->size;
+    if( unaryexpr_tiny_constant_folder(e.index, index) && (index < 0 || index >= length) ) {
+        ss << "Error: Index out of bounds!";
         throw SemanticError(ss.str());
     }
 

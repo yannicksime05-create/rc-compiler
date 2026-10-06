@@ -32,7 +32,11 @@ class SemanticAnalyser : public Visitor {
     std::vector<ReturnStmt*> current_function_return_stmts;
     void check_fn_return_types(Type *t, const Token& fn_name);
 
+    /** */
     int loop_depth = 0, switch_depth = 0;
+
+    /** */
+    bool unaryexpr_tiny_constant_folder(Expr *e, int& v);
 
     void warning(const std::string& msg) {
         std::cout << msg;
