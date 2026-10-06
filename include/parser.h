@@ -78,18 +78,28 @@ class Parser {
         return current().type == t;
     }
 
-    bool is_assignment_operator() {
-        return
-        is(TT::ASSIGN) || is(TT::PLUS_ASSIGN) || is(TT::MINUS_ASSIGN) || is(TT::STAR_ASSIGN) || is(TT::SLASH_ASSIGN) || is(TT::MOD_ASSIGN) ||
-        is(TT::BIT_AND_ASSIGN) || is(TT::BIT_OR_ASSIGN) || is(TT::BIT_XOR_ASSIGN) || is(TT::LEFT_SHIFT_ASSIGN) || is(TT::RIGHT_SHIFT_ASSIGN);
-    }
-
     bool is_primitive_type(size_t i) {
-        return tokens[i].type == TT::KW_INT    || tokens[i].type == TT::KW_FLOAT ||
-               tokens[i].type == TT::KW_DOUBLE || tokens[i].type == TT::KW_BOOL  ||
-               tokens[i].type == TT::KW_STRING || tokens[i].type == TT::KW_CHAR  ||
-               tokens[i].type == TT::KW_VOID   || tokens[i].type == TT::KW_AUTO  ||
-               tokens[i].type == TT::KW_ANY;
+        Token t = tokens[i];
+        switch(t.type) {
+            case TT::KW_ANY:
+            case TT::KW_AUTO:
+            case TT::KW_BOOL:
+            case TT::KW_BYTE:
+            case TT::KW_CHAR:
+            case TT::KW_DOUBLE:
+            case TT::KW_FLOAT:
+            case TT::KW_INT:
+            case TT::KW_LONG:
+//            case TT::KW_QUAD:
+            case TT::KW_SHORT:
+            case TT::KW_STRING:
+            case TT::KW_UBYTE:
+            case TT::KW_UINT:
+            case TT::KW_USHORT:
+            case TT::KW_ULONG:     return true;
+
+            default:               return false;
+        }
     }
 
     bool is_right_associative(TokenType t);
