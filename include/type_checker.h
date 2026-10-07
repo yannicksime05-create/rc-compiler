@@ -8,11 +8,6 @@
 #include "types.h"
 
 class TypeChecker {
-    // --- Helpers
-    const BuiltinType  *to_builtin(const Type *t);
-    const ArrayType    *to_array(const Type *t);
-    const AutoType     *to_auto(const Type *t);
-
     int numeric_rank(const BuiltinType *t);
 
     /**
@@ -27,6 +22,11 @@ public:
 
     /** Default destructor */
     ~TypeChecker() = default;
+
+    // --- Helpers
+    const BuiltinType  *to_builtin(const Type *t);
+    const ArrayType    *to_array(const Type *t);
+    const AutoType     *to_auto(const Type *t);
 
     // --- Type classification
     bool is_builtin(const Type *t);

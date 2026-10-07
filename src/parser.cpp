@@ -184,29 +184,31 @@ Expr *Parser::parse_primary() {
 Expr *Parser::parse_postfix(Expr *lhs) {
     if( is(TT::LPAREN) ) {
         get();
+        std::vector<Expr *> args;
 
         if( !is(TT::RPAREN) ) {
-            std::vector<Expr *> args;
             args.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
             while( is(TT::COMMA) ) {
                 get();
                 args.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
             }
-            expect(TT::RPAREN, "Error: Expected ')' after argument list");
+        }
 
-            lhs = new CallExpr(lhs, args);
-        }
-        else {
-            get();
-            lhs = new CallExpr(lhs);
-        }
+        expect(TT::RPAREN, "Error: Expected ')' after argument list");
+        lhs = new CallExpr(lhs, args);
     }
     else if( is(TT::LBRACKET) ) {
         get();
-        Expr *index = parseExpression(Precedence::PREC_POSTFIX);
-        expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
+        std::vector<Expr *> indices;
 
-        lhs = new SubscriptExpr(lhs, index);
+        indices.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+        while( is(TT::COMMA) ) {
+            get();
+            indices.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
+        }
+
+        expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
+        lhs = new SubscriptExpr(lhs, indices);
     }
     else if( is(TT::DOT) ) {
         get();

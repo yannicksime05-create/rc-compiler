@@ -105,9 +105,11 @@ void CppGenerator::visit(MemberAccessExpr& e) {
 
 void CppGenerator::visit(SubscriptExpr& e) {
     e.object->accept(*this);
-    out << "[";
-    e.index->accept(*this);
-    out << "]";
+    for(Expr *i : e.indices) {
+        out << "[";
+        i->accept(*this);
+        out << "]";
+    }
 }
 
 void CppGenerator::visit(SequenceExpr& e) {
