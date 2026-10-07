@@ -139,8 +139,8 @@ Expr *Parser::parseExpression(Precedence mbp) {
 Expr *Parser::parse_primary() {
     switch(current().type) {
         case TT::IDENTIFIER:    return new IdentifierExpr( get() );
-        case TT::INTEGER:       return new IntNumberExpr( std::stoi(get().value) );
-        case TT::FLOAT:         return new DecimalNumberExpr( std::stod(get().value) );
+        case TT::INTEGER:       return new IntNumberExpr( get() );
+        case TT::FLOAT:         return new DecimalNumberExpr( get() );
         case TT::STRING:        return new StringExpr( get().value );
         case TT::CHAR:          return new CharExpr( get().value );
 
@@ -268,6 +268,13 @@ VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
     if( is(TT::ASSIGN) ) {
         get();
         init = parseExpression(Precedence::PREC_ASSIGNMENT);
+
+        if(!init) {
+            Token next = peek();
+            std::stringstream ss;
+            ss << "Error: Expected primary-expression before '" << next.value << "' at line: " << next.start.line << ", col: " << next.start.col << "\n";
+            throw ParseError(ss.str());
+        }
     }
 
     return new VariableDeclarator(name, init);
@@ -275,10 +282,9 @@ VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
 
 VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
     Token name = previous();
-
     std::vector<VariableDeclarator *> decls;
-    decls.push_back( parse_variable_declarator(name) );
 
+    decls.push_back( parse_variable_declarator(name) );
     while( is(TT::COMMA) ) {
         get();
         expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");

@@ -1,5 +1,3 @@
-//#include <iostream>
-//#include <exception>
 #include "../include/ast.h"
 
 void Program::accept(Visitor& v) {

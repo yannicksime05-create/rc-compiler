@@ -26,12 +26,12 @@ void Printer::visit(BoolExpr& e) {
 
 void Printer::visit(IntNumberExpr& e) {
     indent(); std::cout << "node type: IntegerLiteral,\n";
-    indent(); std::cout << "value: " << e.value << "\n";
+    indent(); std::cout << "value: " << e.raw_value.value << "\n";
 }
 
 void Printer::visit(DecimalNumberExpr& e) {
     indent(); std::cout << "node type: DecimalLiteral,\n";
-    indent(); std::cout << "value: " << e.value << "\n";
+    indent(); std::cout << "value: " << e.raw_value.value << "\n";
 }
 
 void Printer::visit(CharExpr& e) {

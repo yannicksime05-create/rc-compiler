@@ -278,40 +278,39 @@ void Lexer::scan_floating_point_part(Token& t, std::string& s) {
 }
 
 bool Lexer::scan_integer_suffix(Token& t, std::string& s) {
-    bool suffix_u = false, suffix_l = false, suffix_ll = false, suffix_ul = false, suffix_ull = false, first = true;
+    //Valid suffixes: (none), u, l, o, s, ul, uo, us.
+    //i.e. an optional 'u' (unsigned) followed by at most one width marker:
+    //'l' (long), 'o' (byte, as in "octet"), or 's' (short). Plain 'int' has no width marker.
+    //'o' was picked over 'b' for byte because 'b' is also a valid hex digit, so a trailing
+    //'b' right after a hex literal would get consumed as part of the hex digits
+    //instead of being read as a suffix.
+    bool suffix_u = false, has_width = false;
 
-    char next = input.peek(), first_suffix;
-    while( next == 'u' || next == 'U' || next == 'l' || next == 'L' ) {
+    char next = std::tolower(input.peek()); //first_suffix;
+    while( next == 'u' || next == 'U' || next == 'l' || next == 'L' ||
+           next == 'o' || next == 'O' || next == 's' || next == 'S' ) {
         c = static_cast<char>(get());
+        char lc = std::tolower(c);
 
-        if(first) {
-            first = false;
-            first_suffix = std::tolower(c);
-        }
-
-
-        if( first_suffix == 'u' ) {
-            if(!suffix_u)                                               suffix_u = true;
-            else if(suffix_u && std::tolower(c) == 'l' && !suffix_ul)   suffix_ul = true;
-            else if(suffix_ul && std::tolower(c) == 'l' && !suffix_ull) suffix_ull = true;
-            else {
-                s += c;
-                error(t, s, "Unknown suffix");
-                return false;
-            }
-        }
-
-
-        else if( first_suffix == 'l' ) {
-            if(!suffix_l)                                               suffix_l = true;
-            else if(suffix_l && !suffix_ll)                             suffix_ll = true;
-            else if(suffix_ll && std::tolower(c) == 'u' && !suffix_ull) suffix_ull = true;
-            else {
+        if(lc == 'u') {
+            //'u' must come first, and only once (reject "uu", "lu", "ou", "su").
+            if(suffix_u || has_width) {
                 s += c;
                 error(t, s, "Unknown suffix");
                 return false;
             }
 
+            suffix_u = true;
+        }
+        else {
+            //'l', 'o', or 's': only one width marker allowed (reject "ll", "os", etc.).
+            if(has_width) {
+                s += c;
+                error(t, s, "Unknown suffix");
+                return false;
+            }
+
+            has_width = true;
         }
 
         s += c;

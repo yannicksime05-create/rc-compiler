@@ -38,13 +38,17 @@ class CppGenerator : public Visitor {
         }
 
         switch(t.type_name.type) {
-            case TT::KW_ANY:        s += "std::any";         break;
-            case TT::KW_AUTO:       s += "auto";             break;
-            case TT::KW_BOOL:       s += "bool";             break;
-            case TT::KW_CHAR:       s += "char";             break;
-            case TT::KW_DOUBLE:     s += "double";           break;
-            case TT::KW_FLOAT:      s += "float";            break;
-            case TT::KW_INT:        s += "int";              break;
+            case TT::KW_ANY:        s += "std::any";        break;
+            case TT::KW_AUTO:       s += "auto";            break;
+            case TT::KW_BOOL:       s += "bool";            break;
+            case TT::KW_BYTE:       s += "int8_t";          break;
+            case TT::KW_CHAR:       s += "char";            break;
+            case TT::KW_DOUBLE:     s += "double";          break;
+            case TT::KW_FLOAT:      s += "float";           break;
+            case TT::KW_INT:        s += "int";             break;
+            case TT::KW_LONG:       s += "long long";       break;
+//            case TT::KW_QUAD:       s += "";                break;
+            case TT::KW_SHORT:      s += "short";           break;
             case TT::KW_STRING: {
                 if(is_function_parameter)
                     s += "std::string&";
@@ -53,8 +57,12 @@ class CppGenerator : public Visitor {
 
                 break;
             }
-            case TT::KW_VOID:       s += "void";             break;
-            default:                s += t.type_name.value;  break;
+            case TT::KW_UBYTE:      s += "uint8_t";         break;
+            case TT::KW_UINT:       s += "uint32_t";        break;
+            case TT::KW_USHORT:     s += "uint16_t";        break;
+            case TT::KW_ULONG:      s += "uint64_t";        break;
+            case TT::KW_VOID:       s += "void";            break;
+            default:                s += t.type_name.value; break;
         }
 
         if(is_vector) {
@@ -87,28 +95,10 @@ class CppGenerator : public Visitor {
         out << ") ";
     }
 
-    void translate_function_prototype(const FunctionPrototype *proto) {
-        out << map_type(proto->return_type) << " " << proto->function_name.value << "(";
-        is_function_parameter = true;
-        for(size_t i = 0; i < proto->parameters.size(); ++i) {
-            Parameter *p = proto->parameters[i];
-
-            out << map_type(p->type_name) << " " << p->parameter_name.value;
-            if(p->default_value) {
-                out << " = ";
-                p->default_value->accept(*this);
-            }
-
-            if(i + 1 < proto->parameters.size()) out << ", ";
-        }
-        is_function_parameter = false;
-        out << ") ";
-    }
-
 public:
     std::string generate(Program& p) {
         out.str("");
-        out << "#include <iostream>\n#include \"include/string_overloads.h\"\n#include <array>\n#include <any>\n\n";
+        out << "#include <iostream>\n#include <cstdint>\n#include <array>\n#include <any>\n#include \"include/string_overloads.h\"\n\n";
         visit(p);
         return out.str();
     }

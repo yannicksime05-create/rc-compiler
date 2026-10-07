@@ -1,8 +1,6 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-//#include <vector>
-
 enum class TypeKind {
     BUILTIN,
     FUNCTION,
@@ -26,7 +24,9 @@ struct Type {
 struct BuiltinType : Type {
     enum class Types {
         BOOL,
-        INT, FLOAT,
+        INT8, INT16, INT32, INT64,
+        UINT8, UINT16, UINT32, UINT64,
+        FLOAT32, FLOAT64, //FLOAT128, dealing with c++ __float128 is hard so we leave this out for now.
         CHAR, STRING,
         VOID
     };
@@ -36,7 +36,6 @@ struct BuiltinType : Type {
     BuiltinType(Types b, bool c = false) : Type(TypeKind::BUILTIN, c), builtin(b) {}
 
     BuiltinType *clone() const override { return new BuiltinType(*this); }
-
 
     ~BuiltinType() {}
 };

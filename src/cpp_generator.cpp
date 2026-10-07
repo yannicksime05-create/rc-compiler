@@ -17,11 +17,20 @@ void CppGenerator::visit(BoolExpr& e) {
 }
 
 void CppGenerator::visit(IntNumberExpr& e) {
-    out << e.value;
+    const std::string& suffix = e.suffix;
+    size_t n = e.raw_value.value.size() - suffix.size();
+
+    std::string s = e.raw_value.value.substr(0, n);
+    out << s;
+
+    // c++ doesn't know these suffixes
+    if(suffix == "o" || suffix == "s" || suffix == "uo" || suffix == "us") return;
+
+    out << suffix;
 }
 
 void CppGenerator::visit(DecimalNumberExpr& e) {
-    out << e.value;
+    out << e.raw_value.value;
 }
 
 void CppGenerator::visit(CharExpr& e) {

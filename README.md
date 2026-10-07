@@ -38,7 +38,8 @@ adding a new pass over the AST just means writing a new `Visitor` subclass.
 
 ### Types
 `int`, `float`, `double`, `bool`, `string`, `void`, `auto`, `any` (backed by
-`std::any` in the generated C++). Arrays are declared with a fixed size per
+`std::any` in the generated C++), plus a set of fixed-size integer types — see
+[Numeric types](#numeric-types) below. Arrays are declared with a fixed size per
 dimension:
 
 ```rc
@@ -74,6 +75,91 @@ multi-label cases like `case 1, 2, 3:`), `while`, `do...while`, `for`, `break`, 
 
 `print(...)` supports a format-string form validated at semantic-analysis time by
 counting `{}` placeholders against the number of arguments - see the [print](#print-placeholders-must-match) section below.
+
+## Numeric types
+
+Beyond plain `int`/`float`/`double`, rc has a set of fixed-size integer types. They're
+meant to map onto a predictable, fixed-width C++ type each — no platform-dependent
+sizing:
+
+| rc type  | C++ type   | Signedness |
+|----------|------------|------------|
+| `byte`   | `int8_t`   | signed     |
+| `short`  | `short`    | signed     |
+| `int`    | `int`      | signed     |
+| `long`   | `long long`| signed     |
+| `ubyte`  | `uint8_t`  | unsigned   |
+| `ushort` | `uint16_t` | unsigned   |
+| `uint`   | `uint32_t` | unsigned   |
+| `ulong`  | `uint64_t` | unsigned   |
+
+### Suffixes
+ 
+Integer literals can carry a suffix that fixes which type the literal itself is. The
+pattern is an optional `u` (unsigned) followed by at most one width marker —
+`l` (long), `o` (byte, as in "octet"), or `s` (short); no width marker means `int`:
+
+| Suffix     | Literal's type |
+|------------|-----------------|
+| *(none)*   | `int`    |
+| `l`        | `long`   |
+| `o`        | `byte`   |
+| `s`        | `short`  |
+| `u`        | `uint`   |
+| `ul`       | `ulong`  |
+| `uo`       | `ubyte`  |
+| `us`       | `ushort` |
+ 
+```rc
+int a = 10;
+long b = 10000000000l;
+byte c = 5o;
+short d = 1000s;
+ 
+uint e = 42u;
+ulong f = 10000000000ul;
+ubyte g = 200uo;
+ushort h = 50000us;
+```
+ 
+Anything else (`lu`, `os`, `uu`, …) is rejected at the lexer level with an "Unknown
+suffix" error — `u` has to come first, and only one width marker is allowed.
+ 
+`o` was picked over the more obvious `b` specifically to dodge a conflict: hex digits
+already include `a`–`f`, so a trailing `b` right after a hex literal (e.g. `0x10b`)
+would get consumed as part of the hex digits rather than read as a suffix, with no
+way to syntactically separate them. `o` isn't a hex digit, so it doesn't have that
+problem.
+
+### Planned: 128-bit types
+
+A 128-bit integer and a 128-bit float are expected to be added later, with a
+dedicated literal suffix — `q` — for the float128 literal (e.g. `1.5q`). Neither
+exists yet: standard C++ has no built-in 128-bit float and no portable built-in
+128-bit integer either, so both need more work before they can transpile cleanly.
+Of the two, float128 has at least some commented-out scaffolding already in
+`type_checker.cpp` (a `BT::FLOAT128` enum value, a `KW_QUAD` keyword resolving to it,
+and `"quad"` as its printed name) — so `quad` looks like the intended keyword, though
+nothing is wired up yet. 128-bit integers have no trace in the code at all so far.
+
+### Signed/unsigned mixing is an error
+
+Mixing a signed and an unsigned numeric type is rejected for the arithmetic operators
+`+ - * /` and the bitwise operators `& | ^ << >>`, all of which share a `promote()`
+helper that checks signedness:
+ 
+```rc
+int a = -1;
+ulong b = 1ul;
+ 
+a + b;    // error: can't mix a signed operand (int) with an unsigned one (ulong)
+```
+ 
+This check isn't applied everywhere yet, though: comparisons (`< <= > >= == !=`),
+`%`, and assignment / compound-assignment (`= += -= *= /=` …) don't go through
+`promote()`, so they don't currently catch the same mismatch —
+`ulong x = -1;` or comparing a `long` against a `ulong` with `==` will both pass
+without complaint today.
 
 ## String operators
 
@@ -194,7 +280,7 @@ body doesn't `break`, execution falls through into the next clause.
 
 ## Example
 
-`transpilation_test.rc`:
+`test.rc`:
 ```rc
 void greet(const string s) {
   print("Hi {}!\n", s);
@@ -238,8 +324,10 @@ int main() {
 generates `out.cpp`:
 ```cpp
 #include <iostream>
-#include "include/string_overloads.h"
+#include <cstdint>
+#include <array>
 #include <any>
+#include "include/string_overloads.h"
 
 void greet(const std::string& s) {
     std::cout << "Hi " << s << "!\n";
