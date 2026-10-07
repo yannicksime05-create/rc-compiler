@@ -287,19 +287,21 @@ struct MemberAccessExpr : Expr {
 
 struct SubscriptExpr : Expr {
     Expr *object = nullptr;
-    Expr *index = nullptr;
+    std::vector<Expr *> indices;
     //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
-    SubscriptExpr(Expr *o, Expr *i) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), index(i) {}
+    SubscriptExpr(Expr *o, const std::vector<Expr *>& idx) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), indices(idx) {}
 
     void accept(Visitor& v) override;
 
     ~SubscriptExpr() {
         delete object;
         object = nullptr;
-        delete index;
-        index = nullptr;
+        for(const Expr *i : indices) {
+            delete i;
+            i = nullptr;
+        }
 
         std::cout << "Cleaned up SubscriptExpr node...\n";
     }

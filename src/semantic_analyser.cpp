@@ -292,28 +292,36 @@ bool SemanticAnalyser::unaryexpr_tiny_constant_folder(Expr *e, int& v) {
 
 void SemanticAnalyser::visit(SubscriptExpr& e) {
     if(e.object) e.object->accept(*this);
-    if(e.index)  e.index->accept(*this);
+    for(Expr *i : e.indices) if(i) i->accept(*this);
 
-    const Type *obj_type = e.object->resolved_type;
+    const Type *current_obj_type = e.object->resolved_type;
     std::stringstream ss;
-    if(!checker.is_array(obj_type)) {
-        ss << "Error: Subscript operator '[]' requires an array type, found '" << checker.to_string(obj_type) << "' instead!";
-        throw SemanticError(ss.str());
+
+    for(size_t i = 0; i < e.indices.size(); ++i) {
+        if(!checker.is_array(current_obj_type)) {
+            ss << "Error: Too many indices in subscript — '" << checker.to_string(e.object->resolved_type)
+               << "' only has " << i << " dimension(s), but " << e.indices.size() << " were provided.";
+            throw SemanticError(ss.str());
+        }
+
+        const Type *index_type = e.indices[i]->resolved_type;
+        if(!checker.is_integral(index_type)) {
+            ss << "Error: Array index must be an integer, found '" << checker.to_string(index_type) << "' instead!";
+            throw SemanticError(ss.str());
+        }
+
+        const ArrayType *arr_type = checker.to_array(current_obj_type);
+
+        int index, length = arr_type->size;
+        if( unaryexpr_tiny_constant_folder(e.indices[i], index) && (index < 0 || index >= length) ) {
+            ss << "Error: Index out of bounds!";
+            throw SemanticError(ss.str());
+        }
+
+        current_obj_type = arr_type->element_type;
     }
 
-    const Type *index_type = e.index->resolved_type;
-    if(!checker.is_integral(index_type)) {
-        ss << "Error: Array index must be an integer, found '" << checker.to_string(index_type) << "' instead!";
-        throw SemanticError(ss.str());
-    }
-
-    int index, length = static_cast<const ArrayType*>(obj_type)->size;
-    if( unaryexpr_tiny_constant_folder(e.index, index) && (index < 0 || index >= length) ) {
-        ss << "Error: Index out of bounds!";
-        throw SemanticError(ss.str());
-    }
-
-    e.resolved_type = static_cast<const ArrayType*>(obj_type)->element_type->clone();
+    e.resolved_type = current_obj_type->clone();
     std::cout << "subscript expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 

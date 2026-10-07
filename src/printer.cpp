@@ -139,9 +139,9 @@ void Printer::visit(SubscriptExpr& e) {
     indent(); std::cout << "object: {\n";
     exprs_printer_helper(e.object);
     indent(); std::cout << "}\n";
-    indent(); std::cout << "index: {\n";
-    exprs_printer_helper(e.index);
-    indent(); std::cout << "}\n";
+    indent(); std::cout << "indices: [\n";
+    for(Expr *i : e.indices) exprs_printer_helper(i);
+    indent(); std::cout << "]\n";
 }
 
 void Printer::visit(SequenceExpr& e) {
