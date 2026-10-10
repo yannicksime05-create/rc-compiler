@@ -368,10 +368,10 @@ void Printer::visit(RangeForStmt& s) {
 void Printer::visit(ReturnStmt& s) {
     indent(); std::cout << "node type: ReturnStatement,\n";
     indent(); std::cout << "expression: ";
-    if(!s.expression) std::cout << "null\n";
+    if(!s.expr_stmt->expression) std::cout << "null\n";
     else {
         std::cout << "{\n";
-        exprs_printer_helper(s.expression);
+        exprs_printer_helper(s.expr_stmt->expression);
         indent(); std::cout << "}\n";
     }
 }

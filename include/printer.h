@@ -17,12 +17,16 @@ class Printer : public Visitor {
 
 
     void exprs_printer_helper(Expr *e) {
+        if(!e) return;
+
         nspace += tab_length;
         e->accept(*this);
         nspace -= tab_length;
     }
 
     void stmts_printer_helper(Stmt *s) {
+        if(!s) return;
+
         nspace += tab_length;
         s->accept(*this);
         nspace -= tab_length;

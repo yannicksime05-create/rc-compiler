@@ -224,7 +224,7 @@ void CppGenerator::visit(WhileStmt& s) {
 }
 
 void CppGenerator::visit(DoWhileStmt& s) {
-    out << "do(";
+    out << "do";
     s.body->accept(*this);
     out << "while(";
     s.condition->accept(*this);
@@ -255,11 +255,10 @@ void CppGenerator::visit(RangeForStmt& s) {}
 
 void CppGenerator::visit(ReturnStmt& s) {
     out << "return";
-    if(s.expression) {
+    if(s.expr_stmt) {
         out << " ";
-        s.expression->accept(*this);
+        s.expr_stmt->accept(*this);
     }
-    out << ";\n";
 }
 
 void CppGenerator::visit(PrintStmt& s) {

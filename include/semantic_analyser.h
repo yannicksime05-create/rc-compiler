@@ -48,7 +48,7 @@ class SemanticAnalyser : public Visitor {
         std::cerr << msg;
     }
 
-    void check_stmts_condition(Expr *condition, const Token& where);
+    void check_stmts_condition(Expr *condition, Location where);
 
 
 public:

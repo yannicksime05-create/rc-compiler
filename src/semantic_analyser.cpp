@@ -163,7 +163,7 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
     }
 
     Type *result = checker.resolve_assignment(target_type, value_type, e.op.type);
-    if(!result) throw SemanticError(checker.invalid_conversion(value_type, target_type, e.op));
+    if(!result) throw SemanticError(checker.invalid_conversion(value_type, target_type, e.op.start));
 
     e.resolved_type = result;
 //    std::cout << "assignment expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
@@ -322,7 +322,7 @@ void SemanticAnalyser::visit(SubscriptExpr& e) {
     }
 
     e.resolved_type = current_obj_type->clone();
-    std::cout << "subscript expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
+//    std::cout << "subscript expression's resolved type = " << checker.to_string(e.resolved_type) << "\n";
 }
 
 void SemanticAnalyser::visit(SequenceExpr& e) {
@@ -376,7 +376,7 @@ void SemanticAnalyser::visit(VariableDecl& d) {
                 at->resolved = init_type->clone();
             }
             else if(!checker.is_assignable(init_type, t)) {
-                throw SemanticError(checker.invalid_conversion(init_type, t, d.declared_type.type_name));
+                throw SemanticError(checker.invalid_conversion(init_type, t, d.start));
             }
         }
 
@@ -384,7 +384,6 @@ void SemanticAnalyser::visit(VariableDecl& d) {
         manager.insert(s);
         vd->symbol = s;
     }
-
 //    std::cout << "declared variable(s)' resolved type = " << checker.to_string(t) << "\n";
 }
 
@@ -398,15 +397,15 @@ void SemanticAnalyser::check_fn_return_types(Type *ret_type, const Token& fn_nam
 
     if(checker.is_auto(ret_type)) {
         bool has_error = false;
-        const Type *first_retstmt_type = current_function_return_stmts[0]->expression->resolved_type;
+        const Type *first_retstmt_type = current_function_return_stmts[0]->expr_stmt->expression->resolved_type;
 
         for(size_t i = 1; i < current_function_return_stmts.size(); ++i) {
             const ReturnStmt *stmt = current_function_return_stmts[i];
-            const Type *t = stmt->expression->resolved_type;
+            const Type *t = stmt->expr_stmt->expression->resolved_type;
 
             if( !checker.are_compatibles(t, first_retstmt_type) ) {
                 has_error = true;
-                error(checker.invalid_conversion(t, first_retstmt_type, stmt->location), false);
+                error(checker.invalid_conversion(t, first_retstmt_type, stmt->start), false);
             }
         }
 
@@ -497,7 +496,7 @@ void SemanticAnalyser::visit(DeclarationStmt& s) {
     s.declaration->accept(*this);
 }
 
-void SemanticAnalyser::check_stmts_condition(Expr *condition, const Token& where) {
+void SemanticAnalyser::check_stmts_condition(Expr *condition, Location where) {
     Type *cond_type = nullptr;
 
     if(condition) {
@@ -507,19 +506,19 @@ void SemanticAnalyser::check_stmts_condition(Expr *condition, const Token& where
 
     if( !checker.is_builtin(cond_type) ) {
         std::stringstream ss;
-        ss << "Error: Condition must be of a builtin type, found '" << checker.to_string(cond_type) << "'. Line: " << where.start.line << ".\n";
+        ss << "Error: Condition must be of a builtin type, found '" << checker.to_string(cond_type) << "'. Line: " << where.line << ".\n";
         throw SemanticError(ss.str());
     }
 
     if( !checker.is_bool(cond_type) && !checker.is_numeric(cond_type) ) {
         std::stringstream ss;
-        ss << "Error: Condition must be a numeric or boolean expression, found '" << checker.to_string(cond_type) << "'. Line: " << where.start.line << ".\n";
+        ss << "Error: Condition must be a numeric or boolean expression, found '" << checker.to_string(cond_type) << "'. Line: " << where.line << ".\n";
         throw SemanticError(ss.str());
     }
 }
 
 void SemanticAnalyser::visit(IfStmt& s) {
-    check_stmts_condition(s.condition, s.location);
+    check_stmts_condition(s.condition, s.start);
     if(s.then_statement)    s.then_statement->accept(*this);
     if(s.else_statement)    s.else_statement->accept(*this);
 }
@@ -535,7 +534,7 @@ void SemanticAnalyser::visit(SwitchStmt& s) {
 }
 
 void SemanticAnalyser::visit(WhileStmt& s) {
-    check_stmts_condition(s.condition, s.location);
+    check_stmts_condition(s.condition, s.start);
     ++loop_depth;
     if(s.body)      s.body->accept(*this);
     --loop_depth;
@@ -545,7 +544,7 @@ void SemanticAnalyser::visit(DoWhileStmt& s) {
     ++loop_depth;
     if(s.body)      s.body->accept(*this);
     --loop_depth;
-    check_stmts_condition(s.condition, s.location);
+    check_stmts_condition(s.condition, s.start);
 }
 
 void SemanticAnalyser::visit(ForStmt& s) {
@@ -559,6 +558,7 @@ void SemanticAnalyser::visit(ForStmt& s) {
     --loop_depth;
 
     manager.exit();
+    std::cout << "starts at line: " << s.start.line << ", col: " << s.start.col << ", ends at line: " << s.end.line << ", col: " << s.end.col << "\n";
 }
 
 void SemanticAnalyser::visit(RangeForStmt& s) {
@@ -572,25 +572,27 @@ void SemanticAnalyser::visit(RangeForStmt& s) {
 void SemanticAnalyser::visit(ReturnStmt& s) {
     std::stringstream ss;
     if(!is_function_scope) {
-        ss << "Can't return outside of a function! Line: " << s.location.start.line << "\n";
+        ss << "Can't return outside of a function! Line: " << s.start.line << "\n";
         throw SemanticError(ss.str());
     }
 
     const Type *fn_ret_type = current_function_symbol->declared_type;
-    if(s.expression) {
-        s.expression->accept(*this);
-        const Type *ret_type = s.expression->resolved_type;
+    if(s.expr_stmt->expression) {
+        s.expr_stmt->expression->accept(*this);
+        const Type *ret_type = s.expr_stmt->expression->resolved_type;
 
-        if(!checker.are_compatibles(ret_type, fn_ret_type)) throw SemanticError(checker.invalid_conversion(ret_type, fn_ret_type, s.location));
+        if(!checker.are_compatibles(ret_type, fn_ret_type)) throw SemanticError(checker.invalid_conversion(ret_type, fn_ret_type, s.start));
     }
     else {
         if(!checker.is_void(fn_ret_type)) {
-            ss << "Error: Missing return value in non-void function. Line: " << s.location.start.line << ".\n";
+            ss << "Error: Missing return value in non-void function. Line: " << s.start.line << ".\n";
             throw SemanticError(ss.str());
         }
     }
 
     current_function_return_stmts.push_back(&s);
+
+    std::cout << "starts at line: " << s.start.line << ", col: " << s.start.col << ", ends at line: " << s.end.line << ", col: " << s.end.col << "\n";
 }
 
 void SemanticAnalyser::visit(PrintStmt& s) {
@@ -627,7 +629,7 @@ void SemanticAnalyser::visit(PrintStmt& s) {
     //print("x = {", x);        wrong
     if(placeholders != expected_placeholders) {
         std::stringstream ss;
-        ss << "print: format string has " << placeholders << " placeholder(s) but " << expected_placeholders << " placeholder(s) were expected! Line: " << s.location.start.line << ".\n";
+        ss << "print: format string has " << placeholders << " placeholder(s) but " << expected_placeholders << " placeholder(s) were expected! Line: " << s.start.line << ".\n";
         throw SemanticError(ss.str());
     }
 
@@ -637,7 +639,7 @@ void SemanticAnalyser::visit(PrintStmt& s) {
 void SemanticAnalyser::visit(BreakStmt& s) {
     if(!loop_depth && !switch_depth) {
         std::stringstream ss;
-        ss << "Error: Can't break outside of loops of switch! Line: " << s.location.start.line << "\n";
+        ss << "Error: Can't break outside of loops of switch! Line: " << s.start.line << "\n";
         throw SemanticError(ss.str());
     }
 }
@@ -645,7 +647,7 @@ void SemanticAnalyser::visit(BreakStmt& s) {
 void SemanticAnalyser::visit(ContinueStmt& s) {
     if(!loop_depth) {
         std::stringstream ss;
-        ss << "Error: Continue statement not within a loop! Line: " << s.location.start.line << "\n";
+        ss << "Error: Continue statement not within a loop! Line: " << s.start.line << "\n";
         throw SemanticError(ss.str());
     }
 }

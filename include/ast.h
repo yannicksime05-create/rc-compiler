@@ -3,9 +3,15 @@
 
 #include <iostream>
 #include <vector>
-#include "token.h"
 #include "ast_base.h"
 #include "symbol.h"
+
+inline void set_start_and_end(ASTNode *n, Location s, Location e) {
+    if(!n) return;
+
+    n->start = s;
+    n->end = e;
+}
 
 /**
 *   We need Stmt inside FunctionDecl, and Decl inside DeclarationStmt,
@@ -64,7 +70,9 @@ struct Program : ASTNode {
 struct BoolExpr : Expr {
     bool value;
 
-    BoolExpr(bool v) : Expr(ASTNodeType::BOOL_LIT_NODE), value(v) {}
+    BoolExpr(const Token& loc) : Expr(ASTNodeType::BOOL_LIT_NODE), value(loc.type == TokenType::KW_TRUE) {
+        set_start_and_end(this, loc.start, loc.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -80,6 +88,8 @@ struct IntNumberExpr : Expr {
 
     // NOTE: value in only needed in array bounds check in the analyser, so setting it here is probably not necessary.
     IntNumberExpr(const Token& rv) : Expr(ASTNodeType::INT_LIT_NODE), raw_value(rv) {
+        set_start_and_end(this, rv.start, rv.end);
+
         std::string prefix;
         int base = 10;
 
@@ -105,7 +115,9 @@ struct DecimalNumberExpr : Expr {
     Token raw_value;
     double value;
 
-    DecimalNumberExpr(const Token& rv) : Expr(ASTNodeType::DECIMAL_LIT_NODE), raw_value(rv), value( std::stod(rv.value) ) {}
+    DecimalNumberExpr(const Token& rv) : Expr(ASTNodeType::DECIMAL_LIT_NODE), raw_value(rv), value( std::stod(rv.value) ) {
+        set_start_and_end(this, rv.start, rv.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -117,7 +129,9 @@ struct DecimalNumberExpr : Expr {
 struct CharExpr : Expr {
     std::string value;   // raw content between the quotes — 1 char, or a 2-char escape like \n
 
-    CharExpr(const std::string& v) : Expr(ASTNodeType::CHAR_LIT_NODE), value(v) {}
+    CharExpr(const Token& loc) : Expr(ASTNodeType::CHAR_LIT_NODE), value(loc.value) {
+        set_start_and_end(this, loc.start, loc.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -129,7 +143,9 @@ struct CharExpr : Expr {
 struct StringExpr : Expr {
     std::string value;
 
-    StringExpr(const std::string& v) : Expr(ASTNodeType::STRING_LIT_NODE), value(v) {}
+    StringExpr(const Token& loc) : Expr(ASTNodeType::STRING_LIT_NODE), value(loc.value) {
+        set_start_and_end(this, loc.start, loc.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -141,7 +157,9 @@ struct StringExpr : Expr {
 struct ArrayLiteralExpr : Expr {
     std::vector<Expr *> elements;
 
-    ArrayLiteralExpr(const std::vector<Expr *>& e) : Expr(ASTNodeType::ARRAY_LIT_NODE), elements(e) {}
+    ArrayLiteralExpr(const std::vector<Expr *>& e, const Token& op_bracket, const Token& cl_bracket) : Expr(ASTNodeType::ARRAY_LIT_NODE), elements(e) {
+        set_start_and_end(this, op_bracket.start, cl_bracket.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -160,7 +178,9 @@ struct IdentifierExpr : Expr {
     //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
-    IdentifierExpr(const Token& n) : Expr(ASTNodeType::IDENTIFIER_EXPR_NODE), name(n) {}
+    IdentifierExpr(const Token& n) : Expr(ASTNodeType::IDENTIFIER_EXPR_NODE), name(n) {
+        set_start_and_end(this, n.start, n.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -174,8 +194,9 @@ struct BinaryExpr : Expr {
     Token op;
     Expr* right = nullptr;
 
-    BinaryExpr(Expr* l, const Token& o, Expr* r)
-        : Expr(ASTNodeType::BINARY_EXPR_NODE), left(l), op(o), right(r) {}
+    BinaryExpr(Expr* l, const Token& o, Expr* r) : Expr(ASTNodeType::BINARY_EXPR_NODE), left(l), op(o), right(r) {
+        if(l && r) set_start_and_end(this, l->start, r->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -193,7 +214,13 @@ struct UnaryExpr : Expr {
     Token op;
     Expr *expr = nullptr;
 
-    UnaryExpr(const Token& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {}
+    UnaryExpr(const Token& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {
+        if(e) {
+            if(p) set_start_and_end(this, o.start, e->end);
+            else  set_start_and_end(this, e->start, o.end);
+        }
+        else      set_start_and_end(this, o.start, o.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -209,7 +236,9 @@ struct AssignmentExpr : Expr {
     Token op;                       // "=" or "+=", "-=", etc.
     Expr* value = nullptr;         // the right-hand side expression
 
-    AssignmentExpr(Expr* t, const Token& o, Expr* v) : Expr(ASTNodeType::ASSIGNMENT_EXPR_NODE), target(t), op(o), value(v) {}
+    AssignmentExpr(Expr* t, const Token& o, Expr* v) : Expr(ASTNodeType::ASSIGNMENT_EXPR_NODE), target(t), op(o), value(v) {
+        if(t && v) set_start_and_end(this, t->start, v->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -227,8 +256,9 @@ struct ConditionalExpr : Expr {
     Expr *if_true = nullptr;
     Expr *if_false = nullptr;
 
-    ConditionalExpr(Expr *c, Expr *t, Expr *f)
-        : Expr(ASTNodeType::CONDITIONAL_EXPR_NODE), condition(c), if_true(t), if_false(f) {}
+    ConditionalExpr(Expr *c, Expr *t, Expr *f) : Expr(ASTNodeType::CONDITIONAL_EXPR_NODE), condition(c), if_true(t), if_false(f) {
+        if(c && f) set_start_and_end(this, c->start, f->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -250,8 +280,9 @@ struct CallExpr : Expr {
     //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
-    CallExpr(Expr *c, const std::vector<Expr *>& args = std::vector<Expr *>())
-        : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {}
+    CallExpr(Expr *c, const std::vector<Expr *>& args, const Token& cl_brace) : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {
+        if(c) set_start_and_end(this, c->start, cl_brace.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -267,13 +298,16 @@ struct CallExpr : Expr {
     }
 };
 
+//a.method
 struct MemberAccessExpr : Expr {
     Expr *object = nullptr;
     Token member;
     //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
-    MemberAccessExpr(Expr *obj, const Token& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {}
+    MemberAccessExpr(Expr *obj, const Token& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {
+        if(obj) set_start_and_end(this, obj->start, m.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -291,7 +325,9 @@ struct SubscriptExpr : Expr {
     //Non-owning, so never call delete on it.
     Symbol *symbol = nullptr;
 
-    SubscriptExpr(Expr *o, const std::vector<Expr *>& idx) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(o), indices(idx) {}
+    SubscriptExpr(Expr *obj, const std::vector<Expr *>& idx, const Token& cl_bracket) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(obj), indices(idx) {
+        if(obj) set_start_and_end(this, obj->start, cl_bracket.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -337,8 +373,7 @@ struct TypeSpecifier {
     Token type_name;
     std::vector<int> dimension;     //when int[size][size]
 
-    TypeSpecifier(const std::vector<std::string>& qlfs, const Token& t, const std::vector<int>& dims)
-        : qualifiers(qlfs), type_name(t), dimension(dims) {}
+    TypeSpecifier(const std::vector<std::string>& qlfs, const Token& t, const std::vector<int>& dims) : qualifiers(qlfs), type_name(t), dimension(dims) {}
 
 };
 
@@ -363,8 +398,9 @@ struct VariableDecl : Decl {
     TypeSpecifier declared_type;
     std::vector<VariableDeclarator *> declarations;
 
-    VariableDecl(const TypeSpecifier& t, const std::vector<VariableDeclarator *>& decls)
-        : Decl(ASTNodeType::VAR_DECL_NODE), declared_type(t), declarations(decls) {}
+    VariableDecl(const TypeSpecifier& t, const std::vector<VariableDeclarator *>& decls, const Token& sc = {}) : Decl(ASTNodeType::VAR_DECL_NODE), declared_type(t), declarations(decls) {
+        set_start_and_end(this, declared_type.type_name.start, sc.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -384,7 +420,9 @@ struct VariableDecl : Decl {
 struct CompoundStmt : Stmt {
     std::vector<Stmt *> statements;
 
-    CompoundStmt(const std::vector<Stmt *>& s) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {}
+    CompoundStmt(const std::vector<Stmt *>& s, const Token& op_brace, const Token& cl_brace) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {
+        set_start_and_end(this, op_brace.start, cl_brace.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -404,7 +442,7 @@ struct Parameter {
     Expr *default_value = nullptr;
     Symbol *symbol = nullptr;
 
-    Parameter(const TypeSpecifier& t, const Token& n, Expr *dv = nullptr) : type_name(t), parameter_name(n), default_value(dv) {}
+    Parameter(const TypeSpecifier& t, const Token& n, Expr *dv) : type_name(t), parameter_name(n), default_value(dv) {}
 
     ~Parameter() {
         delete default_value;
@@ -439,7 +477,9 @@ struct FunctionDecl : Decl {
     CompoundStmt *body = nullptr;
     Symbol *symbol = nullptr;
 
-    FunctionDecl(FunctionPrototype *proto, CompoundStmt *b) : Decl(ASTNodeType::FUNC_DECL_NODE), prototype(proto), body(b) {}
+    FunctionDecl(FunctionPrototype *proto, CompoundStmt *b) : Decl(ASTNodeType::FUNC_DECL_NODE), prototype(proto), body(b) {
+        if(proto && b) set_start_and_end(this, proto->return_type.type_name.start, b->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -465,7 +505,10 @@ struct FunctionDecl : Decl {
 struct ExpressionStmt : Stmt {
     Expr *expression = nullptr;
 
-    ExpressionStmt(Expr *e) : Stmt(ASTNodeType::EXPR_STMT_NODE), expression(e) {}
+    ExpressionStmt(Expr *e, const Token& sc) : Stmt(ASTNodeType::EXPR_STMT_NODE), expression(e) {
+        if(e) set_start_and_end(this, e->start, sc.end);
+        else  set_start_and_end(this, sc.start, sc.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -480,7 +523,9 @@ struct ExpressionStmt : Stmt {
 struct DeclarationStmt : Stmt {
     Decl *declaration = nullptr;
 
-    DeclarationStmt(Decl *d) : Stmt(ASTNodeType::DECL_STMT_NODE), declaration(d) {}
+    DeclarationStmt(Decl *d) : Stmt(ASTNodeType::DECL_STMT_NODE), declaration(d) {
+        set_start_and_end(this, declaration->start, declaration->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -493,13 +538,14 @@ struct DeclarationStmt : Stmt {
 };
 
 struct IfStmt : Stmt {
-    Token location;
     Expr *condition = nullptr;
     Stmt *then_statement = nullptr;
     Stmt *else_statement = nullptr;
 
-    IfStmt(const Token& loc, Expr *c, Stmt *t = nullptr, Stmt *e = nullptr)
-        : Stmt(ASTNodeType::IF_STMT_NODE), location(loc), condition(c), then_statement(t), else_statement(e) {}
+    IfStmt(const Token& kw, Expr *c, Stmt *t = nullptr, Stmt *e = nullptr) : Stmt(ASTNodeType::IF_STMT_NODE), condition(c), then_statement(t), else_statement(e) {
+        if(!e) set_start_and_end(this, kw.start, t->end);
+        else   set_start_and_end(this, kw.start, e->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -539,7 +585,9 @@ struct SwitchStmt : Stmt {
     Expr *pattern = nullptr;
     std::vector<CaseClause *> cases;
 
-    SwitchStmt(Expr *p, const std::vector<CaseClause *>& c) : Stmt(ASTNodeType::SWITCH_STMT_NODE), pattern(p), cases(c) {}
+    SwitchStmt(const Token& kw, Expr *p, const std::vector<CaseClause *>& c, const Token& cl_brace) : Stmt(ASTNodeType::SWITCH_STMT_NODE), pattern(p), cases(c) {
+        set_start_and_end(this, kw.start, cl_brace.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -556,11 +604,12 @@ struct SwitchStmt : Stmt {
 };
 
 struct WhileStmt : Stmt {
-    Token location;
     Expr *condition = nullptr;
     Stmt *body = nullptr;
 
-    WhileStmt(const Token& loc, Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), location(loc), condition(c), body(b) {}
+    WhileStmt(const Token& kw, Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), condition(c), body(b) {
+        if(c && b) set_start_and_end(this, kw.start, b->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -575,11 +624,12 @@ struct WhileStmt : Stmt {
 };
 
 struct DoWhileStmt : Stmt {
-    Token location;
     Stmt *body = nullptr;
     Expr *condition = nullptr;
 
-    DoWhileStmt(const Token& loc, Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), location(loc), body(b), condition(c) {}
+    DoWhileStmt(const Token& kw, const Token& sc, Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), body(b), condition(c) {
+        if(b && c) set_start_and_end(this, kw.start, sc.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -594,14 +644,14 @@ struct DoWhileStmt : Stmt {
 };
 
 struct ForStmt : Stmt {
-//    Token condition_loc;
     Stmt *initialization = nullptr;
     Expr *condition = nullptr;
     Expr *increment = nullptr;
     Stmt *body = nullptr;
 
-    ForStmt(Stmt *init, Expr *c, Expr *incr, Stmt *b)
-        : Stmt(ASTNodeType::FOR_STMT_NODE), initialization(init), condition(c), increment(incr), body(b) {}
+    ForStmt(const Token& kw, Stmt *init, Expr *c, Expr *incr, Stmt *b) : Stmt(ASTNodeType::FOR_STMT_NODE), initialization(init), condition(c), increment(incr), body(b) {
+        if(b) set_start_and_end(this, kw.start, b->end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -642,31 +692,32 @@ struct RangeForStmt : Stmt {
 };
 
 struct ReturnStmt : Stmt {
-    //We need this for the SemanticAnalyser when reporting an error on a ReturnStmt found outside of a function.
-    Token location;
-    Expr *expression = nullptr;
+    ExpressionStmt *expr_stmt = nullptr;
 
-    ReturnStmt(const Token& t, Expr *e = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), location(t), expression(e) {}
+    ReturnStmt(const Token& kw, ExpressionStmt *s = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), expr_stmt(s) {
+        set_start_and_end(this, kw.start, expr_stmt->end);
+    }
 
     void accept(Visitor& v) override;
 
     ~ReturnStmt() {
-        delete expression;
-        expression = nullptr;
+        delete expr_stmt;
+        expr_stmt = nullptr;
 
         std::cout << "Cleaned up ReturnStmt node...\n";
     }
 };
 
 struct PrintStmt : Stmt {
-    Token location;
     std::vector<Expr*> expressions;
 
     //The cpp generator needs these. They're set by the semantic analyser.
-    bool has_fmt = false;           //true when the first expressions is a string specifying the format.
-    int nb_placeholders;            //this should be equal to expressions.size() - 1 if has_fmt = true.
+    bool has_fmt = false;               //true when the first expressions is a string specifying the format.
+    int nb_placeholders = 0;            //this should be equal to expressions.size() - 1 if has_fmt = true.
 
-    PrintStmt(const Token& loc, const std::vector<Expr*>& exprs) : Stmt(ASTNodeType::PRINT_STMT_NODE), location(loc), expressions(exprs) {}
+    PrintStmt(const Token& kw, const std::vector<Expr*>& exprs, const Token& sc) : Stmt(ASTNodeType::PRINT_STMT_NODE), expressions(exprs) {
+        set_start_and_end(this, kw.start, sc.end);
+    }
 
     void accept(Visitor& v) override;
 
@@ -681,9 +732,9 @@ struct PrintStmt : Stmt {
 };
 
 struct BreakStmt : Stmt {
-    Token location;
-
-    BreakStmt(const Token& loc) : Stmt(ASTNodeType::BREAK_STMT_NODE) {}
+    BreakStmt(const Token& kw) : Stmt(ASTNodeType::BREAK_STMT_NODE) {
+        set_start_and_end(this, kw.start, {kw.end.col + 1, kw.end.line});
+    }
 
     void accept(Visitor& v) override;
 
@@ -693,9 +744,9 @@ struct BreakStmt : Stmt {
 };
 
 struct ContinueStmt : Stmt {
-    Token location;
-
-    ContinueStmt(const Token& loc) : Stmt(ASTNodeType::CONTINUE_STMT_NODE) {}
+    ContinueStmt(const Token& kw) : Stmt(ASTNodeType::CONTINUE_STMT_NODE) {
+        set_start_and_end(this, kw.start, {kw.end.col + 1, kw.end.line});
+    }
 
     void accept(Visitor& v) override;
 

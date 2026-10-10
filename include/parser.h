@@ -43,7 +43,14 @@ class Parser {
     size_t pos;
 
 
-    Token& peek(size_t n = 1) { return (pos + n >= tokens.size()) ? tokens.back() : tokens[pos + n]; }
+    Token& peek(size_t n = 1) {
+        size_t i = pos + n;
+
+        if(i <= 0)                  return tokens.front();
+        else if(i >= tokens.size()) return tokens.back();
+
+        return tokens[i];
+    }
 
     Token& get() { return (pos >= tokens.size()) ? tokens.back() : tokens[pos++]; }
 
@@ -54,7 +61,7 @@ class Parser {
     *   - we need to do an expect() (so that the program stops if there is an error),
     *   - but we also need to recover the skipped token if there were no errors.
     */
-    Token& previous() { return tokens.at(pos - 1); }
+    Token& previous() { return peek(-1); }
 
     void expect(TokenType t, const std::string& error_msg) {
         if( !is(t) ) {
@@ -96,7 +103,8 @@ class Parser {
             case TT::KW_UBYTE:
             case TT::KW_UINT:
             case TT::KW_USHORT:
-            case TT::KW_ULONG:     return true;
+            case TT::KW_ULONG:
+            case TT::KW_VOID:      return true;
 
             default:               return false;
         }

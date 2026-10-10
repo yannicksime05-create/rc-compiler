@@ -513,9 +513,9 @@ std::string TypeChecker::type_mismatch(const Type *left, const Type *right, cons
     return ss.str();
 }
 
-std::string TypeChecker::invalid_conversion(const Type *from, const Type *to, const Token& where) {
+std::string TypeChecker::invalid_conversion(const Type *from, const Type *to, Location where) {
     std::stringstream ss;
-    ss << "Error: Invalid conversion from '" << to_string(from) << "' to '" << to_string(to) << "'. Line: " << where.start.line << "\n";
+    ss << "Error: Invalid conversion from '" << to_string(from) << "' to '" << to_string(to) << "'. Line: " << where.line << "\n";
 
     return ss.str();
 }

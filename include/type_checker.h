@@ -69,7 +69,7 @@ public:
 
     // --- Error messages
     std::string type_mismatch(const Type *left, const Type *right, const Token& op);
-    std::string invalid_conversion(const Type *from, const Type *to, const Token& where);
+    std::string invalid_conversion(const Type *from, const Type *to, Location where);
 };
 
 #endif // TYPECHECKER_H
