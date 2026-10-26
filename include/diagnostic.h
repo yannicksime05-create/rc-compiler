@@ -28,8 +28,8 @@ struct CompilationAborted : std::runtime_error {
 *         |             ^
 */
 class DiagnosticEngine {
-    std::string filename;
-    std::string source;
+    const std::string& filename;
+    const std::string& source;
     std::ostream& out;
     std::vector<size_t> lines_offsets;
 
