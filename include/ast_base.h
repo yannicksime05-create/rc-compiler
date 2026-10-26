@@ -28,8 +28,7 @@ class Visitor;
 
 struct ASTNode {
     ASTNodeType node_type;
-    Location start{};
-    Location end{};
+    SourceRange range{};
     virtual void accept(Visitor& v) = 0;
     virtual ~ASTNode() = default;
 };

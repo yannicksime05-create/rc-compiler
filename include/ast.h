@@ -6,11 +6,11 @@
 #include "ast_base.h"
 #include "symbol.h"
 
-inline void set_start_and_end(ASTNode *n, Location s, Location e) {
+inline void set_start_and_end(ASTNode *n, size_t s, size_t e) {
     if(!n) return;
 
-    n->start = s;
-    n->end = e;
+    n->range.begin = s;
+    n->range.end = e;
 }
 
 /**
@@ -60,7 +60,7 @@ struct Program : ASTNode {
             s = nullptr;
         }
 
-        std::cout << "Cleaned up Program node...\n";
+//        std::cout << "Cleaned up Program node...\n";
     }
 };
 
@@ -71,13 +71,13 @@ struct BoolExpr : Expr {
     bool value;
 
     BoolExpr(const Token& loc) : Expr(ASTNodeType::BOOL_LIT_NODE), value(loc.type == TokenType::KW_TRUE) {
-        set_start_and_end(this, loc.start, loc.end);
+        set_start_and_end(this, loc.range.begin, loc.range.end);
     }
 
     void accept(Visitor& v) override;
 
     ~BoolExpr() {
-        std::cout << "Cleaning up BoolExpr node...\n";
+//        std::cout << "Cleaning up BoolExpr node...\n";
     }
 };
 
@@ -88,26 +88,26 @@ struct IntNumberExpr : Expr {
 
     // NOTE: value in only needed in array bounds check in the analyser, so setting it here is probably not necessary.
     IntNumberExpr(const Token& rv) : Expr(ASTNodeType::INT_LIT_NODE), raw_value(rv) {
-        set_start_and_end(this, rv.start, rv.end);
+        set_start_and_end(this, rv.range.begin, rv.range.end);
 
-        std::string prefix;
-        int base = 10;
-
-        prefix += rv.value[0];
-        prefix += std::tolower(rv.value[1]);
-
-        if(prefix == "0b")      base = 2;
-        else if(prefix == "0o") base = 8;
-        else if(prefix == "0x") base = 16;
-
-
-        value = std::stoll(rv.value, nullptr, base);
+//        std::string prefix;
+//        int base = 10;
+//
+//        prefix += rv.value[0];
+//        prefix += std::tolower(rv.value[1]);
+//
+//        if(prefix == "0b")      base = 2;
+//        else if(prefix == "0o") base = 8;
+//        else if(prefix == "0x") base = 16;
+//
+//
+//        value = std::stoll(rv.value, nullptr, base);
     }
 
     void accept(Visitor& v) override;
 
     ~IntNumberExpr() {
-        std::cout << "Cleaning up IntNumberExpr node...\n";
+//        std::cout << "Cleaning up IntNumberExpr node...\n";
     }
 };
 
@@ -116,13 +116,13 @@ struct DecimalNumberExpr : Expr {
     double value;
 
     DecimalNumberExpr(const Token& rv) : Expr(ASTNodeType::DECIMAL_LIT_NODE), raw_value(rv), value( std::stod(rv.value) ) {
-        set_start_and_end(this, rv.start, rv.end);
+        set_start_and_end(this, rv.range.begin, rv.range.end);
     }
 
     void accept(Visitor& v) override;
 
     ~DecimalNumberExpr() {
-        std::cout << "Cleaning up DecimalNumberExpr node...\n";
+//        std::cout << "Cleaning up DecimalNumberExpr node...\n";
     }
 };
 
@@ -130,13 +130,13 @@ struct CharExpr : Expr {
     std::string value;   // raw content between the quotes — 1 char, or a 2-char escape like \n
 
     CharExpr(const Token& loc) : Expr(ASTNodeType::CHAR_LIT_NODE), value(loc.value) {
-        set_start_and_end(this, loc.start, loc.end);
+        set_start_and_end(this, loc.range.begin, loc.range.end);
     }
 
     void accept(Visitor& v) override;
 
     ~CharExpr() {
-        std::cout << "Cleaning up CharExpr node...\n";
+//        std::cout << "Cleaning up CharExpr node...\n";
     }
 };
 
@@ -144,13 +144,13 @@ struct StringExpr : Expr {
     std::string value;
 
     StringExpr(const Token& loc) : Expr(ASTNodeType::STRING_LIT_NODE), value(loc.value) {
-        set_start_and_end(this, loc.start, loc.end);
+        set_start_and_end(this, loc.range.begin, loc.range.end);
     }
 
     void accept(Visitor& v) override;
 
     ~StringExpr() {
-        std::cout << "Cleaning up StringExpr node...\n";
+//        std::cout << "Cleaning up StringExpr node...\n";
     }
 };
 
@@ -158,7 +158,7 @@ struct ArrayLiteralExpr : Expr {
     std::vector<Expr *> elements;
 
     ArrayLiteralExpr(const std::vector<Expr *>& e, const Token& op_bracket, const Token& cl_bracket) : Expr(ASTNodeType::ARRAY_LIT_NODE), elements(e) {
-        set_start_and_end(this, op_bracket.start, cl_bracket.end);
+        set_start_and_end(this, op_bracket.range.begin, cl_bracket.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -169,7 +169,7 @@ struct ArrayLiteralExpr : Expr {
             e = nullptr;
         }
 
-        std::cout << "Cleaning ArrayLiteralExpr node...\n";
+//        std::cout << "Cleaning ArrayLiteralExpr node...\n";
     }
 };
 
@@ -179,13 +179,13 @@ struct IdentifierExpr : Expr {
     Symbol *symbol = nullptr;
 
     IdentifierExpr(const Token& n) : Expr(ASTNodeType::IDENTIFIER_EXPR_NODE), name(n) {
-        set_start_and_end(this, n.start, n.end);
+        set_start_and_end(this, n.range.begin, n.range.end);
     }
 
     void accept(Visitor& v) override;
 
     ~IdentifierExpr() {
-        std::cout << "Cleaning up IdentifierExpr node...\n";
+//        std::cout << "Cleaning up IdentifierExpr node...\n";
     }
 };
 
@@ -195,7 +195,7 @@ struct BinaryExpr : Expr {
     Expr* right = nullptr;
 
     BinaryExpr(Expr* l, const Token& o, Expr* r) : Expr(ASTNodeType::BINARY_EXPR_NODE), left(l), op(o), right(r) {
-        if(l && r) set_start_and_end(this, l->start, r->end);
+        if(l && r) set_start_and_end(this, l->range.begin, r->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -205,7 +205,7 @@ struct BinaryExpr : Expr {
         left = nullptr;
         delete right;
         right = nullptr;
-        std::cout << "Cleaned up BinaryExpr node...\n";
+//        std::cout << "Cleaned up BinaryExpr node...\n";
     }
 };
 
@@ -216,10 +216,10 @@ struct UnaryExpr : Expr {
 
     UnaryExpr(const Token& o, Expr *e, bool p = true) : Expr(ASTNodeType::UNARY_EXP_NODE), is_prefix(p), op(o), expr(e) {
         if(e) {
-            if(p) set_start_and_end(this, o.start, e->end);
-            else  set_start_and_end(this, e->start, o.end);
+            if(p) set_start_and_end(this, o.range.begin, e->range.end);
+            else  set_start_and_end(this, e->range.begin, o.range.end);
         }
-        else      set_start_and_end(this, o.start, o.end);
+        else      set_start_and_end(this, o.range.begin, o.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -227,7 +227,7 @@ struct UnaryExpr : Expr {
     ~UnaryExpr() {
         delete expr;
         expr = nullptr;
-        std::cout << "Cleaned up UnaryExpr node...\n";
+//        std::cout << "Cleaned up UnaryExpr node...\n";
     }
 };
 
@@ -237,7 +237,7 @@ struct AssignmentExpr : Expr {
     Expr* value = nullptr;         // the right-hand side expression
 
     AssignmentExpr(Expr* t, const Token& o, Expr* v) : Expr(ASTNodeType::ASSIGNMENT_EXPR_NODE), target(t), op(o), value(v) {
-        if(t && v) set_start_and_end(this, t->start, v->end);
+        if(t && v) set_start_and_end(this, t->range.begin, v->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -247,7 +247,7 @@ struct AssignmentExpr : Expr {
         target = nullptr;
         delete value;
         value = nullptr;
-        std::cout << "Cleaned up AssignmentExpr node...\n";
+//        std::cout << "Cleaned up AssignmentExpr node...\n";
     }
 };
 
@@ -257,7 +257,7 @@ struct ConditionalExpr : Expr {
     Expr *if_false = nullptr;
 
     ConditionalExpr(Expr *c, Expr *t, Expr *f) : Expr(ASTNodeType::CONDITIONAL_EXPR_NODE), condition(c), if_true(t), if_false(f) {
-        if(c && f) set_start_and_end(this, c->start, f->end);
+        if(c && f) set_start_and_end(this, c->range.begin, f->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -270,7 +270,7 @@ struct ConditionalExpr : Expr {
         delete if_false;
         if_false = nullptr;
 
-        std::cout << "Cleaned up ConditionalExpr node...\n";
+//        std::cout << "Cleaned up ConditionalExpr node...\n";
     }
 };
 
@@ -281,7 +281,7 @@ struct CallExpr : Expr {
     Symbol *symbol = nullptr;
 
     CallExpr(Expr *c, const std::vector<Expr *>& args, const Token& cl_brace) : Expr(ASTNodeType::CALL_EXPR_NODE), callee(c), arguments(args) {
-        if(c) set_start_and_end(this, c->start, cl_brace.end);
+        if(c) set_start_and_end(this, c->range.begin, cl_brace.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -294,7 +294,7 @@ struct CallExpr : Expr {
             e = nullptr;
         }
 
-        std::cout << "Cleaned up CallExpr node...\n";
+//        std::cout << "Cleaned up CallExpr node...\n";
     }
 };
 
@@ -306,7 +306,7 @@ struct MemberAccessExpr : Expr {
     Symbol *symbol = nullptr;
 
     MemberAccessExpr(Expr *obj, const Token& m) : Expr(ASTNodeType::MEMBER_ACCESS_EXPR_NODE), object(obj), member(m) {
-        if(obj) set_start_and_end(this, obj->start, m.end);
+        if(obj) set_start_and_end(this, obj->range.begin, m.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -315,7 +315,7 @@ struct MemberAccessExpr : Expr {
         delete object;
         object = nullptr;
 
-        std::cout << "Cleaned up MemberAccessExpr node...\n";
+//        std::cout << "Cleaned up MemberAccessExpr node...\n";
     }
 };
 
@@ -326,7 +326,7 @@ struct SubscriptExpr : Expr {
     Symbol *symbol = nullptr;
 
     SubscriptExpr(Expr *obj, const std::vector<Expr *>& idx, const Token& cl_bracket) : Expr(ASTNodeType::SUBSCRIPT_EXPR_NODE), object(obj), indices(idx) {
-        if(obj) set_start_and_end(this, obj->start, cl_bracket.end);
+        if(obj) set_start_and_end(this, obj->range.begin, cl_bracket.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -339,7 +339,7 @@ struct SubscriptExpr : Expr {
             i = nullptr;
         }
 
-        std::cout << "Cleaned up SubscriptExpr node...\n";
+//        std::cout << "Cleaned up SubscriptExpr node...\n";
     }
 };
 
@@ -356,7 +356,7 @@ struct SequenceExpr : Expr {
             e = nullptr;
         }
 
-        std::cout << "Cleaned up SequenceExpr node...\n";
+//        std::cout << "Cleaned up SequenceExpr node...\n";
     }
 };
 
@@ -390,7 +390,7 @@ struct VariableDeclarator {
         delete symbol;
         symbol = nullptr;
 
-        std::cout << "Cleaned up VariableDeclarator...\n";
+//        std::cout << "Cleaned up VariableDeclarator...\n";
     }
 };
 
@@ -399,7 +399,7 @@ struct VariableDecl : Decl {
     std::vector<VariableDeclarator *> declarations;
 
     VariableDecl(const TypeSpecifier& t, const std::vector<VariableDeclarator *>& decls, const Token& sc = {}) : Decl(ASTNodeType::VAR_DECL_NODE), declared_type(t), declarations(decls) {
-        set_start_and_end(this, declared_type.type_name.start, sc.end);
+        set_start_and_end(this, declared_type.type_name.range.begin, sc.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -410,7 +410,7 @@ struct VariableDecl : Decl {
             vd = nullptr;
         }
 
-        std::cout << "Cleaned up VariableDecl node...\n";
+//        std::cout << "Cleaned up VariableDecl node...\n";
     }
 };
 
@@ -421,7 +421,7 @@ struct CompoundStmt : Stmt {
     std::vector<Stmt *> statements;
 
     CompoundStmt(const std::vector<Stmt *>& s, const Token& op_brace, const Token& cl_brace) : Stmt(ASTNodeType::COMP_STMT_NODE), statements(s) {
-        set_start_and_end(this, op_brace.start, cl_brace.end);
+        set_start_and_end(this, op_brace.range.begin, cl_brace.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -432,7 +432,7 @@ struct CompoundStmt : Stmt {
             s = nullptr;
         }
 
-        std::cout << "Cleaned up CompoundStmt node...\n";
+//        std::cout << "Cleaned up CompoundStmt node...\n";
     }
 };
 
@@ -450,7 +450,7 @@ struct Parameter {
         delete symbol;
         symbol = nullptr;
 
-        std::cout << "Cleaning up Param...\n";
+//        std::cout << "Cleaning up Param...\n";
     }
 };
 
@@ -467,7 +467,7 @@ struct FunctionPrototype {
             p = nullptr;
         }
 
-        std::cout << "Cleaned up FunctionPrototype...\n";
+//        std::cout << "Cleaned up FunctionPrototype...\n";
     }
 };
 
@@ -478,7 +478,7 @@ struct FunctionDecl : Decl {
     Symbol *symbol = nullptr;
 
     FunctionDecl(FunctionPrototype *proto, CompoundStmt *b) : Decl(ASTNodeType::FUNC_DECL_NODE), prototype(proto), body(b) {
-        if(proto && b) set_start_and_end(this, proto->return_type.type_name.start, b->end);
+        if(proto && b) set_start_and_end(this, proto->return_type.type_name.range.begin, b->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -491,7 +491,7 @@ struct FunctionDecl : Decl {
         delete symbol;
         symbol = nullptr;
 
-        std::cout << "Cleaned up FunctionDecl...\n";
+//        std::cout << "Cleaned up FunctionDecl...\n";
     }
 };
 
@@ -506,8 +506,8 @@ struct ExpressionStmt : Stmt {
     Expr *expression = nullptr;
 
     ExpressionStmt(Expr *e, const Token& sc) : Stmt(ASTNodeType::EXPR_STMT_NODE), expression(e) {
-        if(e) set_start_and_end(this, e->start, sc.end);
-        else  set_start_and_end(this, sc.start, sc.end);
+        if(e) set_start_and_end(this, e->range.begin, sc.range.end);
+        else  set_start_and_end(this, sc.range.begin, sc.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -516,7 +516,7 @@ struct ExpressionStmt : Stmt {
         delete expression;
         expression = nullptr;
 
-        std::cout << "Cleaned up ExpressionStmt node...\n";
+//        std::cout << "Cleaned up ExpressionStmt node...\n";
     }
 };
 
@@ -524,7 +524,7 @@ struct DeclarationStmt : Stmt {
     Decl *declaration = nullptr;
 
     DeclarationStmt(Decl *d) : Stmt(ASTNodeType::DECL_STMT_NODE), declaration(d) {
-        set_start_and_end(this, declaration->start, declaration->end);
+        set_start_and_end(this, declaration->range.begin, declaration->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -533,7 +533,7 @@ struct DeclarationStmt : Stmt {
         delete declaration;
         declaration = nullptr;
 
-        std::cout << "Cleaned up DeclarationStmt node...\n";
+//        std::cout << "Cleaned up DeclarationStmt node...\n";
     }
 };
 
@@ -543,8 +543,8 @@ struct IfStmt : Stmt {
     Stmt *else_statement = nullptr;
 
     IfStmt(const Token& kw, Expr *c, Stmt *t = nullptr, Stmt *e = nullptr) : Stmt(ASTNodeType::IF_STMT_NODE), condition(c), then_statement(t), else_statement(e) {
-        if(!e) set_start_and_end(this, kw.start, t->end);
-        else   set_start_and_end(this, kw.start, e->end);
+        if(!e) set_start_and_end(this, kw.range.begin, t->range.end);
+        else   set_start_and_end(this, kw.range.begin, e->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -557,7 +557,7 @@ struct IfStmt : Stmt {
         delete else_statement;
         else_statement = nullptr;
 
-        std::cout << "Cleaned up IfStmt node...\n";
+//        std::cout << "Cleaned up IfStmt node...\n";
     }
 };
 
@@ -577,7 +577,7 @@ struct CaseClause {
         delete body;
         body = nullptr;
 
-        std::cout << "Cleaned up CaseClause...\n";
+//        std::cout << "Cleaned up CaseClause...\n";
     }
 };
 
@@ -586,7 +586,7 @@ struct SwitchStmt : Stmt {
     std::vector<CaseClause *> cases;
 
     SwitchStmt(const Token& kw, Expr *p, const std::vector<CaseClause *>& c, const Token& cl_brace) : Stmt(ASTNodeType::SWITCH_STMT_NODE), pattern(p), cases(c) {
-        set_start_and_end(this, kw.start, cl_brace.end);
+        set_start_and_end(this, kw.range.begin, cl_brace.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -599,7 +599,7 @@ struct SwitchStmt : Stmt {
             c = nullptr;
         }
 
-        std::cout << "Cleaned up SwitchStmt node...\n";
+//        std::cout << "Cleaned up SwitchStmt node...\n";
     }
 };
 
@@ -608,7 +608,7 @@ struct WhileStmt : Stmt {
     Stmt *body = nullptr;
 
     WhileStmt(const Token& kw, Expr *c, Stmt *b) : Stmt(ASTNodeType::WHILE_STMT_NODE), condition(c), body(b) {
-        if(c && b) set_start_and_end(this, kw.start, b->end);
+        if(c && b) set_start_and_end(this, kw.range.begin, b->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -619,7 +619,7 @@ struct WhileStmt : Stmt {
         delete body;
         body = nullptr;
 
-        std::cout << "Cleaned up WhileStmt node...\n";
+//        std::cout << "Cleaned up WhileStmt node...\n";
     }
 };
 
@@ -628,7 +628,7 @@ struct DoWhileStmt : Stmt {
     Expr *condition = nullptr;
 
     DoWhileStmt(const Token& kw, const Token& sc, Stmt *b, Expr *c = nullptr) : Stmt(ASTNodeType::DO_WHILE_STMT_NODE), body(b), condition(c) {
-        if(b && c) set_start_and_end(this, kw.start, sc.end);
+        if(b && c) set_start_and_end(this, kw.range.begin, sc.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -639,7 +639,7 @@ struct DoWhileStmt : Stmt {
         delete condition;
         condition = nullptr;
 
-        std::cout << "Cleaned up DoWhileStmt node...\n";
+//        std::cout << "Cleaned up DoWhileStmt node...\n";
     }
 };
 
@@ -650,7 +650,7 @@ struct ForStmt : Stmt {
     Stmt *body = nullptr;
 
     ForStmt(const Token& kw, Stmt *init, Expr *c, Expr *incr, Stmt *b) : Stmt(ASTNodeType::FOR_STMT_NODE), initialization(init), condition(c), increment(incr), body(b) {
-        if(b) set_start_and_end(this, kw.start, b->end);
+        if(b) set_start_and_end(this, kw.range.begin, b->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -665,7 +665,7 @@ struct ForStmt : Stmt {
         delete body;
         body = nullptr;
 
-        std::cout << "Cleaned up ForStmt node...\n";
+//        std::cout << "Cleaned up ForStmt node...\n";
     }
 };
 
@@ -674,8 +674,7 @@ struct RangeForStmt : Stmt {
     Expr *range_initializer = nullptr;
     Stmt *body = nullptr;
 
-    RangeForStmt(VariableDecl *i, Expr *ri, Stmt *b)
-        : Stmt(ASTNodeType::RANGE_FOR_STMT_NODE), item(i), range_initializer(ri), body(b) {}
+    RangeForStmt(VariableDecl *i, Expr *ri, Stmt *b) : Stmt(ASTNodeType::RANGE_FOR_STMT_NODE), item(i), range_initializer(ri), body(b) {}
 
     void accept(Visitor& v) override;
 
@@ -687,7 +686,7 @@ struct RangeForStmt : Stmt {
         delete body;
         body = nullptr;
 
-        std::cout << "Cleaned up RangeForStmt node...\n";
+//        std::cout << "Cleaned up RangeForStmt node...\n";
     }
 };
 
@@ -695,7 +694,7 @@ struct ReturnStmt : Stmt {
     ExpressionStmt *expr_stmt = nullptr;
 
     ReturnStmt(const Token& kw, ExpressionStmt *s = nullptr) : Stmt(ASTNodeType::RETURN_STMT_NODE), expr_stmt(s) {
-        set_start_and_end(this, kw.start, expr_stmt->end);
+        set_start_and_end(this, kw.range.begin, expr_stmt->range.end);
     }
 
     void accept(Visitor& v) override;
@@ -704,7 +703,7 @@ struct ReturnStmt : Stmt {
         delete expr_stmt;
         expr_stmt = nullptr;
 
-        std::cout << "Cleaned up ReturnStmt node...\n";
+//        std::cout << "Cleaned up ReturnStmt node...\n";
     }
 };
 
@@ -716,7 +715,7 @@ struct PrintStmt : Stmt {
     int nb_placeholders = 0;            //this should be equal to expressions.size() - 1 if has_fmt = true.
 
     PrintStmt(const Token& kw, const std::vector<Expr*>& exprs, const Token& sc) : Stmt(ASTNodeType::PRINT_STMT_NODE), expressions(exprs) {
-        set_start_and_end(this, kw.start, sc.end);
+        set_start_and_end(this, kw.range.begin, sc.range.end);
     }
 
     void accept(Visitor& v) override;
@@ -727,31 +726,31 @@ struct PrintStmt : Stmt {
             e = nullptr;
         }
 
-        std::cout << "Cleaned up PrintStmt node...\n";
+//        std::cout << "Cleaned up PrintStmt node...\n";
     }
 };
 
 struct BreakStmt : Stmt {
     BreakStmt(const Token& kw) : Stmt(ASTNodeType::BREAK_STMT_NODE) {
-        set_start_and_end(this, kw.start, {kw.end.col + 1, kw.end.line});
+        set_start_and_end(this, kw.range.begin, kw.range.end + 1);
     }
 
     void accept(Visitor& v) override;
 
     ~BreakStmt() {
-        std::cout << "Cleaned up BreakStmt node...\n";
+//        std::cout << "Cleaned up BreakStmt node...\n";
     }
 };
 
 struct ContinueStmt : Stmt {
     ContinueStmt(const Token& kw) : Stmt(ASTNodeType::CONTINUE_STMT_NODE) {
-        set_start_and_end(this, kw.start, {kw.end.col + 1, kw.end.line});
+        set_start_and_end(this, kw.range.begin, kw.range.end + 1);
     }
 
     void accept(Visitor& v) override;
 
     ~ContinueStmt() {
-        std::cout << "Cleaned up ContinueStmt node...\n";
+//        std::cout << "Cleaned up ContinueStmt node...\n";
     }
 };
 
