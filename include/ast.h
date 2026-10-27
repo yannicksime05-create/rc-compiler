@@ -90,18 +90,18 @@ struct IntNumberExpr : Expr {
     IntNumberExpr(const Token& rv) : Expr(ASTNodeType::INT_LIT_NODE), raw_value(rv) {
         set_start_and_end(this, rv.range.begin, rv.range.end);
 
-//        std::string prefix;
-//        int base = 10;
-//
-//        prefix += rv.value[0];
-//        prefix += std::tolower(rv.value[1]);
-//
-//        if(prefix == "0b")      base = 2;
-//        else if(prefix == "0o") base = 8;
-//        else if(prefix == "0x") base = 16;
-//
-//
-//        value = std::stoll(rv.value, nullptr, base);
+        std::string prefix;
+        int base = 10;
+
+        prefix += rv.value[0];
+        prefix += std::tolower(rv.value[1]);
+
+        if(prefix == "0b")      base = 2;
+        else if(prefix == "0o") base = 8;
+        else if(prefix == "0x") base = 16;
+
+
+        value = std::stoll(rv.value, nullptr, base);
     }
 
     void accept(Visitor& v) override;
