@@ -1,3 +1,4 @@
+#include <sstream>
 #include "../include/parser.h"
 
 Precedence Parser::get_precedence(TokenType t) {
@@ -66,7 +67,7 @@ bool Parser::is_right_associative(TokenType t) {
         case TT::BIT_XOR_ASSIGN:
         case TT::LEFT_SHIFT_ASSIGN:
         case TT::RIGHT_SHIFT_ASSIGN:
-        case TT::CONDITIONAL: // conditional
+        case TT::CONDITIONAL:
             return true;
 
         default:
@@ -89,7 +90,6 @@ bool Parser::is_postfix_operator(TokenType t) {
 
 Expr *Parser::parseExpression(Precedence mbp) {
     Expr *lhs = parse_primary();
-    if(!lhs) return nullptr;
 
     while(true) {
         TokenType t = current().type;
@@ -107,8 +107,8 @@ Expr *Parser::parseExpression(Precedence mbp) {
         if(t == TT::CONDITIONAL) {
             get();
             Expr *then_expr = parseExpression();
-            expect(TT::COLON, "Error: Expected ':' in ternary operator!");
-            Expr *else_expr = parseExpression();
+            expect(TT::COLON, "expected ':' in ternary operator");
+            Expr *else_expr = parseExpression(Precedence::PREC_CONDITIONAL);
             lhs = new ConditionalExpr(lhs, then_expr, else_expr);
             continue;
         }
@@ -116,7 +116,6 @@ Expr *Parser::parseExpression(Precedence mbp) {
         Token op = get();
 
         Expr *rhs = parseExpression(rbp);
-        if(!rhs) return nullptr;
 
         if(lbp == Precedence::PREC_ASSIGNMENT)                      lhs = new AssignmentExpr(lhs, op, rhs);
         else if(lbp == Precedence::PREC_COMMA) {
@@ -139,7 +138,16 @@ Expr *Parser::parseExpression(Precedence mbp) {
 Expr *Parser::parse_primary() {
     switch(current().type) {
         case TT::IDENTIFIER:    return new IdentifierExpr( get() );
-        case TT::INTEGER:       return new IntNumberExpr( get() );
+
+        case TT::INTEGER: {
+            Token tok = get();
+            try{
+                return new IntNumberExpr( tok );
+            }
+            catch(const std::out_of_range&) {
+                throw ParseError(tok.range, "integer literal is too large");
+            }
+        }
         case TT::FLOAT:         return new DecimalNumberExpr( get() );
         case TT::STRING:        return new StringExpr( get() );
         case TT::CHAR:          return new CharExpr( get() );
@@ -157,7 +165,7 @@ Expr *Parser::parse_primary() {
                     elems.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
                 }
             }
-            expect(TT::RBRACKET, "Error: Expected closing ']' after array literal.");
+            expect(TT::RBRACKET, "expected closing ']' after array literal");
             return new ArrayLiteralExpr(elems, s, previous());
         }
 
@@ -165,19 +173,23 @@ Expr *Parser::parse_primary() {
         case TT::NOT:
         case TT::BIT_NOT:
         case TT::INCREMENT:
-        case TT::DECREMENT:
-            return new UnaryExpr(get(), parseExpression(Precedence::PREC_PREFIX));
+        case TT::DECREMENT: {
+            Token op = get();
+            return new UnaryExpr(op, parseExpression(Precedence::PREC_PREFIX));
+        }
 
         case TT::LPAREN: {
             get();
             Expr *e = parseExpression();
-            expect(TT::RPAREN, "Error: Expected closing ')' after expression!");
+            expect(TT::RPAREN, "expected closing ')' after expression");
             return e;
         }
         default:
-            std::cerr << "Error: Unknow primary Expression!" << std::endl;
-            return nullptr;
+            error("expected primary-expression");
     }
+
+    // Removes c++'s warning: control reaches end of non-void function
+    return nullptr;
 }
 
 Expr *Parser::parse_postfix(Expr *lhs) {
@@ -193,7 +205,7 @@ Expr *Parser::parse_postfix(Expr *lhs) {
             }
         }
 
-        expect(TT::RPAREN, "Error: Expected ')' after argument list");
+        expect(TT::RPAREN, "expected ')' after argument list");
         lhs = new CallExpr(lhs, args, previous());
     }
     else if( is(TT::LBRACKET) ) {
@@ -206,12 +218,12 @@ Expr *Parser::parse_postfix(Expr *lhs) {
             indices.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
         }
 
-        expect(TT::RBRACKET, "Error: Expected closing ']' to complete subscript expression");
+        expect(TT::RBRACKET, "expected closing ']' to complete subscript expression");
         lhs = new SubscriptExpr(lhs, indices, previous());
     }
     else if( is(TT::DOT) ) {
         get();
-        expect(TT::IDENTIFIER, "Error: Expected identifier for member expressions");
+        expect(TT::IDENTIFIER, "expected identifier for member expression");
 
         lhs = new MemberAccessExpr(lhs, previous());
     }
@@ -231,7 +243,7 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
 Decl *Parser::parseDeclaration() {
     TypeSpecifier *type = parse_type_specifier();
-    expect(TT::IDENTIFIER, "Error: Expected identifier after type specifier");
+    expect(TT::IDENTIFIER, "expected identifier after type specifier");
 
     if( is(TT::LPAREN) )
         return parse_function_declaration(*type);
@@ -245,8 +257,7 @@ TypeSpecifier *Parser::parse_type_specifier() {
     std::vector<std::string> qualifiers;
     while( is(TT::KW_CONST) ) qualifiers.push_back(get().value);
 
-    if( !is_primitive_type(pos) && !is(TT::IDENTIFIER) )
-        throw ParseError("Error: Expected type name after qualifiers");
+    if( !is_primitive_type(pos) && !is(TT::IDENTIFIER) ) error("expected type name");
 
     Token base_type = get();
 
@@ -255,10 +266,10 @@ TypeSpecifier *Parser::parse_type_specifier() {
     while( is(TT::LBRACKET) ) {
         get();
 
-        if( !is(TT::INTEGER) ) throw ParseError("Error: Array size must be an integer literal!");
-        dimension.push_back(std::stoi(get().value));
+        expect(TT::INTEGER, "array size must be an integer literal!");
+        dimension.push_back(std::stoi(previous().value));
 
-        expect(TT::RBRACKET, "Error: Expected ']' after array size");
+        expect(TT::RBRACKET, "expected ']' after array size");
     }
 
     return new TypeSpecifier(qualifiers, base_type, dimension);
@@ -269,13 +280,6 @@ VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
     if( is(TT::ASSIGN) ) {
         get();
         init = parseExpression(Precedence::PREC_ASSIGNMENT);
-
-        if(!init) {
-            Token next = peek();
-            std::stringstream ss;
-            ss << "Error: Expected primary-expression before '" << next.value << "' at line: " << next.start.line << ", col: " << next.start.col << "\n";
-            throw ParseError(ss.str());
-        }
     }
 
     return new VariableDeclarator(name, init);
@@ -288,10 +292,10 @@ VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
     decls.push_back( parse_variable_declarator(name) );
     while( is(TT::COMMA) ) {
         get();
-        expect(TT::IDENTIFIER, "Error: Expected identifier in variable declaration");
+        expect(TT::IDENTIFIER, "expected identifier in variable declaration");
         decls.push_back(parse_variable_declarator(previous()));
     }
-    expect(TT::SEMICOLON, "Error: Expected ';' at the end of variables' declarations");
+    expect(TT::SEMICOLON, "expected ';' at the end of variable(s) declarations");
 
     return new VariableDecl(type, decls, previous());
 }
@@ -299,7 +303,7 @@ VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
 Parameter *Parser::parse_function_parameters() {
     TypeSpecifier type = *parse_type_specifier();
 
-    expect(TT::IDENTIFIER, "Error: Expected parameter's name in function declaration");
+    expect(TT::IDENTIFIER, "expected parameter's name in function declaration");
     Token name = previous();
 
     Expr *default_value = nullptr;
@@ -313,7 +317,7 @@ Parameter *Parser::parse_function_parameters() {
 
 FunctionPrototype *Parser::parse_function_prototype(const TypeSpecifier& type) {
     Token name = previous();
-    expect(TT::LPAREN, "Error: Expected '(' after function's name");
+    expect(TT::LPAREN, "expected '(' after function's name");
 
     std::vector<Parameter *> parameters;
     if( !is(TT::RPAREN) ) {
@@ -323,14 +327,14 @@ FunctionPrototype *Parser::parse_function_prototype(const TypeSpecifier& type) {
             parameters.push_back(parse_function_parameters());
         }
     }
-    expect(TT::RPAREN, "Error: Expected ')' after parameter list");
+    expect(TT::RPAREN, "expected ')' after parameter list");
 
     return new FunctionPrototype(type, name, parameters);
 }
 
 FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
     FunctionPrototype *proto = parse_function_prototype(type);
-    if(!proto) throw ParseError("Missing function's prototype!");
+//    if(!proto) throw ParseError(type.type_name.range, "Missing function's prototype!");
 
     return new FunctionDecl(proto, parse_compound_statement());
 }
@@ -379,44 +383,44 @@ bool Parser::starts_declaration() {
 }
 
 CompoundStmt *Parser::parse_compound_statement() {
-    expect(TT::LBRACE, "Error: Expected '{' to start compound statement");
+    expect(TT::LBRACE, "expected '{' to start compound statement");
+    ++block_depth;
     Token s = previous();
 
     std::vector<Stmt *> stmts;
-    while( !is(TT::RBRACE) && !is(TT::END_OF_FILE) ) stmts.push_back(parseStatement());
+    while( !is(TT::RBRACE) && !is(TT::END_OF_FILE) ) {
+        try{
+            stmts.push_back(parseStatement());
+        }
+        catch(const CompileError& e) {
+            //Recover inside the block, so one bad statement doesn't throw away the rest of the function.
+            diagnostic.error(e);
+            synchronize();
+        }
+    }
 
-    expect(TT::RBRACE, "Error: Expected '}' to end compound statement");
-
+    expect(TT::RBRACE, "expected '}' to end compound statement");
+    --block_depth;
     return new CompoundStmt(stmts, s, previous());
 }
 
 ExpressionStmt *Parser::parse_expression_statement() {
-    Expr *e = parseExpression();
-    expect(TT::SEMICOLON, "Error: Expected ';' at the end of expression");
+    Expr *e = is(TT::SEMICOLON) ? nullptr : parseExpression();
+    expect(TT::SEMICOLON, "expected ';' at the end of expression");
 
     return new ExpressionStmt(e, previous());
 }
 
 DeclarationStmt *Parser::parse_declaration_statement() {
-    Decl *d = parseDeclaration();
-    if(!d) {
-        std::cerr << "From: parse_declaration_statement\nError: unable to create declaration" << std::endl;
-        return nullptr;
-    }
-
-    return new DeclarationStmt(d);
+    return new DeclarationStmt( parseDeclaration() );
 }
 
 IfStmt *Parser::parse_if_statement() {
     Token kw = get();
-    expect(TT::LPAREN, "Error: Expected '(' after keyword if");
+    expect(TT::LPAREN, "expected '(' after keyword if");
 
     Expr *condition = parseExpression();
-    if(!condition) {
-        std::cerr << "Error: Expected primary-expression for if-statement" << std::endl;
-        return nullptr;
-    }
-    expect(TT::RPAREN, "Error: Expected closing ')' for if-statement");
+    expect(TT::RPAREN, "expected closing ')' for if-statement");
 
     Stmt *else_stmt = nullptr, *then_stmt = parseStatement();
 
@@ -430,26 +434,19 @@ IfStmt *Parser::parse_if_statement() {
 
 SwitchStmt *Parser::parse_switch_statement() {
     Token kw = get();
-    expect(TT::LPAREN, "Error: Expected '(' after 'switch'");
+    expect(TT::LPAREN, "expected '(' after 'switch'");
 
     Expr *e = parseExpression();
-    if(!e) {
-//        throw ParseError("Expected primary-expression after '('");
-        std::cerr << "couldn't create switch expression" << std::endl;
-        return nullptr;
-    }
-    expect(TT::RPAREN, "Error: Expected ')' after switch expression");
+    expect(TT::RPAREN, "expected ')' after switch expression");
 
-    expect(TT::LBRACE, "Error: Expected '{' to start switch body");
+    expect(TT::LBRACE, "expected '{' to start switch body");
     std::vector<CaseClause *> cases;
     while( !is(TT::RBRACE) && !is(TT::END_OF_FILE)  ) {
         if( is(TT::KW_CASE) || is(TT::KW_DEFAULT) )   cases.push_back(parse_case_clause());
-        else {
-            expect(TT::KW_CASE, "Error: Expected 'case' inside switch");
-        }
+        else error("expected case/default keywords inside switch");
     }
 
-    expect(TT::RBRACE, "Error: Expected '}' at the end of switch");
+    expect(TT::RBRACE, "expected '}' at the end of switch");
     return new SwitchStmt(kw, e, cases, previous());
 }
 
@@ -464,20 +461,18 @@ CaseClause *Parser::parse_case_clause() {
     while(true) {
         if( is(TT::KW_DEFAULT) ) {
             get();
-            expect(TT::COLON, "Error: Expected ':' after 'default'");
+            expect(TT::COLON, "expected ':' after 'default'");
         }
         else {
-            get();
+            Token kw = get();
             // comma-list form: case a, b, c:
             exprs.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
             while( is(TT::COMMA) ) {
                 get();
-                Expr *e = parseExpression(Precedence::PREC_ASSIGNMENT);
-                if(!e) throw ParseError("Error: Expected expression after ',' in case label");
-                exprs.push_back(e);
+                exprs.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
             }
 
-            expect(TT::COLON, "Error: Expected ':' after case label");
+            expect(TT::COLON, "expected ':' after case label");
         }
 
         // stacked-keyword form: case a: case b: { ... }
@@ -490,43 +485,26 @@ CaseClause *Parser::parse_case_clause() {
 
 WhileStmt *Parser::parse_while_statement() {
     Token kw = get();
-    expect(TT::LPAREN, "Error: Expected '(' after 'while'");
+    expect(TT::LPAREN, "expected '(' after 'while'");
 
     Expr *condition = parseExpression();
-    if(!condition) {
-        std::cout << "Error: Expected primary-expression for while-statement" << std::endl;
-        return nullptr;
-    }
-    expect(TT::RPAREN, "Error: Expected ')' after while expression");
+    expect(TT::RPAREN, "expected ')' after while expression");
 
     Stmt *body = parseStatement();
-    if(!body) {
-        std::cout << "From: parse_while_statement\nError: statement is null" << std::endl;
-        return nullptr;
-    }
     return new WhileStmt(kw, condition, body);
 }
 
 DoWhileStmt *Parser::parse_do_while_statement() {
     Token kw = get();
-
     Stmt *body = parseStatement();
-    if(!body) {
-        std::cout << "From: parse_do_while_statement\nError: statement is null" << std::endl;
-        return nullptr;
-    }
 
-    expect(TT::KW_WHILE, "Error: Expected 'while' after 'do'");
-    expect(TT::LPAREN, "Error: Expected '(' after 'while'");
+    expect(TT::KW_WHILE, "expected 'while' after 'do'");
+    expect(TT::LPAREN, "expected '(' after 'while'");
 
     Expr *condition = parseExpression();
-    if(!condition) {
-        std::cout << "Error: Expected primary-expression for do-while-statement" << std::endl;
-        return nullptr;
-    }
-    expect(TT::RPAREN, "Error: Expected ')' after while expression");
-    expect(TT::SEMICOLON, "Error: Expected ';' at the end of do..while");
+    expect(TT::RPAREN, "expected ')' after while expression");
 
+    expect(TT::SEMICOLON, "expected ';' at the end of do..while");
     return new DoWhileStmt(kw, previous(), body, condition);
 }
 
@@ -546,7 +524,7 @@ bool Parser::is_rangefor_pattern() {
 
 Stmt *Parser::dispatch_for_statements() {
     get();
-    expect(TT::LPAREN, "Error: Expected '(' after keyword 'for'");
+    expect(TT::LPAREN, "expected '(' after keyword 'for'");
 
     if(is_rangefor_pattern()) return parse_rangefor_statement();
     return parse_for_statement();
@@ -556,11 +534,11 @@ ForStmt *Parser::parse_for_statement() {
     Token kw = peek(-2);
     Stmt *init = parseStatement();
 
-    Expr *condition = parseExpression();
-    expect(TT::SEMICOLON, "Error: Expected ';' after for-loop condition");
+    Expr *condition = is(TT::SEMICOLON) ? nullptr : parseExpression();
+    expect(TT::SEMICOLON, "expected ';' after for-loop condition");
 
-    Expr *incr = parseExpression();
-    expect(TT::RPAREN, "Error: Expected ')' after for-loop increment");
+    Expr *incr = is(TT::RPAREN) ? nullptr : parseExpression();
+    expect(TT::RPAREN, "expected ')' after for-loop increment");
 
     Stmt *body = parseStatement();
     return new ForStmt(kw, init, condition, incr, body);
@@ -589,15 +567,17 @@ RangeForStmt *Parser::parse_rangefor_statement() {
     }
 
     return new RangeForStmt(v, range, body);
+//    return nullptr;
 }
 
 ReturnStmt *Parser::parse_return_statement() {
-    return new ReturnStmt(get(), parse_expression_statement());
+    Token kw = get();
+    return new ReturnStmt(kw, parse_expression_statement());
 }
 
 PrintStmt *Parser::parse_print_statement() {
     Token kw = get();
-    expect(TT::LPAREN, "Error: Expected '(' after print");
+    expect(TT::LPAREN, "expected '(' after print");
 
     std::vector<Expr*> exprs;
     if(!is(TT::RPAREN)) {
@@ -605,11 +585,10 @@ PrintStmt *Parser::parse_print_statement() {
         while(is(TT::COMMA)) {
             get();
             exprs.push_back(parseExpression(Precedence::PREC_ASSIGNMENT));
-
         }
     }
-    expect(TT::RPAREN, "Error: Expected ')' after print arguments");
-    expect(TT::SEMICOLON, "Error: Expected ';' at the end of print statement");
+    expect(TT::RPAREN, "expected ')' after print arguments");
+    expect(TT::SEMICOLON, "expected ';' at the end of print statement");
 
     return new PrintStmt(kw, exprs, previous());
 }
@@ -617,13 +596,13 @@ PrintStmt *Parser::parse_print_statement() {
 BreakStmt *Parser::parse_break_statement() {
     Token loc = get();
 
-    expect(TT::SEMICOLON, "Error: Expected ';' after break statement!");
+    expect(TT::SEMICOLON, "expected ';' after break statement!");
     return new BreakStmt(loc);
 }
 
 ContinueStmt *Parser::parse_continue_statement() {
     Token loc = get();
 
-    expect(TT::SEMICOLON, "Error: Expected ';' after continue statement!");
+    expect(TT::SEMICOLON, "expected ';' after continue statement!");
     return new ContinueStmt(loc);
 }
