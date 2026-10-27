@@ -59,9 +59,8 @@ class Printer : public Visitor {
                 nspace += tab_length;
                 indent(); std::cout << "name: " << p->parameter_name.value<< ",\n";
                 indent(); std::cout << "type: " << p->type_name.type_name.value << ",\n";
-                indent(); std::cout << "const: ";
-    //            p->type_name.is_constant ? (std::cout << "true,\n") : (std::cout << "false,\n");
-    //            indent(); std::cout << "default value: ";
+                indent(); std::cout << "const: " << (p->type_name.qualifiers.empty() ? "false" : "true") << "\n";
+                indent(); std::cout << "default value: ";
                 if(p->default_value) {
                     std::cout << "{\n";
                     exprs_printer_helper(p->default_value);

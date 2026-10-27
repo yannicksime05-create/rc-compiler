@@ -4,11 +4,13 @@ void Printer::visit(Program& p) {
     std::cout << "AST:" << std::endl;
     indent(); std::cout << "Program: {\n";
     nspace += tab_length;
-    indent(); std::cout << "body: [\n";
-    for(Stmt *s : p.statements) {
-        stmts_printer_helper(s);
+    indent(); std::cout << "body: ";
+    if(p.statements.empty()) std::cout << "[]\n";
+    else {
+        std::cout << "[\n";
+        for(Stmt *s : p.statements) stmts_printer_helper(s);
+        indent(); std::cout << "]\n";
     }
-    indent(); std::cout << "]\n";
     nspace -= tab_length;
     indent(); std::cout << "}\n";
 }
