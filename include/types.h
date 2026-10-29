@@ -42,7 +42,7 @@ struct BuiltinType : Type {
 
 struct ArrayType : Type {
     Type *element_type = nullptr;
-    int size = 0;
+    size_t size = 0;
 
     ArrayType(Type *elmtp, int sz, bool c = false) : Type(TypeKind::ARRAY, c), element_type(elmtp), size(sz) {}
 
@@ -53,16 +53,11 @@ struct ArrayType : Type {
 
     ArrayType& operator=(const ArrayType& t) {
         if(this != &t) {
+            is_constant = t.is_constant;
             size = t.size;
+            if(element_type) delete element_type;
 
-            if(element_type) {
-                delete element_type;
-                element_type = nullptr;
-            }
-
-            if(t.element_type) {
-                element_type = t.element_type->clone();
-            }
+            element_type = t.element_type ? t.element_type->clone() : nullptr;
         }
 
         return *this;
@@ -88,7 +83,7 @@ struct AutoType : Type {
     AutoType& operator=(const AutoType& t) {
         if(this != &t) {
             is_constant = t.is_constant;
-            delete resolved;
+            if(resolved) delete resolved;
 
             resolved = t.resolved ? t.resolved->clone() : nullptr;
         }
