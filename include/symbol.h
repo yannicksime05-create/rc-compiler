@@ -20,8 +20,7 @@ struct Symbol {
     //Non-owning, so never call delete on it.
     ASTNode *declaration = nullptr;
 
-    Symbol(const std::string& n, SymbolType t, bool c, Type *dt, ASTNode *node)
-    : name(n), type(t), is_constant(c), declared_type(dt), declaration(node) {}
+    Symbol(const std::string& n, SymbolType t, bool c, Type *dt, ASTNode *node) : name(n), type(t), is_constant(c), declared_type(dt), declaration(node) {}
 
     ~Symbol() {
         if(declared_type) {
@@ -29,7 +28,7 @@ struct Symbol {
             declared_type = nullptr;
         }
 
-        std::cout << "Cleaning Symbol...\n";
+//        std::cout << "Cleaning Symbol...\n";
     }
 };
 

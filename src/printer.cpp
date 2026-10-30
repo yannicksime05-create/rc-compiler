@@ -4,11 +4,13 @@ void Printer::visit(Program& p) {
     std::cout << "AST:" << std::endl;
     indent(); std::cout << "Program: {\n";
     nspace += tab_length;
-    indent(); std::cout << "body: [\n";
-    for(Stmt *s : p.statements) {
-        stmts_printer_helper(s);
+    indent(); std::cout << "body: ";
+    if(p.statements.empty()) std::cout << "[]\n";
+    else {
+        std::cout << "[\n";
+        for(Stmt *s : p.statements) stmts_printer_helper(s);
+        indent(); std::cout << "]\n";
     }
-    indent(); std::cout << "]\n";
     nspace -= tab_length;
     indent(); std::cout << "}\n";
 }
@@ -368,10 +370,10 @@ void Printer::visit(RangeForStmt& s) {
 void Printer::visit(ReturnStmt& s) {
     indent(); std::cout << "node type: ReturnStatement,\n";
     indent(); std::cout << "expression: ";
-    if(!s.expression) std::cout << "null\n";
+    if(!s.expr_stmt->expression) std::cout << "null\n";
     else {
         std::cout << "{\n";
-        exprs_printer_helper(s.expression);
+        exprs_printer_helper(s.expr_stmt->expression);
         indent(); std::cout << "}\n";
     }
 }

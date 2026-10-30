@@ -3,35 +3,34 @@
 
 Token Lexer::comments_or_div_operator() {
     Token t;
-    t.start = {column - 1, line};
+    t.range.begin = pos - 1;
 
-    if(input.peek() == '/') {
+    if(peek() == '/') {
         do{
             get();
-        }while(input.peek() != '\n' && !input.eof());
-        std::cout << "Single-line comment." << std::endl;
+        }while(peek() != '\n' && !eof());
+//        std::cout << "Single-line comment." << std::endl;
         t.type = TT::USELESS;
     }
-    else if(input.peek() == '*') {
+    else if(peek() == '*') {
         bool ended = false;
         get();
 
-        while( input.peek() != EOF ) {
-            input.get(c);
-            advance();
+        while( peek() != EOF ) {
+            c = get();
 
-            if(c == '*' && input.peek() == '/') {
+            if(c == '*' && peek() == '/') {
                 get();
-                std::cout << "Multi-lines comment." << std::endl;
+//                std::cout << "Multi-lines comment." << std::endl;
                 t.type = TT::USELESS;
                 ended = true;
                 break;
             }
         }
 
-        if(!ended) error(t, "", "Error: Unterminated comment!");
+        if(!ended) error(t, "", "unterminated comment!");
     }
-    else if(input.peek() == '=') {
+    else if(peek() == '=') {
         get();
         t.type = TT::SLASH_ASSIGN;
         t.value = "/=";
@@ -41,23 +40,23 @@ Token Lexer::comments_or_div_operator() {
         t.value = "/";
     }
 
-    t.end = {column, line};
+    t.range.end = pos;
     return t;
 }
 
 Token Lexer::strings() {
     Token t;
-    t.start = {column - 1, line};
+    t.range.begin = pos - 1;
 
     std::string s;
     bool found_backslash = false;
-    while(input.get(c)) {
-        advance();
+    while( peek() != EOF ) {
+        c = get();
+
         if(found_backslash) found_backslash = false;
         else if(c == '\\')  found_backslash = true;
         else if(c == '"') {
-//            advance();
-            std::cout << "String found!" << std::endl;
+//            std::cout << "String found!" << std::endl;
             t.type = TT::STRING;
             break;
         }
@@ -65,36 +64,36 @@ Token Lexer::strings() {
         s += c;
     }
 
-    if(input.eof()) {
-        error(t, s, "Error: Unterminated string literal! Missing closing \"");
+    if(eof()) {
+        error(t, s, "unterminated string literal! Missing closing \"");
         return t;
     }
 
     t.value = s;
-    t.end = {column, line};
+    t.range.end = pos;
     return t;
 }
 
 Token Lexer::chars() {
     Token t;
-    t.start = {column - 1, line};
+    t.range.begin = pos - 1;
 
-    if(input.peek() == '\'') {
+    if(peek() == '\'') {
         get();
-        error(t, "", "Error: Empty character literal!");
+        error(t, "", "empty character literal!");
         return t;
     }
 
     std::string s;
     bool found_backslash = false, first = true;
     int remaining_chars = 2;                                            //The character itself + the closing '.
-    while(input.get(c) && remaining_chars) {
-        advance();
+    while(peek() != EOF && remaining_chars) {
+        c = get();
 
         if(found_backslash)         found_backslash = false;
         else if(c == '\\' && first) found_backslash = true;
         else if(c == '\'' && remaining_chars == 1) {                    //We reached the closing '.
-            std::cout << "Character literal found!" << std::endl;
+//            std::cout << "Character literal found!" << std::endl;
             t.type = TT::CHAR;
             --remaining_chars;
             break;
@@ -106,74 +105,73 @@ Token Lexer::chars() {
     }
 
     if(t.type != TT::CHAR) {
-        std::string msg = input.eof() ? "Error: Unterminated character literal! Missing closing '" : "Error: Character literal must contain exactly one character!";
+        std::string msg = eof() ? "unterminated character literal! Missing closing '" : "character literal must contain exactly one character!";
         error(t, s, msg);
         return t;
     }
 
     t.value = s;
-    t.end = {column, line};
+    t.range.end = pos;
     return t;
 }
 
 Token Lexer::keywords_and_identifiers() {
     Token t;
-    t.start = {column - 1, line};
+    t.range.begin = pos - 1;
+
     std::string s(1, c);
-    while( std::isalnum(static_cast<unsigned char>(input.peek())) || input.peek() == '_' ) {
-        s += get();
-    }
+    while( std::isalnum(peek()) || peek() == '_' ) s += get();
 
     t.type = get_word_type(s);
-    t.type == TT::IDENTIFIER ? (std::cout << "Identifier found!" << std::endl) : (std::cout << "Keyword found!" << std::endl);
+//    t.type == TT::IDENTIFIER ? (std::cout << "Identifier found!" << std::endl) : (std::cout << "Keyword found!" << std::endl);
     t.value = s;
-    t.end = {column, line};
+    t.range.end = pos;
     return t;
 }
 
 bool Lexer::scan_binary_numbers(Token& t, std::string& s) {
-    if( input.peek() != '0' && input.peek() != '1' ) {
-        error(t, s, "Error: Binary number has no digits!");
+    if( peek() != '0' && peek() != '1' ) {
+        error(t, s, "binary number has no digits!");
         return false;
     }
 
     do{
         s += get();
-    }while( input.peek() == '0' || input.peek() == '1' );
+    }while( peek() == '0' || peek() == '1' );
     t.type = TT::INTEGER;
 
-    std::cout << "Binary number found!" << std::endl;
+//    std::cout << "Binary number found!" << std::endl;
     return true;
 }
 
 bool Lexer::scan_octal_numbers(Token& t, std::string& s) {
-    if( input.peek() < '0' || input.peek() > '7' ) {
-        error(t, s, "Error: Octal number has no digits!");
+    if( peek() < '0' || peek() > '7' ) {
+        error(t, s, "octal number has no digits!");
         return false;
     }
 
     do{
         s += get();
-    }while( input.peek() >= '0' && input.peek() <= '7' );
+    }while( peek() >= '0' && peek() <= '7' );
     t.type = TT::INTEGER;
 
-    std::cout << "Octal number found!" << std::endl;
+//    std::cout << "Octal number found!" << std::endl;
     return true;
 }
 
 bool Lexer::scan_hex_numbers(Token& t, std::string& s) {
-    char ch = static_cast<unsigned char>( input.peek() );
+    char ch = static_cast<unsigned char>( peek() );
     if( !std::isxdigit(ch) ) {
-        error(t, s, "Error: Hexdecimal number has no digits!");
+        error(t, s, "hexdecimal number has no digits!");
         return false;
     }
 
     do{
         s += get();
-    }while( std::isxdigit(static_cast<unsigned char>(input.peek())) );
+    }while( std::isxdigit(peek()) );
     t.type = TT::INTEGER;
 
-    std::cout << "Hexdecimal number found!" << std::endl;
+//    std::cout << "Hexdecimal number found!" << std::endl;
     return true;
 }
 
@@ -213,10 +211,7 @@ enum class FloatState {
 //}
 
 void Lexer::scan_integral_part(Token& t, std::string& s) {
-    while( std::isdigit(input.peek()) ) {
-        c = get();
-        s += c;
-    }
+    while( std::isdigit(peek()) ) s += get();
 
     t.type = TT::INTEGER;
 }
@@ -226,7 +221,7 @@ void Lexer::scan_floating_point_part(Token& t, std::string& s) {
     FloatState state = has_dot ? FloatState::AFTER_DOT : FloatState::INTEGER_PART;
 
     is_float = has_dot || has_e;
-    char next = input.peek();
+    char next = peek();
     while( next == '.' || std::isdigit(next) || next == '+' || next == '-' || next == 'e' || next == 'E' ) {
         c = static_cast<char>(get());
 //        std::cout << "s = " << s << ", c = " << c << ", state = " << state_to_string(state) << std::endl;
@@ -252,16 +247,16 @@ void Lexer::scan_floating_point_part(Token& t, std::string& s) {
         }
 
 
-        next = static_cast<char>(input.peek());
+        next = static_cast<char>(peek());
         if(is_float && c == '.') {
-            error(t, s, "Error: Too many decimal points in number");
+            error(t, s, "too many decimal points in number");
             return;
         }
         else if(    (state == FloatState::AFTER_SIGN && !std::isdigit(next))         ||
                     (state == FloatState::AFTER_E && !std::isdigit(next) && next != '+' && next != '-')
                 )
         {
-            error(t, s, "Error: exponent has no digits");
+            error(t, s, "exponent has no digits");
             return;
         }
         else if(    (next == 'e' || next == 'E') &&
@@ -269,7 +264,7 @@ void Lexer::scan_floating_point_part(Token& t, std::string& s) {
                 )
         {
             s += next;
-            error(t, s, "Unexpected exponent marker");
+            error(t, s, "unexpected exponent marker");
             return;
         }
     }
@@ -286,7 +281,7 @@ bool Lexer::scan_integer_suffix(Token& t, std::string& s) {
     //instead of being read as a suffix.
     bool suffix_u = false, has_width = false;
 
-    char next = std::tolower(input.peek()); //first_suffix;
+    char next = std::tolower(peek()); //first_suffix;
     while( next == 'u' || next == 'U' || next == 'l' || next == 'L' ||
            next == 'o' || next == 'O' || next == 's' || next == 'S' ) {
         c = static_cast<char>(get());
@@ -296,7 +291,7 @@ bool Lexer::scan_integer_suffix(Token& t, std::string& s) {
             //'u' must come first, and only once (reject "uu", "lu", "ou", "su").
             if(suffix_u || has_width) {
                 s += c;
-                error(t, s, "Unknown suffix");
+                error(t, s, "unknown suffix");
                 return false;
             }
 
@@ -306,7 +301,7 @@ bool Lexer::scan_integer_suffix(Token& t, std::string& s) {
             //'l', 'o', or 's': only one width marker allowed (reject "ll", "os", etc.).
             if(has_width) {
                 s += c;
-                error(t, s, "Unknown suffix");
+                error(t, s, "unknown suffix");
                 return false;
             }
 
@@ -314,7 +309,7 @@ bool Lexer::scan_integer_suffix(Token& t, std::string& s) {
         }
 
         s += c;
-        next = input.peek();
+        next = peek();
     }
 
     return true;
@@ -322,15 +317,15 @@ bool Lexer::scan_integer_suffix(Token& t, std::string& s) {
 }
 
 bool Lexer::scan_float_suffix(Token& t, std::string& s) {
-    char next = input.peek();
+    char next = peek();
     if( std::tolower(next) != 'l' && std::tolower(next) != 'f' ) return true;
 
     s += get();
 
-    next = input.peek();
+    next = peek();
     if( std::tolower(next) == 'l' || std::tolower(next) == 'f' || std::tolower(next) == 'e' ) {
         s += get();
-        error(t, s, std::tolower(next) == 'e' ? "Error: Suffix must come last in floating point literals" : "Error: Float literal can only have one suffix");
+        error(t, s, std::tolower(next) == 'e' ? "suffix must come last in floating point literals" : "float literal can only have one suffix");
         return false;
     }
 
@@ -339,12 +334,13 @@ bool Lexer::scan_float_suffix(Token& t, std::string& s) {
 
 Token Lexer::numbers() {
     Token t;
-    t.start = {column - 1, line};
+    t.range.begin = pos - 1;
+
     std::string s(1, c);
     bool base10_number = true;
 
     if(c == '0') {
-        char next = static_cast<char>(input.peek());
+        char next = static_cast<char>(peek());
         if( std::isdigit(next) ) {
             s += get();
             error(t, s, "C-style octal numbers are discouraged!");
@@ -372,15 +368,15 @@ Token Lexer::numbers() {
 
         //Note: Putting this here prevents non-base10 floating-point numbers. I read that some languages allowed them, but we'll stick with this for now.
         //c == '.' handles leading-dot floats (.5, .14e3) entered via next_token's case '.'.
-        //input.peek() handles mid-number floats (3.14) and exponents (1e9).
-        if(c == '.' || input.peek() == '.' || std::tolower(input.peek()) == 'e') scan_floating_point_part(t, s);
+        //peek() handles mid-number floats (3.14) and exponents (1e9).
+        if(c == '.' || peek() == '.' || std::tolower(peek()) == 'e') scan_floating_point_part(t, s);
     }
 
     if(t.type == TT::INTEGER && !scan_integer_suffix(t, s))     return t;
     else if(t.type == TT::FLOAT && !scan_float_suffix(t, s))    return t;
 
     t.value = s;
-    t.end = {column, line};
+    t.range.end = pos;
     return t;
 }
 
@@ -388,17 +384,13 @@ Token Lexer::next_token() {
     Token t;
 
     //On ignore tous les espaces
-    while( std::isspace(input.peek()) ) {
-        input.get(c);
-        advance();
-    }
+    while( std::isspace(peek()) ) get();
 
-    t.start = {column, line};
+    t.range.begin = pos;
     c = get();
 
     switch(c) {
         case EOF:
-            --column;
             t.type = TT::END_OF_FILE;
             t.value = "End of file";
             break;
@@ -431,7 +423,7 @@ Token Lexer::next_token() {
             t.value = ",";
             break;
         case '.':
-            if( std::isdigit(input.peek()) ) {
+            if( std::isdigit(peek()) ) {
                 t = numbers();
                 return t;
             }
@@ -445,12 +437,12 @@ Token Lexer::next_token() {
             t.value = "?";
             break;
         case '+':
-            if(input.peek() == '+') {
+            if(peek() == '+') {
                 get();
                 t.type = TT::INCREMENT;
                 t.value = "++";
             }
-            else if(input.peek() == '=') {
+            else if(peek() == '=') {
                 get();
                 t.type = TT::PLUS_ASSIGN;
                 t.value = "+=";
@@ -461,12 +453,12 @@ Token Lexer::next_token() {
             }
             break;
         case '-':
-            if(input.peek() == '-') {
+            if(peek() == '-') {
                 get();
                 t.type = TT::DECREMENT;
                 t.value = "--";
             }
-            else if(input.peek() == '=') {
+            else if(peek() == '=') {
                 get();
                 t.type = TT::MINUS_ASSIGN;
                 t.value = "-=";
@@ -477,7 +469,7 @@ Token Lexer::next_token() {
             }
             break;
         case '*':
-            if(input.peek() == '=') {
+            if(peek() == '=') {
                 get();
                 t.type = TT::STAR_ASSIGN;
                 t.value = "*=";
@@ -491,7 +483,7 @@ Token Lexer::next_token() {
             t = comments_or_div_operator();
             break;
         case '%':
-            if(input.peek() == '=') {
+            if(peek() == '=') {
                 get();
                 t.type = TT::MOD_ASSIGN;
                 t.value = "%=";
@@ -502,28 +494,28 @@ Token Lexer::next_token() {
             }
             break;
         case '=':
-            if(input.peek() == '=') {
+            if(peek() == '=') {
                 get();
-                std::cout << "Comparaison found!" << std::endl;
+//                std::cout << "Comparaison found!" << std::endl;
                 t.type = TT::EQUAL;
                 t.value = "==";
             }
             else {
-                std::cout << "Assignment found!" << std::endl;
+//                std::cout << "Assignment found!" << std::endl;
                 t.type = TT::ASSIGN;
                 t.value = "=";
             }
             break;
         case '<':
-            if(input.peek() == '=') {
-                std::cout << "Comparaison found!" << std::endl;
+            if(peek() == '=') {
+//                std::cout << "Comparaison found!" << std::endl;
                 get();
                 t.type = TT::LESS_EQUAL;
                 t.value = "<=";
             }
-            else if(input.peek() == '<') {
+            else if(peek() == '<') {
                 get();
-                if(input.peek() == '=') {
+                if(peek() == '=') {
                     get();
                     t.type = TT::LEFT_SHIFT_ASSIGN;
                     t.value = "<<=";
@@ -534,21 +526,21 @@ Token Lexer::next_token() {
                 }
             }
             else {
-                std::cout << "Comparaison found!" << std::endl;
+//                std::cout << "Comparaison found!" << std::endl;
                 t.type = TT::LESS;
                 t.value = "<";
             }
             break;
         case '>':
-            if(input.peek() == '=') {
-                std::cout << "Comparaison found!" << std::endl;
+            if(peek() == '=') {
+//                std::cout << "Comparaison found!" << std::endl;
                 get();
                 t.type = TT::GREATER_EQUAL;
                 t.value = ">=";
             }
-            else if(input.peek() == '>') {
+            else if(peek() == '>') {
                 get();
-                if(input.peek() == '=') {
+                if(peek() == '=') {
                     get();
                     t.type = TT::RIGHT_SHIFT_ASSIGN;
                     t.value = ">>=";
@@ -559,7 +551,7 @@ Token Lexer::next_token() {
                 }
             }
             else {
-                std::cout << "Comparaison found!" << std::endl;
+//                std::cout << "Comparaison found!" << std::endl;
                 t.type = TT::GREATER;
                 t.value = ">";
             }
@@ -573,45 +565,45 @@ Token Lexer::next_token() {
             t.value = ";";
             break;
         case '&':
-            if(input.peek() == '&') {
+            if(peek() == '&') {
                 get();
-                std::cout << "Logic and found!" << std::endl;
+//                std::cout << "Logic and found!" << std::endl;
                 t.type = TT::AND;
                 t.value = "&&";
             }
-            else if(input.peek() == '=') {
+            else if(peek() == '=') {
                 get();
-                std::cout << "Bitwise and assignment found!" << std::endl;
+//                std::cout << "Bitwise and assignment found!" << std::endl;
                 t.type = TT::BIT_AND_ASSIGN;
                 t.value = "&=";
             }
             else {
-                std::cout << "Bitwise and found!\n" << std::endl;
+//                std::cout << "Bitwise and found!\n" << std::endl;
                 t.type = TT::BIT_AND;
                 t.value = "&";
             }
             break;
         case '|':
-            if(input.peek() == '|') {
+            if(peek() == '|') {
                 get();
-                std::cout << "Logic or found!" << std::endl;
+//                std::cout << "Logic or found!" << std::endl;
                 t.type = TT::OR;
                 t.value = "||";
             }
-            else if(input.peek() == '=') {
+            else if(peek() == '=') {
                 get();
-                std::cout << "Bitwise or assignment found!" << std::endl;
+//                std::cout << "Bitwise or assignment found!" << std::endl;
                 t.type = TT::BIT_OR_ASSIGN;
                 t.value = "|=";
             }
             else {
-                std::cout << "Bitwise or found!" << std::endl;
+//                std::cout << "Bitwise or found!" << std::endl;
                 t.type = TT::BIT_OR;
                 t.value = "|";
             }
             break;
         case '!':
-            if(input.peek() == '=') {
+            if(peek() == '=') {
                 get();
                 t.type = TT::NOT_EQUAL;
                 t.value = "!=";
@@ -626,7 +618,7 @@ Token Lexer::next_token() {
             t.value = "~";
             break;
         case '^':
-            if(input.peek() == '=') {
+            if(peek() == '=') {
                 get();
                 t.type = TT::BIT_XOR_ASSIGN;
                 t.value = "^=";
@@ -658,12 +650,12 @@ Token Lexer::next_token() {
             }
             else {
                 std::string s(1, c);
-                error(t, s, "Unknown token found!");
+                error(t, s, "unknown token found!");
                 return t;
             }
         break;
     }
 
-    t.end = {column, line};
+    t.range.end = pos;
     return t;
 }

@@ -9,7 +9,9 @@
 enum class ScopeType {
     GLOBAL,
     FUNCTION,
-    BLOCK
+    BLOCK,
+    LOOP,
+    SWITCH
 };
 
 class Scope {
@@ -45,6 +47,19 @@ public:
         return nullptr;
     }
 
+    /**
+    *   True if this scope, or one of the scopes around it, has the given type.
+    *   The search stops at the nearest function: currently used for ScopeType::LOOP and ScopeType::SWITCH
+    */
+    bool is_inside(ScopeType t) {
+        for(const Scope *s = this; s != nullptr; s = s->parent) {
+            if(s->type == t)                    return true;
+            if(s->type == ScopeType::FUNCTION)  return false;
+        }
+
+        return false;
+    }
+
     //This destructor does nothing because the declarations nodes on the ast will delete their symbols.
     ~Scope() {
     }
@@ -77,6 +92,16 @@ public:
     }
 
     /**
+    *   @brief Gets the type of the current scope.
+    */
+    ScopeType get_type() { return current()->get_type(); }
+
+    /**
+    *   @brief Tells if we're inside a scope of this type (within the current function).
+    */
+    bool inside(ScopeType t) { return current() && current()->is_inside(t); }
+
+    /**
     *   @brief Inserts into the current scope.
     */
     bool insert(Symbol *s) { return current()->insert(s); }
@@ -95,6 +120,17 @@ public:
     Symbol *lookup_current(const std::string& name) const {
         if(!current()) return nullptr;
         return current()->lookup(name);
+    }
+};
+
+class ScopeGuard {
+    ScopeManager& manager;
+
+public:
+    ScopeGuard(ScopeManager& m, ScopeType t) : manager(m) { manager.enter(t); }
+
+    ~ScopeGuard() {
+        manager.exit();
     }
 };
 

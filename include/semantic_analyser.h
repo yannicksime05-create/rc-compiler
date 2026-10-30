@@ -1,22 +1,20 @@
 #ifndef SEMANTIC_ANALYSER_H
 #define SEMANTIC_ANALYSER_H
 
-#include <stdexcept>
 #include "scope.h"
 #include "ast.h"
+#include "diagnostic.h"
 #include "type_checker.h"
 //#include "symbol.h"           //symbol.h already comes in with scope.h and ast.h
 
-
-class SemanticError : public std::logic_error {
-
+/**
+*   Thrown to abandon the statement being analysed (see analyze_statement()). Use it when the node has no
+*   meaningful result after the error (undefined identifier, operator on incompatible types, ...).
+*   When the analysis can simply go on (redefinition, wrong argument type, ...) call error() instead.
+*/
+class SemanticError : public CompileError {
 public:
-    SemanticError(const std::string& error_msg) : std::logic_error(error_msg) {}
-
-    const char *what() {
-        return std::logic_error::what();
-    }
-
+    SemanticError(const SourceRange& r, const std::string& msg) : CompileError(r, msg) {}
 };
 
 
@@ -24,35 +22,50 @@ class SemanticAnalyser : public Visitor {
     ScopeManager manager;
     TypeChecker checker;
     Program& program;
+    DiagnosticEngine& diagnostic;
 
-    /**
-    */
+    /** What the function being analysed needs to know about its return statements. */
     bool is_function_scope = false;
     Symbol *current_function_symbol = nullptr;
     std::vector<ReturnStmt*> current_function_return_stmts;
     void check_fn_return_types(Type *t, const Token& fn_name);
 
     /** */
-    int loop_depth = 0, switch_depth = 0;
+    bool unaryexpr_tiny_constant_folder(Expr *e, long long& v);
 
-    /** */
-    bool unaryexpr_tiny_constant_folder(Expr *e, int& v);
-
-    void warning(const std::string& msg) {
-        std::cout << msg;
+    void error(const SourceRange& r, const std::string& msg) {
+        diagnostic.error(r, msg);
     }
 
-    void error(const std::string& msg, bool _throw = true) {
-        if(_throw) throw SemanticError(msg);
-
-        std::cerr << msg;
+    void warning(const SourceRange& r, const std::string& msg) {
+        diagnostic.warning(r, msg);
     }
 
-    void check_stmts_condition(Expr *condition, const Token& where);
+    void note(const SourceRange& r, const std::string& msg) {
+        diagnostic.note(r, msg);
+    }
+
+    /** Analyses a statement; an error that abandons it is reported here and the next statement is analysed normally. */
+    void analyze_statement(Stmt *s);
+
+    /**
+    *   Same as analyze_statement, but sets e->resolved_type to unknown with the reason contained in the thrown error.
+    *   Used in nodes containing a list of expressions, and in check_stmts_conditions (so that a wrong condition doesn't throw out the whole statement)
+    */
+    void analyze_expression(Expr *e);
+
+    /**
+    *   Checks that 'value' (of type 'from') can be converted to 'to'.
+    *   Throws if it can't, warns if the value may change (narrowing), unless it's a literal that fits.
+    */
+    void check_conversion(const Type *from, const Type *to, Expr *value);
+    bool literal_fits(Expr *value, const Type *in);
+
+    void check_stmts_condition(Expr *condition);
 
 
 public:
-    SemanticAnalyser(Program& p) : program(p) {}
+    SemanticAnalyser(Program& p, DiagnosticEngine& d) : program(p), diagnostic(d) {}
 
     /** Default destructor */
     ~SemanticAnalyser() = default;

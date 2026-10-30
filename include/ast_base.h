@@ -1,6 +1,8 @@
 #ifndef AST_BASE_H
 #define AST_BASE_H
 
+#include "token.h"
+
 enum class ASTNodeType {
     PROGRAM,
 
@@ -26,6 +28,7 @@ class Visitor;
 
 struct ASTNode {
     ASTNodeType node_type;
+    SourceRange range{};
     virtual void accept(Visitor& v) = 0;
     virtual ~ASTNode() = default;
 };

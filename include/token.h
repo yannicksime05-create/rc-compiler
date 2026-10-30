@@ -43,7 +43,7 @@ enum class TokenType {
     LEFT_SHIFT, RIGHT_SHIFT,                                            // << >>
     CONDITIONAL, COLON,                                                 // ? :
     DOT,
-    //ARROW, DOT_STAR, ELLIPSIS,                                   // -> . .* ...
+//    ARROW, DOT_STAR, ELLIPSIS,                                          // -> . .* ...
 
     // ===== Punctuation =====
     LPAREN, RPAREN,                                                     // ( )
@@ -53,16 +53,21 @@ enum class TokenType {
 //    HASH                                                                // #
 };
 
+struct SourceRange {
+    size_t begin = 0;
+    size_t end = 0;
+};
+
+/** Only used when printing. Derived from an offset by DiagnosticEngine::locate(). */
 struct Location {
-    int col;
-    int line;
+    int col = 0;
+    int line = 0;
 };
 
 struct Token {
-    TokenType type;
+    TokenType type = TokenType::UNKNOWN;
     std::string value;
-    Location start;
-    Location end;
+    SourceRange range;
 };
 
 #endif // TOKEN_H

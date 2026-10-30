@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <vector>
-#include <istream>
 #include <map>
+#include "diagnostic.h"
 #include "token.h"
 
 using TT = TokenType;
@@ -48,43 +48,48 @@ const std::map<std::string, TokenType> keywords = {
 
 class Lexer {
     std::vector<Token> tokens;
-    std::istream& input;
-    int line, column;
+    const std::string& input;
+    DiagnosticEngine& diagnostic;
+    size_t pos = 0;
+    bool hit_eof = false;
 
     //current character in the file.
     char c;
-
-    // TODO: find a way to get the actual tab size instead of assuming it's 4
-    void advance() {
-        if(c == '\n') {
-            ++line; column = 1;
-        }
-        else if(c == '\t') column += 4;
-        else    ++column;
-    }
 
     TokenType get_word_type(const std::string& word) {
         auto it = keywords.find(word);
         return it != keywords.end() ? it->second : TokenType::IDENTIFIER;
     }
 
-    /**
-    *   Use this function when there's no doubt about character we're going to read
-    *   (i.e we don't need to check it with advance()).
-    */
     char get() {
-        ++column;
-        return input.get();
+        if(pos >= input.size()) {
+            hit_eof = true;
+            return static_cast<char>(EOF);
+        }
+
+        return input[pos++];
     }
+
+    /**
+    *   @return the character at pos without incrementing it.
+    */
+    int peek() {
+        if(pos >= input.size()) {
+            hit_eof = true;
+            return EOF;
+        }
+
+        return static_cast<unsigned char>(input[pos]);
+    }
+
+    bool eof() { return hit_eof; }
 
     void error(Token& t, const std::string& s, const std::string& msg) {
         t.type = TT::UNKNOWN;
         t.value = s;
-        t.end = {column, line};
+        t.range.end = pos;
 
-        std::cerr << msg << "\nToken: value = " << t.value
-        << ", spans from: line " << t.start.line << ", col " << t.start.col
-        << " to: line " << line << ", col " << column << ".\n" << std::endl;
+        diagnostic.error(t, msg);
     }
 
     bool scan_binary_numbers(Token& t, std::string& s);
@@ -104,22 +109,22 @@ class Lexer {
 
 
 public:
-    Lexer(std::istream& input) : input(input), line(1), column(1) {}
+    Lexer(const std::string& source, DiagnosticEngine& d) : input(source), diagnostic(d) {}
 
     std::vector<Token>& lex() {
         Token t;
         do{
             t = next_token();
-            if(t.type != TT::UNKNOWN) print(t);
-            if(t.type != TT::USELESS) tokens.push_back(t);
+            if(t.type == TT::UNKNOWN || t.type == TT::USELESS) continue;
+            tokens.push_back(t);
         }while( t.type != TT::END_OF_FILE );
 
         return tokens;
     }
 
     void print(Token& t) {
-        std::cout << "token value = " << t.value << "\n" << std::endl;
-//        std::cout << "token value = " << t.value << ", starts at line: " << t.start.line << ", col: " << t.start.col << ", ends at: line: " << t.end.line << ", col: " << t.end.col << std::endl;
+//        std::cout << "token value = " << t.value << ", offset begin: " << t.range.begin << ", offset end: " << t.range.end << " start at line: " << loc.line << ", col: " << loc.col << std::endl;
+        std::cout << "token value = " << t.value << ", offset begin: " << t.range.begin << ", offset end: " << t.range.end << std::endl;
     }
 
 };

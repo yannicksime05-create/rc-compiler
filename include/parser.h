@@ -1,9 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <stdexcept>
-#include <sstream>
 #include "ast.h"
+#include "diagnostic.h"
 
 using TT = TokenType;
 
@@ -27,46 +26,40 @@ enum Precedence {
     PREC_POSTFIX         // () [] . ++ --
 };
 
-class ParseError : public std::logic_error {
+class ParseError : public CompileError {
 
 public:
-    ParseError(const std::string& error_msg) : std::logic_error(error_msg) {}
-
-    const char *what() {
-        return std::logic_error::what();
-    }
-
+    ParseError(const SourceRange& r, const std::string& msg) : CompileError(r, msg) {}
 };
 
 class Parser {
     std::vector<Token>& tokens;
-    size_t pos;
+    DiagnosticEngine& diagnostic;
+    size_t pos = 0;
 
+    // how many '{' we are currently inside, it's used by synchronize to detect if a '}' should be swallowed or not. Updated by parse_compound_statement
+    int block_depth = 0;
 
-    Token& peek(size_t n = 1) { return (pos + n >= tokens.size()) ? tokens.back() : tokens[pos + n]; }
+    // parse_for_statement uses peek(-2) to get the keyword back
+    Token& peek(int n = 1) {
+        size_t i = pos + static_cast<size_t>(n);
 
-    Token& get() { return (pos >= tokens.size()) ? tokens.back() : tokens[pos++]; }
+        if(i <= 0)                  return tokens.front();
+        else if(i >= tokens.size()) return tokens.back();
 
-    Token& current() { return tokens.at(pos); }
+        return tokens[i];
+    }
+
+    Token& get() { return pos >= tokens.size() ? tokens.back() : tokens[pos++]; }
+
+    Token& current() { return pos >= tokens.size() ? tokens.back() : tokens[pos]; }
 
     /**
     *   This function is useful when:
     *   - we need to do an expect() (so that the program stops if there is an error),
     *   - but we also need to recover the skipped token if there were no errors.
     */
-    Token& previous() { return tokens.at(pos - 1); }
-
-    void expect(TokenType t, const std::string& error_msg) {
-        if( !is(t) ) {
-            std::stringstream s;
-            s << error_msg << " found: "
-            << current().value << " instead. Spans from: line " << current().start.line << ", col " << current().start.col
-            << ", to: line " << current().end.line << ", col " << current().end.col;
-            throw ParseError(s.str());
-        }
-
-        ++pos;
-    }
+    Token& previous() { return peek(-1); }
 
     /**
     *   Tells if the current token is of a certain type.
@@ -96,7 +89,8 @@ class Parser {
             case TT::KW_UBYTE:
             case TT::KW_UINT:
             case TT::KW_USHORT:
-            case TT::KW_ULONG:     return true;
+            case TT::KW_ULONG:
+            case TT::KW_VOID:      return true;
 
             default:               return false;
         }
@@ -104,6 +98,68 @@ class Parser {
 
     bool is_right_associative(TokenType t);
     bool is_postfix_operator(TokenType t);
+
+    std::string final_msg(const std::string& msg) {
+        return msg + ", found '" + current().value + "' instead";
+    }
+
+    void error(const std::string& msg) {
+        const std::string& s = final_msg(msg);
+
+        throw ParseError(current().range, s);
+    }
+
+    void expect(TokenType t, const std::string& msg) {
+        if( is(t) ) {
+            ++pos;
+            return;
+        }
+
+        // A missing ';' (or ')' ...) is where the user has to type it: right after the previous token,
+        // not where the next token is.
+        bool is_delimiter = t == TT::SEMICOLON || t == TT::COMMA || t == TT::COLON || t == TT::RPAREN || t == TT::RBRACE || t == TT::RBRACKET;
+        if( pos > 0 && is_delimiter ) {
+            SourceRange r;
+            r.begin = r.end = tokens[pos - 1].range.end;
+
+            throw ParseError(r, final_msg(msg));
+        }
+
+        error(msg);
+    }
+
+    bool starts_statement() {
+        switch(current().type) {
+            case TT::KW_IF:     case TT::KW_SWITCH: case TT::KW_WHILE:
+            case TT::KW_DO:     case TT::KW_FOR:    case TT::KW_RETURN:
+            case TT::KW_PRINT:  case TT::KW_BREAK:  case TT::KW_CONTINUE:
+            case TT::KW_CONST:  case TT::LBRACE:
+                return true;
+            default:
+                return is_primitive_type(pos);
+        }
+    }
+
+    // skip to a safe point
+    void synchronize() {
+        while( !is(TT::END_OF_FILE) ) {
+            if( is(TT::SEMICOLON) ) {
+                get();
+                return;
+            }
+
+            if( is(TT::RBRACE) ) {
+                if(!block_depth) get();  // stray '}' at the top level: nothing is waiting for it
+                return;                  // otherwise it closes the block we're recovering in: leave it
+            }
+
+            if( starts_statement() ) return;
+
+            get();
+        }
+    }
+
+
 
 
     Precedence get_precedence(TokenType t);
@@ -148,17 +204,22 @@ class Parser {
 
 
 public:
-    Parser(std::vector<Token>& tokens) : tokens(tokens), pos(0) {}
+    Parser(std::vector<Token>& tokens, DiagnosticEngine& d) : tokens(tokens), diagnostic(d), pos(0) {}
 
     Program *parse() {
         std::vector<Stmt *> statements;
-        do{
-            statements.push_back(parseStatement());
-        }while( !is(TT::END_OF_FILE) );
+        while( !is(TT::END_OF_FILE) ) {
+            try {
+                statements.push_back(parseStatement());
+            }
+            catch(const CompileError& e) {
+                diagnostic.error(e);
+                synchronize();
+            }
+        }
 
         return new Program(statements);
     }
-
 };
 
 #endif // PARSER_H
