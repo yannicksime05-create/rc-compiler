@@ -28,7 +28,7 @@ struct Symbol {
             declared_type = nullptr;
         }
 
-        std::cout << "Cleaning Symbol...\n";
+//        std::cout << "Cleaning Symbol...\n";
     }
 };
 
