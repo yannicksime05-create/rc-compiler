@@ -1,20 +1,32 @@
 #ifndef TYPE_CHECKER_H
 #define TYPE_CHECKER_H
 
-//#include <stdexcept>
-#include <sstream>
 #include "ast.h"
 #include "token.h"
 #include "types.h"
 
+/**
+*   How good a conversion from one type to another is. Only classifies: reporting is the analyser's job.
+*/
+enum class Conversion {
+    EXACT,          // same type
+    WIDENING,       // numeric, to a type at least as big (int -> long)
+    NARROWING,      // numeric, to a smaller type (double -> int): allowed, but the value may change
+    INVALID
+};
+
 class TypeChecker {
+    // --- Helpers
+    const BuiltinType  *to_builtin(const Type *t);
+    const ArrayType    *to_array(const Type *t);
+    const AutoType     *to_auto(const Type *t);
+
     int numeric_rank(const BuiltinType *t);
 
-    /**
-    *   This is a helper function for are_compatibles and is_assignable.
-    *   Special cases apart, those functions do the same work, so this helper does it for them.
-    */
-    bool assign_compat_helper(const Type *a, const Type *b);
+    // --- String conversion (for error messages)
+    std::string builtintype_to_string(const BuiltinType *t);
+    std::string arraytype_to_string(const ArrayType *t);
+    std::string autotype_to_string(const AutoType *t);
 
 public:
     /** Default constructor */
@@ -22,11 +34,6 @@ public:
 
     /** Default destructor */
     ~TypeChecker() = default;
-
-    // --- Helpers
-    const BuiltinType  *to_builtin(const Type *t);
-    const ArrayType    *to_array(const Type *t);
-    const AutoType     *to_auto(const Type *t);
 
     // --- Type classification
     bool is_builtin(const Type *t);
@@ -48,6 +55,7 @@ public:
     bool is_void(const Type *t);
 
     // --- Type compatibility
+    Conversion classify_conversion(const Type *from, const Type *to);
     bool are_equals(const Type *a, const Type *b);
     bool are_compatibles(const Type *a, const Type *b);
     bool is_assignable(const Type *value, const Type *target);
@@ -60,16 +68,16 @@ public:
     Type        *resolve_unary(const Type *operand, TokenType op);
     Type        *resolve_assignment(const Type *target, const Type *value, TokenType op);
 
+    //
+    Type        *find_base_type(const ArrayType *t);
 
     // --- String conversion (for error messages)
     std::string to_string(const Type *t);
-    std::string builtintype_to_string(const BuiltinType *t);
-    std::string arraytype_to_string(const ArrayType *t);
-    std::string autotype_to_string(const AutoType *t);
 
     // --- Error messages
     std::string type_mismatch(const Type *left, const Type *right, const Token& op);
-    std::string invalid_conversion(const Type *from, const Type *to, Location where);
+    std::string invalid_conversion(const Type *from, const Type *to);
+    std::string narrowing_conversion(const Type *from, const Type *to);
 };
 
 #endif // TYPECHECKER_H

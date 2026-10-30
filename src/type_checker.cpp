@@ -1,3 +1,4 @@
+#include <sstream>
 #include "type_checker.h"
 
 using TT = TokenType;
@@ -41,20 +42,6 @@ int TypeChecker::numeric_rank(const BuiltinType *t) {
 //        case BT::FLOAT128:  return 7;
 
         default:            return -1;
-    }
-}
-
-bool TypeChecker::assign_compat_helper(const Type *a, const Type *b) {
-    switch(a->kind) {
-        case TK::ANY:       return true;
-        case TK::ARRAY:     return are_equals(a, b);
-        case TK::BUILTIN: {
-            if(is_numeric(a) && is_numeric(b)) return ( is_unsigned(a) && is_unsigned(b) ) || ( is_signed(a) && is_signed(b) );
-
-            // char, string, bool are only assignable from themselves
-            return are_equals(a, b);
-        }
-        default:            return false;
     }
 }
 
@@ -140,6 +127,41 @@ bool TypeChecker::is_void(const Type *t) {
 }
 
 
+Conversion TypeChecker::classify_conversion(const Type *from, const Type *to) {
+    if(!from || !to) return Conversion::INVALID;
+
+    if(to->kind == TK::ANY) return Conversion::EXACT;
+
+    if(from->kind == TK::AUTO) {
+        const AutoType *a = to_auto(from);
+        return a->resolved ? classify_conversion(a->resolved, to) : Conversion::EXACT;
+    }
+    else if(to->kind == TK::AUTO) {
+        const AutoType *a = to_auto(to);
+        return a->resolved ? classify_conversion(from, a->resolved) : Conversion::EXACT;
+    }
+
+    if(from->kind != to->kind) return Conversion::INVALID;
+
+    switch(to->kind) {
+        case TK::ARRAY:                          return are_equals(from, to) ? Conversion::EXACT : Conversion::INVALID;
+        case TK::BUILTIN: {
+            const BuiltinType *f = to_builtin(from), *t = to_builtin(to);
+            if(f->builtin == t->builtin)         return Conversion::EXACT;
+
+            // char, string, bool and void only convert to themselves, so if we reached this condition
+            // and both f and t are not numeric values then the conversion is invalid
+            if(!is_numeric(f) || !is_numeric(t)) return Conversion::INVALID;
+
+            // signed and unsigned are never mixed
+            if(is_unsigned(f) != is_unsigned(t)) return Conversion::INVALID;
+
+            return numeric_rank(f) <= numeric_rank(t) ? Conversion::WIDENING : Conversion::NARROWING;
+        }
+        default: return Conversion::INVALID;
+    }
+}
+
 bool TypeChecker::are_equals(const Type *a, const Type *b) {
     if(!a || !b)            return false;
     if(a->kind != b->kind)  return false;
@@ -162,38 +184,27 @@ bool TypeChecker::are_equals(const Type *a, const Type *b) {
 }
 
 bool TypeChecker::are_compatibles(const Type *a, const Type *b) {
-    if(!a || !b)            return false;
-
-    if(a->kind == TK::AUTO) {
-        const AutoType *aa = to_auto(a);
-        return aa->resolved ? are_compatibles(aa->resolved, b) : true;
-    }
-    if(b->kind == TK::AUTO) {
-        const AutoType *ab = to_auto(b);
-        return ab->resolved ? are_compatibles(ab->resolved, a) : true;
-    }
-
-    if(a->kind != b->kind)  return false;
-
-    return assign_compat_helper(a, b);
+    return classify_conversion(a, b) != Conversion::INVALID;
 }
 
 bool TypeChecker::is_assignable(const Type *value, const Type *target) {
     if(!target || !value)   return false;
 
-    if(target->kind == TK::AUTO) {
-        const AutoType *at = to_auto(target);
-        return is_assignable(value, at->resolved);
-    }
+//    if(target->kind == TK::AUTO) {
+//        const AutoType *at = to_auto(target);
+//        return is_assignable(value, at->resolved);
+//    }
 
-    return assign_compat_helper(target, value);
+    //Assigning to an 'auto' that hasn't been deduced yet is not allowed.
+    if(target->kind == TK::AUTO && !to_auto(target)->resolved) return false;
+
+//    return assign_compat_helper(target, value);
+    return classify_conversion(value, target) != Conversion::INVALID;
 }
 
 
 Type *TypeChecker::resolve(TypeSpecifier& t) {
     Type *tmp = resolve_type_name(t.type_name);
-    //for now it only constains 'const'
-    tmp->is_constant = !t.qualifiers.empty();
 
     //int[3]            (kind: ARRAY, size: 3, elem_type: (kind: BUILTIN, builtin: INT))
     //int[3][4]         (kind: ARRAY, size: 3, elem_type: (kind: ARRAY, size: 4, elem_type: (kind: BUILTIN, builtin: INT)))
@@ -205,6 +216,8 @@ Type *TypeChecker::resolve(TypeSpecifier& t) {
         --dimension;
     }
 
+    //for now it only constains 'const'
+    tmp->is_constant = !t.qualifiers.empty();
     return tmp;
 }
 
@@ -231,11 +244,7 @@ Type *TypeChecker::resolve_type_name(Token& t) {
         case TT::KW_STRING: return new BuiltinType(BT::STRING);
 
         case TT::KW_VOID:   return new BuiltinType(BT::VOID);
-        default: {
-            std::stringstream ss;
-            ss << "undefined type '" << t.value << "'";
-            return new UnknownType(ss.str());
-        }
+        default:            return new UnknownType("undefined type '" + t.value + "'");
     }
 }
 
@@ -431,6 +440,13 @@ Type *TypeChecker::resolve_assignment(const Type *target, const Type *value, Tok
     }
 }
 
+Type *TypeChecker::find_base_type(const ArrayType *t) {
+    const ArrayType *tmp = t;
+    while(tmp->element_type && tmp->element_type->kind == TK::ARRAY) tmp = to_array(tmp->element_type);
+
+    return tmp->element_type;
+}
+
 std::string TypeChecker::to_string(const Type *t) {
     if(!t) return "null";
 
@@ -482,15 +498,12 @@ std::string TypeChecker::builtintype_to_string(const BuiltinType *t) {
 }
 
 std::string TypeChecker::arraytype_to_string(const ArrayType *t) {
-    const ArrayType *tmp = t;
-    while(tmp->element_type->kind == TK::ARRAY) tmp = to_array(tmp->element_type);
-
     std::stringstream ss;
-    ss << to_string(tmp->element_type);
+    ss << to_string(find_base_type(t));
 
-    tmp = t;
+    const ArrayType *tmp = t;
     ss << "[" << tmp->size << "]";
-    while(tmp->element_type->kind == TK::ARRAY) {
+    while(tmp->element_type && tmp->element_type->kind == TK::ARRAY) {
         tmp = to_array(tmp->element_type);
         ss << "[";
         if(tmp->size > 0) ss << tmp->size;
@@ -507,15 +520,21 @@ std::string TypeChecker::autotype_to_string(const AutoType *t) {
 
 std::string TypeChecker::type_mismatch(const Type *left, const Type *right, const Token& op) {
     std::stringstream ss;
-    ss << "Error: Operands' types mismatch for operator '" << op.value << "' at line: " << op.start.line
-    << ".\n Left is: '" << to_string(left) << "', right is: '" << to_string(right) << "'.\n";
+    ss << "invalid operands to operator '" << op.value << "': '" << to_string(left) << "' and '" << to_string(right) << "'";
 
     return ss.str();
 }
 
-std::string TypeChecker::invalid_conversion(const Type *from, const Type *to, Location where) {
+std::string TypeChecker::invalid_conversion(const Type *from, const Type *to) {
     std::stringstream ss;
-    ss << "Error: Invalid conversion from '" << to_string(from) << "' to '" << to_string(to) << "'. Line: " << where.line << "\n";
+    ss << "invalid conversion from '" << to_string(from) << "' to '" << to_string(to) << "'";
+
+    return ss.str();
+}
+
+std::string TypeChecker::narrowing_conversion(const Type *from, const Type *to) {
+    std::stringstream ss;
+    ss << "implicit conversion from '" << to_string(from) << "' to '" << to_string(to) << "' may lose information";
 
     return ss.str();
 }
