@@ -555,16 +555,12 @@ VariableDecl *Parser::parse_rangefor_variable() {
 
 RangeForStmt *Parser::parse_rangefor_statement() {
     VariableDecl *v = parse_rangefor_variable();
-    expect(TT::COLON, "Error: Expected ':' in range-for statement");
+    expect(TT::COLON, "expected ':' in range-for statement");
 
     Expr *range = parseExpression();
-    if(!range) throw ParseError("Error: Expected primary-expression before ')'");
-    expect(TT::RPAREN, "Error: Expected ')' after range-for expression");
+    expect(TT::RPAREN, "expected ')' after range-for expression");
 
     Stmt *body = parseStatement();
-    if(!body) {
-        std::cerr << "From: parse_rangefor_statement\nError: unable to parse body" << std::endl;
-    }
 
     return new RangeForStmt(v, range, body);
 //    return nullptr;
