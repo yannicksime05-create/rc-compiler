@@ -19,7 +19,7 @@ source.rc
    ▼
  Parser           (src/parser.cpp)       →  AST (Program)
    │
-   ├──▶ Printer            (src/printer.cpp)            – dumps the AST for debugging
+   ├──▶ Printer   (src/printer.cpp)      – dumps the AST for debugging // currently commented in main.cpp. Uncomment it to print the ast again
    │
    ▼
  SemanticAnalyser (src/semantic_analyser.cpp) – scoping, type resolution & checking
@@ -372,7 +372,7 @@ g++ -Iinclude main.cpp src/*.cpp -o rc
 
 Running the compiler:
 1. Lexes and parses `transpilation_test.rc`.
-2. Prints the AST to stdout via `Printer` (debug output).
+2. Prints the AST to stdout via `Printer` (debug output). // commented out
 3. Runs `SemanticAnalyser::analyze()`.
 4. Writes the transpiled C++ to `out.cpp`.
 5. (Optional, currently commented out in `main.cpp`) invokes `g++` on `out.cpp`.
@@ -382,6 +382,7 @@ Running the compiler:
 ```
 include/
   ast.h, ast_base.h        – AST node definitions + Visitor interface
+  diagnostic.h             – Prints all errors/warnings/notes
   token.h                  – TokenType enum, Token/Location structs
   lexer.h                  – Lexer class
   parser.h                 – Parser class (Pratt/precedence-climbing expression parser)
@@ -416,11 +417,6 @@ directly from gaps in the current source:
   `concept`, `import`/`export`, `friend`, and `static_assert` declarations, and
   `ebnfs/statements.txt` lists `continue` and `labeled-statement` — none of these
   exist in the lexer/parser/AST yet.
-- **The AST classes print verbose destructor logs** (`std::cout << "Cleaned up X
-  node...\n"` in nearly every destructor) — useful during development, but worth
-  gating behind a debug flag before this is used for anything larger.
-- **`SemanticAnalyser` logs a lot of `std::cout` debug output** for resolved types;
-  same note as above.
 
 ## Roadmap ideas
 
