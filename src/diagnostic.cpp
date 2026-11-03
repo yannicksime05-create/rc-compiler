@@ -70,7 +70,7 @@ void DiagnosticEngine::report(Severity s, const SourceRange& r, const std::strin
 
     if(s == Severity::ERROR && errors >= MAX_ERRORS) {
         out << "too many errors emitted, stopping now\n";
-        throw CompilationAborted("error limit reached");
+        throw CompilationAborted("error limit reached\n");
     }
 }
 
