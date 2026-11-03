@@ -386,7 +386,7 @@ Stmt *Parser::parseStatement() {
         case TT::KW_BREAK:      return parse_break_statement();
         case TT::KW_CONTINUE:   return parse_continue_statement();
         default:
-            if(!is_compound_statement) throw ParseError(current().range, "declarations are not allowed a single statement's body, wrap it inside '{ }'");
+            if(!is_compound_statement) throw ParseError(current().range, "declarations are not allowed in a single statement's body, wrap it inside '{ }'");
             if( starts_declaration() ) return parse_declaration_statement();
             return parse_expression_statement();
     }
@@ -396,9 +396,11 @@ Stmt *Parser::parseStatement() {
 *   This function is only used by control-flow statements except the for-statement
 */
 Stmt *Parser::parse_sub_statement() {
-    // we are already inside a compound statement
+    // we are already inside a compound statement so
+    // we can turn it off
     is_compound_statement = false;
     Stmt *s = parseStatement();
+    // we restore the previous state
     is_compound_statement = true;
 
     return s;
