@@ -5,10 +5,10 @@ void Printer::visit(Program& p) {
     indent(); std::cout << "Program: {\n";
     nspace += tab_length;
     indent(); std::cout << "body: ";
-    if(p.statements.empty()) std::cout << "[]\n";
+    if(p.declarations.empty()) std::cout << "[]\n";
     else {
         std::cout << "[\n";
-        for(Stmt *s : p.statements) stmts_printer_helper(s);
+        for(Decl *d : p.declarations) decls_printer_helper(d);
         indent(); std::cout << "]\n";
     }
     nspace -= tab_length;

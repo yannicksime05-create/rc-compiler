@@ -46,18 +46,18 @@ struct Stmt : ASTNode {
 
 
 struct Program : ASTNode {
-    std::vector<Stmt *> statements;
+    std::vector<Decl *> declarations;
 
-    Program(const std::vector<Stmt *>& s) : statements(s) {
+    Program(const std::vector<Decl *>& d) : declarations(d) {
         node_type = ASTNodeType::PROGRAM;
     }
 
     void accept(Visitor& v) override;
 
     ~Program() {
-        for(const Stmt *s : statements) {
-            delete s;
-            s = nullptr;
+        for(const Decl *d : declarations) {
+            delete d;
+            d = nullptr;
         }
 
 //        std::cout << "Cleaned up Program node...\n";

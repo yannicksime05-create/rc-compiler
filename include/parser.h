@@ -37,8 +37,8 @@ class Parser {
     DiagnosticEngine& diagnostic;
     size_t pos = 0;
 
-    // how many '{' we are currently inside, it's used by synchronize to detect if a '}' should be swallowed or not. Updated by parse_compound_statement
-    int block_depth = 0;
+    // Used with parse_sub_statement() to report declarations happening in single statements
+    bool is_compound_statement = false;
 
     // parse_for_statement uses peek(-2) to get the keyword back
     Token& peek(int n = 1) {
@@ -133,27 +133,46 @@ class Parser {
             case TT::KW_IF:     case TT::KW_SWITCH: case TT::KW_WHILE:
             case TT::KW_DO:     case TT::KW_FOR:    case TT::KW_RETURN:
             case TT::KW_PRINT:  case TT::KW_BREAK:  case TT::KW_CONTINUE:
-            case TT::KW_CONST:  case TT::LBRACE:
+            case TT::LBRACE:
                 return true;
             default:
-                return is_primitive_type(pos);
+                return false;
         }
+    }
+
+    bool starts_declaration() {
+        switch(current().type) {
+            case TT::KW_CONST: return true;
+            default:
+                if( is_primitive_type(pos) ) return true;
+
+                if( is(TT::IDENTIFIER) && peek().type == TT::IDENTIFIER )
+                    return true;
+        }
+
+        return false;
     }
 
     // skip to a safe point
     void synchronize() {
+        int depth = 0;
+
         while( !is(TT::END_OF_FILE) ) {
-            if( is(TT::SEMICOLON) ) {
+//            if(depth == 0 && pos > start && starts_declaration()) return;
+
+            if( is(TT::LBRACE) )                      ++depth;
+            else if( is(TT::RBRACE) ) {
+                if(depth > 0) --depth;
+                get();
+
+                // we're back at the global scope
+                if(depth == 0) return;
+                continue;
+            }
+            else if( is(TT::SEMICOLON) && depth == 0 ) {
                 get();
                 return;
             }
-
-            if( is(TT::RBRACE) ) {
-                if(!block_depth) get();  // stray '}' at the top level: nothing is waiting for it
-                return;                  // otherwise it closes the block we're recovering in: leave it
-            }
-
-            if( starts_statement() ) return;
 
             get();
         }
@@ -170,19 +189,21 @@ class Parser {
 
 
 
-    Decl                    *parseDeclaration();
-    TypeSpecifier           *parse_type_specifier();
-    VariableDeclarator      *parse_variable_declarator(const Token& name);
-    VariableDecl            *parse_variable_declaration(const TypeSpecifier& type);
+    Decl                    *parse_top_level_declaration();
+    Decl                    *parseDeclaration(bool at_file_scope = true);
+    bool                     starts_variable_declaration(bool in_rangefor = false);
+    TypeSpecifier            parse_type_specifier();
+    VariableDeclarator      *parse_variable_declarator();
+    VariableDecl            *parse_variable_declaration();
     Parameter               *parse_function_parameters();
-    FunctionPrototype       *parse_function_prototype(const TypeSpecifier& type);
-    FunctionDecl            *parse_function_declaration(const TypeSpecifier& type);
+    FunctionPrototype       *parse_function_prototype();
+    FunctionDecl            *parse_function_declaration();
 
 
 
 
     Stmt                *parseStatement();
-    bool                 starts_declaration();
+    Stmt                *parse_sub_statement();
     CompoundStmt        *parse_compound_statement();
     ExpressionStmt      *parse_expression_statement();
     DeclarationStmt     *parse_declaration_statement();
@@ -191,7 +212,6 @@ class Parser {
     CaseClause          *parse_case_clause();
     WhileStmt           *parse_while_statement();
     DoWhileStmt         *parse_do_while_statement();
-    bool                 is_rangefor_pattern();
     Stmt                *dispatch_for_statements();
     ForStmt             *parse_for_statement();
     VariableDecl        *parse_rangefor_variable();
@@ -207,10 +227,10 @@ public:
     Parser(std::vector<Token>& tokens, DiagnosticEngine& d) : tokens(tokens), diagnostic(d), pos(0) {}
 
     Program *parse() {
-        std::vector<Stmt *> statements;
+        std::vector<Decl *> declarations;
         while( !is(TT::END_OF_FILE) ) {
             try {
-                statements.push_back(parseStatement());
+                declarations.push_back( parse_top_level_declaration() );
             }
             catch(const CompileError& e) {
                 diagnostic.error(e);
@@ -218,7 +238,7 @@ public:
             }
         }
 
-        return new Program(statements);
+        return new Program(declarations);
     }
 };
 

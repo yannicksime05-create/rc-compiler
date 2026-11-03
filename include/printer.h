@@ -24,6 +24,14 @@ class Printer : public Visitor {
         nspace -= tab_length;
     }
 
+    void decls_printer_helper(Decl *d) {
+        if(!d) return;
+
+        nspace += tab_length;
+        d->accept(*this);
+        nspace -= tab_length;
+    }
+
     void stmts_printer_helper(Stmt *s) {
         if(!s) return;
 

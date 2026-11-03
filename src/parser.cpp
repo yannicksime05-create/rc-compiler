@@ -241,19 +241,38 @@ Expr *Parser::parse_postfix(Expr *lhs) {
 
 
 
-Decl *Parser::parseDeclaration() {
-    TypeSpecifier *type = parse_type_specifier();
-    expect(TT::IDENTIFIER, "expected identifier after type specifier");
+Decl *Parser::parse_top_level_declaration() {
+    if( !starts_declaration() ) throw ParseError(current().range, "only declarations are allowed in the global scope");
 
-    if( is(TT::LPAREN) )
-        return parse_function_declaration(*type);
-    else
-        return parse_variable_declaration(*type);
-
-    return nullptr;
+    return parseDeclaration();
 }
 
-TypeSpecifier *Parser::parse_type_specifier() {
+Decl *Parser::parseDeclaration(bool at_file_scope) {
+    switch(current().type) {
+        default:
+            if( starts_variable_declaration() ) return parse_variable_declaration();
+
+            if(!at_file_scope) throw ParseError(current().range, "functions can only be declared at file scope");
+
+            return parse_function_declaration();
+    }
+
+}
+
+bool Parser::starts_variable_declaration(bool in_rangefor) {
+    size_t i = pos;
+    if(i < tokens.size() && tokens[i].type == TT::KW_CONST) ++i;
+
+    if(i < tokens.size() && (is_primitive_type(i) || tokens[i].type == TT::IDENTIFIER)) ++i;
+    else return false;
+
+    if(i < tokens.size() && tokens[i].type == TT::IDENTIFIER) ++i;
+    else return false;
+
+    return i < tokens.size() && (in_rangefor ? tokens[i].type == TT::COLON : tokens[i].type != TT::LPAREN);
+}
+
+TypeSpecifier Parser::parse_type_specifier() {
     std::vector<std::string> qualifiers;
     while( is(TT::KW_CONST) ) qualifiers.push_back(get().value);
 
@@ -272,10 +291,13 @@ TypeSpecifier *Parser::parse_type_specifier() {
         expect(TT::RBRACKET, "expected ']' after array size");
     }
 
-    return new TypeSpecifier(qualifiers, base_type, dimension);
+    return TypeSpecifier(qualifiers, base_type, dimension);
 }
 
-VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
+VariableDeclarator *Parser::parse_variable_declarator() {
+    expect(TT::IDENTIFIER, "expected variable's name after type specifier");
+    Token name = previous();
+
     Expr *init = nullptr;
     if( is(TT::ASSIGN) ) {
         get();
@@ -285,15 +307,14 @@ VariableDeclarator *Parser::parse_variable_declarator(const Token& name) {
     return new VariableDeclarator(name, init);
 }
 
-VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
-    Token name = previous();
-    std::vector<VariableDeclarator *> decls;
+VariableDecl *Parser::parse_variable_declaration() {
+    TypeSpecifier type = parse_type_specifier();
 
-    decls.push_back( parse_variable_declarator(name) );
+    std::vector<VariableDeclarator *> decls;
+    decls.push_back( parse_variable_declarator() );
     while( is(TT::COMMA) ) {
         get();
-        expect(TT::IDENTIFIER, "expected identifier in variable declaration");
-        decls.push_back(parse_variable_declarator(previous()));
+        decls.push_back( parse_variable_declarator() );
     }
     expect(TT::SEMICOLON, "expected ';' at the end of variable(s) declarations");
 
@@ -301,7 +322,7 @@ VariableDecl *Parser::parse_variable_declaration(const TypeSpecifier& type) {
 }
 
 Parameter *Parser::parse_function_parameters() {
-    TypeSpecifier type = *parse_type_specifier();
+    TypeSpecifier type = parse_type_specifier();
 
     expect(TT::IDENTIFIER, "expected parameter's name in function declaration");
     Token name = previous();
@@ -315,8 +336,12 @@ Parameter *Parser::parse_function_parameters() {
     return new Parameter(type, name, default_value);
 }
 
-FunctionPrototype *Parser::parse_function_prototype(const TypeSpecifier& type) {
+FunctionPrototype *Parser::parse_function_prototype() {
+    TypeSpecifier type = parse_type_specifier();
+
+    expect(TT::IDENTIFIER, "expected function's name after type specifier");
     Token name = previous();
+
     expect(TT::LPAREN, "expected '(' after function's name");
 
     std::vector<Parameter *> parameters;
@@ -332,8 +357,8 @@ FunctionPrototype *Parser::parse_function_prototype(const TypeSpecifier& type) {
     return new FunctionPrototype(type, name, parameters);
 }
 
-FunctionDecl *Parser::parse_function_declaration(const TypeSpecifier& type) {
-    FunctionPrototype *proto = parse_function_prototype(type);
+FunctionDecl *Parser::parse_function_declaration() {
+    FunctionPrototype *proto = parse_function_prototype();
 //    if(!proto) throw ParseError(type.type_name.range, "Missing function's prototype!");
 
     return new FunctionDecl(proto, parse_compound_statement());
@@ -360,31 +385,28 @@ Stmt *Parser::parseStatement() {
         case TT::KW_PRINT:      return parse_print_statement();
         case TT::KW_BREAK:      return parse_break_statement();
         case TT::KW_CONTINUE:   return parse_continue_statement();
-
         default:
+            if(!is_compound_statement) throw ParseError(current().range, "declarations are not allowed a single statement's body, wrap it inside '{ }'");
             if( starts_declaration() ) return parse_declaration_statement();
             return parse_expression_statement();
     }
-
-    return nullptr;
 }
 
-bool Parser::starts_declaration() {
-    if( is(TT::KW_CONST) )
-        return true;
+/**
+*   This function is only used by control-flow statements except the for-statement
+*/
+Stmt *Parser::parse_sub_statement() {
+    // we are already inside a compound statement
+    is_compound_statement = false;
+    Stmt *s = parseStatement();
+    is_compound_statement = true;
 
-    if( is_primitive_type(pos) )
-        return true;
-
-    if( is(TT::IDENTIFIER) && peek().type == TT::IDENTIFIER )
-        return true;
-
-    return false;
+    return s;
 }
 
 CompoundStmt *Parser::parse_compound_statement() {
     expect(TT::LBRACE, "expected '{' to start compound statement");
-    ++block_depth;
+    is_compound_statement = true;
     Token s = previous();
 
     std::vector<Stmt *> stmts;
@@ -400,7 +422,7 @@ CompoundStmt *Parser::parse_compound_statement() {
     }
 
     expect(TT::RBRACE, "expected '}' to end compound statement");
-    --block_depth;
+    is_compound_statement = false;
     return new CompoundStmt(stmts, s, previous());
 }
 
@@ -412,7 +434,7 @@ ExpressionStmt *Parser::parse_expression_statement() {
 }
 
 DeclarationStmt *Parser::parse_declaration_statement() {
-    return new DeclarationStmt( parseDeclaration() );
+    return new DeclarationStmt( parseDeclaration(false) );
 }
 
 IfStmt *Parser::parse_if_statement() {
@@ -422,11 +444,11 @@ IfStmt *Parser::parse_if_statement() {
     Expr *condition = parseExpression();
     expect(TT::RPAREN, "expected closing ')' for if-statement");
 
-    Stmt *else_stmt = nullptr, *then_stmt = parseStatement();
+    Stmt *else_stmt = nullptr, *then_stmt = parse_sub_statement();
 
     if( is(TT::KW_ELSE) ) {
         get();
-        else_stmt = parseStatement();
+        else_stmt = parse_sub_statement();
     }
 
     return new IfStmt(kw, condition, then_stmt, else_stmt);
@@ -490,13 +512,13 @@ WhileStmt *Parser::parse_while_statement() {
     Expr *condition = parseExpression();
     expect(TT::RPAREN, "expected ')' after while expression");
 
-    Stmt *body = parseStatement();
+    Stmt *body = parse_sub_statement();
     return new WhileStmt(kw, condition, body);
 }
 
 DoWhileStmt *Parser::parse_do_while_statement() {
     Token kw = get();
-    Stmt *body = parseStatement();
+    Stmt *body = parse_sub_statement();
 
     expect(TT::KW_WHILE, "expected 'while' after 'do'");
     expect(TT::LPAREN, "expected '(' after 'while'");
@@ -508,25 +530,11 @@ DoWhileStmt *Parser::parse_do_while_statement() {
     return new DoWhileStmt(kw, previous(), body, condition);
 }
 
-bool Parser::is_rangefor_pattern() {
-    size_t i = pos;
-
-    if(i < tokens.size() && tokens[i].type == TT::KW_CONST) ++i;
-
-    if(i < tokens.size() && (is_primitive_type(i) || tokens[i].type == TT::IDENTIFIER)) ++i;
-    else return false;
-
-    if(i < tokens.size() && tokens[i].type == TT::IDENTIFIER) ++i;
-    else return false;
-
-    return (i < tokens.size() && tokens[i].type == TT::COLON);
-}
-
 Stmt *Parser::dispatch_for_statements() {
     get();
     expect(TT::LPAREN, "expected '(' after keyword 'for'");
 
-    if(is_rangefor_pattern()) return parse_rangefor_statement();
+    if( starts_variable_declaration(true) ) return parse_rangefor_statement();
     return parse_for_statement();
 }
 
@@ -545,9 +553,9 @@ ForStmt *Parser::parse_for_statement() {
 }
 
 VariableDecl *Parser::parse_rangefor_variable() {
-    TypeSpecifier type = *parse_type_specifier();
+    TypeSpecifier type = parse_type_specifier();
 
-    VariableDeclarator *vd = parse_variable_declarator( get() );
+    VariableDeclarator *vd = parse_variable_declarator();
     const std::vector<VariableDeclarator*> decl = {vd};
 
     return new VariableDecl(type, decl);
@@ -563,7 +571,6 @@ RangeForStmt *Parser::parse_rangefor_statement() {
     Stmt *body = parseStatement();
 
     return new RangeForStmt(v, range, body);
-//    return nullptr;
 }
 
 ReturnStmt *Parser::parse_return_statement() {
