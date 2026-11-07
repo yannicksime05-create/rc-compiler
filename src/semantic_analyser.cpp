@@ -84,7 +84,13 @@ void SemanticAnalyser::analyze_expression(Expr *e) {
 void SemanticAnalyser::visit(Program& p) {
    ScopeGuard g(manager, ScopeType::GLOBAL);
 
-    for(Stmt *s : p.statements) analyze_statement(s);
+   // Pass 1: every function's signature is visible everywhere (forward calls, mutual recursion).
+    for(Decl *d : p.declarations) {
+        if(d && d->node_type == ASTNodeType::FUNC_DECL_NODE) declare_function( *static_cast<FunctionDecl*>(d) );
+    }
+
+    // Pass 2: global variables (in source order) and function bodies.
+    for(Decl *d : p.declarations) if(d) d->accept(*this);
 }
 
 void SemanticAnalyser::visit(BoolExpr& e) {
@@ -178,8 +184,8 @@ void SemanticAnalyser::visit(IdentifierExpr& e) {
 }
 
 void SemanticAnalyser::visit(BinaryExpr& e) {
-    if(e.left)  e.left->accept(*this);
-    if(e.right) e.right->accept(*this);
+    analyze_expression(e.left);
+    analyze_expression(e.right);
 
     const Type *lt = e.left->resolved_type;
     const Type *rt = e.right->resolved_type;
@@ -192,7 +198,7 @@ void SemanticAnalyser::visit(BinaryExpr& e) {
 }
 
 void SemanticAnalyser::visit(UnaryExpr& e) {
-    if(e.expr) e.expr->accept(*this);
+    analyze_expression(e.expr);
 
     const Type *operand = e.expr->resolved_type;
 
@@ -204,8 +210,8 @@ void SemanticAnalyser::visit(UnaryExpr& e) {
 }
 
 void SemanticAnalyser::visit(AssignmentExpr& e) {
-    if(e.target) e.target->accept(*this);
-    if(e.value)  e.value->accept(*this);
+    analyze_expression(e.target);
+    analyze_expression(e.value);
 
     const Type *target_type = e.target->resolved_type;
     const Type *value_type = e.value->resolved_type;
@@ -220,9 +226,9 @@ void SemanticAnalyser::visit(AssignmentExpr& e) {
 }
 
 void SemanticAnalyser::visit(ConditionalExpr& e) {
-    if(e.condition) e.condition->accept(*this);
-    if(e.if_true)   e.if_true->accept(*this);
-    if(e.if_false)  e.if_false->accept(*this);
+    analyze_expression(e.condition);
+    analyze_expression(e.if_true);
+    analyze_expression(e.if_false);
 
     const Type *cond_type     = e.condition->resolved_type;
     const Type *if_true_type  = e.if_true->resolved_type;
@@ -248,6 +254,8 @@ void SemanticAnalyser::visit(CallExpr& e) {
 
     if(s->type != SymbolType::FUNCTION) throw SemanticError(callee->range, "'" + fn_name + "' is not a function");
     e.symbol = s;
+
+    if( checker.is_auto(s->declared_type) && !static_cast<AutoType*>(s->declared_type)->resolved ) throw SemanticError(callee->range, "return type of '" + fn_name + "' is not deduced yet: declare it before this call or give it an explicit return type");
 
     for(Expr *arg : e.arguments) analyze_expression(arg);
 
@@ -292,11 +300,11 @@ void SemanticAnalyser::visit(CallExpr& e) {
 }
 
 void SemanticAnalyser::visit(MemberAccessExpr& e) {
-    if(e.object) e.object->accept(*this);
+    analyze_expression(e.object);
 }
 
 void SemanticAnalyser::visit(SubscriptExpr& e) {
-    if(e.object) e.object->accept(*this);
+    analyze_expression(e.object);
     for(Expr *i : e.indices) analyze_expression(i);
 
     const Type *current_obj_type = e.object->resolved_type;
@@ -414,47 +422,63 @@ void SemanticAnalyser::check_fn_return_types(Type *ret_type, const Token& fn_nam
     else if (!checker.is_void(ret_type) && !function_has_return) error(fn_name.range, "no return statement in function returning non-void");
 }
 
-void SemanticAnalyser::visit(FunctionDecl& d) {
+void SemanticAnalyser::declare_function(FunctionDecl& d) {
     const Token& fn_name = d.prototype->function_name;
 
     Type *return_type = checker.resolve(d.prototype->return_type);
     if( checker.is_unknown(return_type) ) error(d.prototype->return_type.type_name.range, static_cast<UnknownType*>(return_type)->why);
 
+    // The symbol owns return_type, and the FunctionDecl owns the symbol.
     Symbol *f = new Symbol(fn_name.value, SymbolType::FUNCTION, return_type->is_constant, return_type, &d);
     d.symbol = f;
 
     if(Symbol *prev_decl = manager.lookup_current(fn_name.value)) {
-        error(d.range, "redefinition of function '" + fn_name.value + "'");
+        error(fn_name.range, "redefinition of function '" + fn_name.value + "'");
         note(prev_decl->declaration->range, "previous declaration is here");
     }
     else manager.insert(f);
 
-    //The function is visible from its own body through the enclosing scope, which is what allows recursion.
-    ScopeGuard g(manager, ScopeType::FUNCTION);
-
+    // Parameter symbols are created here because CallExpr needs their types, possibly before the body is analysed.
+    size_t i = 0;
     for(Parameter *param : d.prototype->parameters) {
+        std::string previous_name;
+        if(i) previous_name = d.prototype->parameters[i-1]->parameter_name.value;
+
         const Token& pname = param->parameter_name;
         Type *param_type = checker.resolve(param->type_name);
 
         if( checker.is_unknown(param_type) )    error(param->type_name.type_name.range, static_cast<UnknownType*>(param_type)->why);
         else if( checker.is_auto(param_type) )  error(param->type_name.type_name.range, "'auto' can't be used as the type of a parameter");
 
-        Symbol *p = new Symbol(pname.value, SymbolType::PARAMETER, param_type->is_constant, param_type, &d);
-        param->symbol = p;
+        param->symbol = new Symbol(pname.value, SymbolType::PARAMETER, param_type->is_constant, param_type, &d);
 
-        if( manager.lookup_current(pname.value) ) error(pname.range, "duplicate parameter name '" + pname.value + "'");
-        else manager.insert(p);
+        if( i && previous_name == pname.value ) error(pname.range, "duplicate parameter name '" + pname.value + "'");
+        ++i;
+    }
+}
 
-        if(param->default_value) param->default_value->accept(*this);
+void SemanticAnalyser::visit(FunctionDecl& d) {
+    const Token& fn_name = d.prototype->function_name;
+    Symbol *f = d.symbol;                       // created by declare_function()
+    Type *return_type = f->declared_type;
+
+    //The function is visible from its own body through the enclosing scope, which is what allows recursion.
+    ScopeGuard g(manager, ScopeType::FUNCTION);
+
+    for(Parameter *param : d.prototype->parameters) {
+        manager.insert(param->symbol);          // a duplicate name was already reported in pass 1; insert() just fails
+        if(param->default_value) analyze_expression(param->default_value);
     }
 
     current_function_symbol = f;
     is_function_scope = true;
+    current_function_return_stmts.clear();
 
     if(d.body) d.body->accept(*this);
 
     check_fn_return_types(return_type, fn_name);
     current_function_return_stmts.clear();
+    current_function_symbol = nullptr;
     is_function_scope = false;
 }
 

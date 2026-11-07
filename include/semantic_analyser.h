@@ -63,6 +63,12 @@ class SemanticAnalyser : public Visitor {
 
     void check_stmts_condition(Expr *condition);
 
+    /**
+    *   Pass 1 over the program: registers a function's symbol and its parameters' symbols, so that calls can
+    *   come before the definition. The body is analysed later, by visit(FunctionDecl&) (pass 2).
+    */
+    void declare_function(FunctionDecl&);
+
 
 public:
     SemanticAnalyser(Program& p, DiagnosticEngine& d) : program(p), diagnostic(d) {}
