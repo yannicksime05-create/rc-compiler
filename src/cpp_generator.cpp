@@ -2,11 +2,16 @@
 
 void CppGenerator::visit(Program& p) {
     // Prototypes first, so that functions can be called before their definition.
+    bool is_defined_after_main = false;
     for(Decl *d : p.declarations) {
         if(d && d->node_type == ASTNodeType::FUNC_DECL_NODE) {
             // The main function doesn't need a prototype
             const std::string& fn_name = static_cast<FunctionDecl*>(d)->prototype->function_name.value;
-            if(fn_name != "main") {
+            if(fn_name == "main") {
+                is_defined_after_main = true;
+                continue;
+            }
+            if(is_defined_after_main) {
                 translate_function_prototype(static_cast<FunctionDecl*>(d)->prototype, true);
                 out << ";\n";
             }
