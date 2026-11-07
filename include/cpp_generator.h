@@ -73,18 +73,18 @@ class CppGenerator : public Visitor {
             s += tmp.str();
         }
 
-        std::cout << "CppGenerator: mapped type = " << s << "\n";
+//        std::cout << "CppGenerator: mapped type = " << s << "\n";
         return s;
     }
 
-    void translate_function_prototype(const FunctionPrototype *proto) {
+    void translate_function_prototype(const FunctionPrototype *proto, bool with_defaults) {
         out << map_type(proto->return_type) << " " << proto->function_name.value << "(";
         is_function_parameter = true;
         for(size_t i = 0; i < proto->parameters.size(); ++i) {
             Parameter *p = proto->parameters[i];
 
             out << map_type(p->type_name) << " " << p->parameter_name.value;
-            if(p->default_value) {
+            if(with_defaults && p->default_value) {
                 out << " = ";
                 p->default_value->accept(*this);
             }
@@ -92,7 +92,7 @@ class CppGenerator : public Visitor {
             if(i + 1 < proto->parameters.size()) out << ", ";
         }
         is_function_parameter = false;
-        out << ") ";
+        out << ")";
     }
 
 public:

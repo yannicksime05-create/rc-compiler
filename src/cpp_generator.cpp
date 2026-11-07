@@ -1,8 +1,22 @@
 #include "../include/cpp_generator.h"
 
 void CppGenerator::visit(Program& p) {
-    for(Stmt *s : p.statements) {
-        if(s) s->accept(*this);
+    // Prototypes first, so that functions can be called before their definition.
+    for(Decl *d : p.declarations) {
+        if(d && d->node_type == ASTNodeType::FUNC_DECL_NODE) {
+            // The main function doesn't need a prototype
+            const std::string& fn_name = static_cast<FunctionDecl*>(d)->prototype->function_name.value;
+            if(fn_name != "main") {
+                translate_function_prototype(static_cast<FunctionDecl*>(d)->prototype, true);
+                out << ";\n";
+            }
+        }
+    }
+
+    out << "\n";
+
+    for(Decl *d : p.declarations) {
+        if(d) d->accept(*this);
     }
 }
 
@@ -145,9 +159,12 @@ void CppGenerator::visit(VariableDecl& d) {
 }
 
 void CppGenerator::visit(FunctionDecl& d) {
-    translate_function_prototype(d.prototype);
+    translate_function_prototype(d.prototype, false);       // default values live on the prototype only
 
-    if(d.body) d.body->accept(*this);
+    if(d.body) {
+        out << " ";
+        d.body->accept(*this);
+    }
     else out << ";\n";
 
     out << "\n";
