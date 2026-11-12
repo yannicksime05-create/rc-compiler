@@ -266,6 +266,8 @@ bool Parser::starts_variable_declaration(bool in_rangefor) {
     if(i < tokens.size() && (is_primitive_type(i) || tokens[i].type == TT::IDENTIFIER)) ++i;
     else return false;
 
+    if(!in_rangefor && i < tokens.size() && tokens[i].type == TT::LBRACKET) return true;
+
     if(i < tokens.size() && tokens[i].type == TT::IDENTIFIER) ++i;
     else return false;
 

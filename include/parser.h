@@ -144,7 +144,7 @@ class Parser {
         switch(current().type) {
             case TT::KW_CONST: return true;
             default:
-                if( is_primitive_type(pos) ) return true;
+                if( is_primitive_type(pos) || is(TT::IDENTIFIER) ) return true;
 
                 if( is(TT::IDENTIFIER) && peek().type == TT::IDENTIFIER )
                     return true;
