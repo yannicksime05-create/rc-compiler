@@ -23,6 +23,9 @@ class TypeChecker {
 
     int numeric_rank(const BuiltinType *t);
 
+    // --- Type resolution
+    Type        *resolve_type_name(Token& t);
+
     // --- String conversion (for error messages)
     std::string builtintype_to_string(const BuiltinType *t);
     std::string arraytype_to_string(const ArrayType *t);
@@ -62,14 +65,15 @@ public:
 
     // --- Type resolution
     Type        *resolve(TypeSpecifier& t);
-    Type        *resolve_type_name(Token& t);
     BuiltinType *promote(const Type *left, const Type *right);
     Type        *resolve_binary(const Type *left, const Type *right, TokenType op);
     Type        *resolve_unary(const Type *operand, TokenType op);
     Type        *resolve_assignment(const Type *target, const Type *value, TokenType op);
 
-    //
-    Type        *find_base_type(const ArrayType *t);
+    /**
+    *   @returns an ArrayType's base type, an AutoType's resolved type, or t if t is neither of them.
+    */
+    Type        *find_base_type(Type *t);
 
     // --- String conversion (for error messages)
     std::string to_string(const Type *t);

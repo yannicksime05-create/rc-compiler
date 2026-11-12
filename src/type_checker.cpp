@@ -440,11 +440,18 @@ Type *TypeChecker::resolve_assignment(const Type *target, const Type *value, Tok
     }
 }
 
-Type *TypeChecker::find_base_type(const ArrayType *t) {
-    const ArrayType *tmp = t;
-    while(tmp->element_type && tmp->element_type->kind == TK::ARRAY) tmp = to_array(tmp->element_type);
+Type *TypeChecker::find_base_type(Type *t) {
+    if(!t) return nullptr;
 
-    return tmp->element_type;
+    if(t->kind == TK::ARRAY) {
+        const ArrayType *tmp = to_array(t);
+        while(tmp->element_type && tmp->element_type->kind == TK::ARRAY) tmp = to_array(tmp->element_type);
+
+        return tmp->element_type;
+    }
+    else if(t->kind == TK::AUTO) return to_auto(t)->resolved;
+
+    return t;
 }
 
 std::string TypeChecker::to_string(const Type *t) {
@@ -499,7 +506,7 @@ std::string TypeChecker::builtintype_to_string(const BuiltinType *t) {
 
 std::string TypeChecker::arraytype_to_string(const ArrayType *t) {
     std::stringstream ss;
-    ss << to_string(find_base_type(t));
+    ss << to_string(find_base_type(t->element_type));
 
     const ArrayType *tmp = t;
     ss << "[" << tmp->size << "]";
