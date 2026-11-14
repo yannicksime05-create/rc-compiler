@@ -1,4 +1,4 @@
-#include "../include/printer.h"
+#include "printer.h"
 
 void Printer::visit(Program& p) {
     std::cout << "AST:" << std::endl;

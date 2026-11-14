@@ -1,5 +1,5 @@
 #include <sstream>
-#include "../include/semantic_analyser.h"
+#include "semantic_analyser.h"
 
 using TT = TokenType;
 using TK = TypeKind;
@@ -405,7 +405,7 @@ void SemanticAnalyser::visit(VariableDecl& d) {
                 else check_conversion(init_type, declared_type, init);
             }
             else {
-                bool need_init = declared_type->is_constant || checker.is_any(declared_type) || checker.is_auto(declared_type);
+                bool need_init = declared_type->is_constant /* || checker.is_any(declared_type) */ || checker.is_auto(declared_type);
                 if(need_init) throw SemanticError(name.range, "'" + name.value + "' must be initialized because it is const, auto or any");
             }
         }

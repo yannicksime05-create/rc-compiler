@@ -1,4 +1,4 @@
-#include "../include/cpp_generator.h"
+#include "cpp_generator.h"
 
 void CppGenerator::visit(Program& p) {
     // Prototypes first, so that functions can be called before their definition.

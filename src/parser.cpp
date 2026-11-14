@@ -1,5 +1,5 @@
 #include <sstream>
-#include "../include/parser.h"
+#include "parser.h"
 
 Precedence Parser::get_precedence(TokenType t) {
     switch(t) {

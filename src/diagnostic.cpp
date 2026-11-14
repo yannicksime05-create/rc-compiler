@@ -1,4 +1,4 @@
-#include "../include/diagnostic.h"
+#include "diagnostic.h"
 
 DiagnosticEngine::DiagnosticEngine(const std::string& fname, const std::string& src, std::ostream& o) : filename(fname), source(src), out(o) {
     lines_offsets.push_back(0);

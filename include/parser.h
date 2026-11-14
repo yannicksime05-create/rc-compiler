@@ -74,7 +74,7 @@ class Parser {
     bool is_primitive_type(size_t i) {
         Token t = tokens[i];
         switch(t.type) {
-            case TT::KW_ANY:
+//            case TT::KW_ANY:
             case TT::KW_AUTO:
             case TT::KW_BOOL:
             case TT::KW_BYTE:

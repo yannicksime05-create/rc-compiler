@@ -1,4 +1,4 @@
-#include "../include/ast.h"
+#include "ast.h"
 
 void Program::accept(Visitor& v) {
     v.visit(*this);

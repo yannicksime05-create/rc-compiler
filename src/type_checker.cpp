@@ -48,7 +48,7 @@ int TypeChecker::numeric_rank(const BuiltinType *t) {
 bool TypeChecker::is_builtin(const Type *t)        {   return t && t->kind == TK::BUILTIN;     }
 bool TypeChecker::is_array(const Type *t)          {   return t && t->kind == TK::ARRAY;       }
 bool TypeChecker::is_auto(const Type *t)           {   return t && t->kind == TK::AUTO;        }
-bool TypeChecker::is_any(const Type *t)            {   return t && t->kind == TK::ANY;         }
+//bool TypeChecker::is_any(const Type *t)            {   return t && t->kind == TK::ANY;         }
 
 bool TypeChecker::is_unknown(const Type *t)        {
     if(!t) return false;
@@ -141,7 +141,7 @@ bool TypeChecker::is_void(const Type *t) {
 Conversion TypeChecker::classify_conversion(const Type *from, const Type *to) {
     if(!from || !to) return Conversion::INVALID;
 
-    if(to->kind == TK::ANY) return Conversion::EXACT;
+//    if(to->kind == TK::ANY) return Conversion::EXACT;
 
     if(from->kind == TK::AUTO) {
         const AutoType *a = to_auto(from);

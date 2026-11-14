@@ -3,7 +3,7 @@
 
 #include <string>
 #include <sstream>
-#include "../include/ast.h"
+#include "ast.h"
 
 using TT = TokenType;
 
@@ -38,7 +38,7 @@ class CppGenerator : public Visitor {
         }
 
         switch(t.type_name.type) {
-            case TT::KW_ANY:        s += "std::any";        break;
+//            case TT::KW_ANY:        s += "std::any";        break;
             case TT::KW_AUTO:       s += "auto";            break;
             case TT::KW_BOOL:       s += "bool";            break;
             case TT::KW_BYTE:       s += "int8_t";          break;
@@ -98,7 +98,7 @@ class CppGenerator : public Visitor {
 public:
     std::string generate(Program& p) {
         out.str("");
-        out << "#include <iostream>\n#include <cstdint>\n#include <array>\n#include <any>\n#include \"include/string_overloads.h\"\n\n";
+        out << "#include <iostream>\n#include <cstdint>\n#include <array>\n//#include <any>\n#include \"include/string_overloads.h\"\n\n";
         visit(p);
         return out.str();
     }

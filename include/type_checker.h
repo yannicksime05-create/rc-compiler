@@ -43,7 +43,7 @@ public:
     bool is_array(const Type *t);
 //    bool is_function(const Type *t);
     bool is_auto(const Type *t);
-    bool is_any(const Type *t);
+//    bool is_any(const Type *t);
     bool is_unknown(const Type *t);
 
     // --- BuiltinType classification (all return false if t is not a BuiltinType)

@@ -3,9 +3,9 @@
 
 enum class TypeKind {
     BUILTIN,
-    FUNCTION,
+//    FUNCTION,
     AUTO,
-    ANY,
+//    ANY,
     ARRAY,
     UNKNOWN
 };

@@ -10,7 +10,7 @@
 using TT = TokenType;
 
 const std::map<std::string, TokenType> keywords = {
-    {"any",         TT::KW_ANY},
+//    {"any",         TT::KW_ANY},
     {"auto",        TT::KW_AUTO},
     {"bool",        TT::KW_BOOL},
     {"break",       TT::KW_BREAK},

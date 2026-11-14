@@ -1,5 +1,5 @@
 #include <cctype>
-#include "../include/lexer.h"
+#include "lexer.h"
 
 Token Lexer::comments_or_div_operator() {
     Token t;
