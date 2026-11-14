@@ -5,8 +5,8 @@ void CppGenerator::visit(Program& p) {
     bool is_defined_after_main = false;
     for(Decl *d : p.declarations) {
         if(d && d->node_type == ASTNodeType::FUNC_DECL_NODE) {
-            // The main function doesn't need a prototype
             const std::string& fn_name = static_cast<FunctionDecl*>(d)->prototype->function_name.value;
+            // The main function doesn't need a prototype
             if(fn_name == "main") {
                 is_defined_after_main = true;
                 continue;
@@ -119,7 +119,8 @@ void CppGenerator::visit(CallExpr& e) {
 void CppGenerator::visit(MemberAccessExpr& e) {
     e.object->accept(*this);
     out << ".";
-    out << e.member.value;
+    if(e.member.value == "length")  out << "size()";
+    else                            out << e.member.value;
 }
 
 void CppGenerator::visit(SubscriptExpr& e) {
