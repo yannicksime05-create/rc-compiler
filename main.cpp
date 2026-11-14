@@ -5,7 +5,7 @@
 #include "include/parser.h"
 #include "include/printer.h"
 #include "include/semantic_analyser.h"
-//#include "include/cpp_generator.h"
+#include "include/cpp_generator.h"
 
 std::string read_file(const std::string& path) {
     std::ifstream file(path, std::ios::in | std::ios::binary);
@@ -17,42 +17,44 @@ std::string read_file(const std::string& path) {
 }
 
 int main(int argc, char *argv[]) {
-//    if(argc < 2) {
-//        std::cerr << "Usage: " << argv[0] << "<filename>" << std::endl;
-//        return 1;
-//    }
+    if(argc < 2) {
+        std::cerr << "Usage: " << argv[0] << "<filename>" << std::endl;
+        return 1;
+    }
 
-    const std::string filename = "tests/program.txt";
-//    const std::string filename(argv[1]);
+    const std::string filename(argv[1]);
     std::string source = read_file(filename);
     DiagnosticEngine engine(filename, source);
 
-    try{
-        Lexer lexer(source, engine);
-        std::vector<Token>& tokens = lexer.lex();
-
+    Lexer lexer(source, engine);
+    std::vector<Token>& tokens = lexer.lex();
 //        std::cout << "tokens size = " << tokens.size() << "." << std::endl;
+    do{
+        try{
+            Parser parser(tokens, engine);
+            Program p = *parser.parse();
 
-        Parser parser(tokens, engine);
-        Program p = *parser.parse();
+    //        Printer printer;
+    //        printer.print(p);
 
-//        Printer printer;
-//        printer.print(p);
+            SemanticAnalyser analyser(p, engine);
+            analyser.analyze();
 
-        SemanticAnalyser analyser(p, engine);
-        analyser.analyze();
+            if(engine.has_errors()) break;
 
-//        CppGenerator gen;
-//        std::ofstream output("out.cpp");
-//        output << gen.generate(p);
-//        output.close();
-    }
-    catch(const CompilationAborted& e) {
-        std::cerr << e.what();
-    }
+            CppGenerator gen;
+            std::ofstream output("out.cpp");
+            output << gen.generate(p);
+            output.close();
+        }
+        catch(const CompilationAborted& e) {
+            std::cerr << e.what();
+        }
+    } while(false);
     engine.print_summary();
 
 //    system("g++ -std=c++17 out.cpp -o out");
 
     return 0;
 }
+
