@@ -49,7 +49,14 @@ bool TypeChecker::is_builtin(const Type *t)        {   return t && t->kind == TK
 bool TypeChecker::is_array(const Type *t)          {   return t && t->kind == TK::ARRAY;       }
 bool TypeChecker::is_auto(const Type *t)           {   return t && t->kind == TK::AUTO;        }
 bool TypeChecker::is_any(const Type *t)            {   return t && t->kind == TK::ANY;         }
-bool TypeChecker::is_unknown(const Type *t)        {   return t && t->kind == TK::UNKNOWN;     }
+
+bool TypeChecker::is_unknown(const Type *t)        {
+    if(!t) return false;
+
+    if(is_array(t)) t = find_base_type(t);
+
+    return t && t->kind == TK::UNKNOWN;
+}
 
 
 bool TypeChecker::is_integral(const Type *t) {
@@ -122,6 +129,10 @@ bool TypeChecker::is_bool(const Type *t) {
 }
 
 bool TypeChecker::is_void(const Type *t) {
+    if(!t) return false;
+
+    if(is_array(t)) t = find_base_type(t);
+
     const BuiltinType *bt = to_builtin(t);
     return bt && bt->builtin == BT::VOID;
 }
@@ -440,7 +451,7 @@ Type *TypeChecker::resolve_assignment(const Type *target, const Type *value, Tok
     }
 }
 
-Type *TypeChecker::find_base_type(Type *t) {
+const Type *TypeChecker::find_base_type(const Type *t) {
     if(!t) return nullptr;
 
     if(t->kind == TK::ARRAY) {

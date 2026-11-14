@@ -73,7 +73,7 @@ public:
     /**
     *   @returns an ArrayType's base type, an AutoType's resolved type, or t if t is neither of them.
     */
-    Type        *find_base_type(Type *t);
+    const Type        *find_base_type(const Type *t);
 
     // --- String conversion (for error messages)
     std::string to_string(const Type *t);

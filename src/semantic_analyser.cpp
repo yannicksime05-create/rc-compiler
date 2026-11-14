@@ -301,6 +301,9 @@ void SemanticAnalyser::visit(CallExpr& e) {
 
 void SemanticAnalyser::visit(MemberAccessExpr& e) {
     analyze_expression(e.object);
+    const Type *obj_type = e.object->resolved_type;
+
+    if( checker.is_array(obj_type) && e.member.value == "length" ) e.resolved_type = new BuiltinType(BT::UINT64);
 }
 
 void SemanticAnalyser::visit(SubscriptExpr& e) {
@@ -343,8 +346,11 @@ void SemanticAnalyser::visit(SequenceExpr& e) {
 
 
 void SemanticAnalyser::visit(VariableDecl& d) {
-    Type *t = checker.resolve(d.declared_type);
-    if( checker.is_unknown(t) ) error(d.declared_type.type_name.range, static_cast<UnknownType*>(t)->why);
+    Type *declared_type = checker.resolve(d.declared_type);
+
+    if( checker.is_void(declared_type) )         error(d.declared_type.type_name.range, "cannot declare variables with type void");
+    else if( checker.is_unknown(declared_type) ) error(d.declared_type.type_name.range, static_cast<const UnknownType*>(checker.find_base_type(declared_type))->why);
+
 
     for(VariableDeclarator *vd : d.declarations) {
         const Token& name = vd->variable_name;
@@ -356,27 +362,51 @@ void SemanticAnalyser::visit(VariableDecl& d) {
             note(prev_decl->declaration->range, "previous declaration is here");
         }
 
-        if(manager.get_type() == ScopeType::GLOBAL && !t->is_constant) warning(name.range, "global variable '" + name.value + "' is not const: other parts of the code could modify it by accident");
+        if(manager.get_type() == ScopeType::GLOBAL && !declared_type->is_constant) warning(name.range, "global variable '" + name.value + "' is not const: other parts of the code could modify it by accident");
 
         try{
             if(vd->initializer) {
                 vd->initializer->accept(*this);
-                Type *init_type = vd->initializer->resolved_type;
+                Expr *init = vd->initializer;
+                Type *init_type = init->resolved_type;
 
-                if(checker.is_auto(t)) {
-                    AutoType *a = static_cast<AutoType*>(t);
-                    a->resolved = init_type->clone();
+                if( checker.is_auto(declared_type) ) {
+                    AutoType *a = static_cast<AutoType*>(declared_type);
+
+                    // Initialization from an array (eg: auto a = [];)
+                    if(init_type->kind == TK::ARRAY) {
+                        const Type *init_type_base_type = checker.find_base_type(init_type);
+                        // The array is empty so we can't deduce auto
+                        if(!init_type_base_type) throw SemanticError(init->range, "cannot deduce auto from an empty array");
+
+                        // Everything is ok
+                        a->resolved = init_type->clone();
+                    }
+                    // Initialization from another auto variable and anything else
+                    else a->resolved = checker.find_base_type(init_type)->clone();
                 }
-                // eg: int[2] a = [];
-                // initializer is ArrayType(null, 0) so we use the declared type to set the initializer's base type.
-                else if(checker.is_array(t) && checker.is_array(init_type)) {
-                    Type *init_type_base_type = checker.find_base_type( static_cast<ArrayType*>(init_type) );
-                    if(!init_type_base_type) init_type_base_type = checker.find_base_type( static_cast<ArrayType*>(t) )->clone();
+                else if( checker.is_array(declared_type) ) {
+                    // Arrays can only be initialized by another array
+                    if( !checker.is_array(init_type) ) throw SemanticError(init->range, "cannot initialize an array from '" + checker.to_string(init_type) + "'");
+
+                    const Type *decl_type_base_type = checker.find_base_type(declared_type);
+                    const Type *init_type_base_type = checker.find_base_type(init_type);
+
+                    // Reject 'auto[n] a = [];'
+                    if( checker.is_auto(decl_type_base_type) ) throw SemanticError(d.declared_type.type_name.range, "'[]' are not allowed after the auto keyword");
+                    // Concrete type but empty initializer (eg: int[n] a = [];)
+                    else if(!init_type_base_type) {
+                        Expr *e = static_cast<ArrayLiteralExpr*>(init);
+                        delete e->resolved_type;
+                        e->resolved_type = declared_type->clone();
+                    }
+                    else check_conversion(init_type_base_type, decl_type_base_type, init);
                 }
-                else check_conversion(init_type, t, vd->initializer);
+                else check_conversion(init_type, declared_type, init);
             }
             else {
-                if(t->is_constant || checker.is_any(t) || checker.is_auto(t)) throw SemanticError(name.range, "'" + name.value + "' must be initialized because it is const, auto or any");
+                bool need_init = declared_type->is_constant || checker.is_any(declared_type) || checker.is_auto(declared_type);
+                if(need_init) throw SemanticError(name.range, "'" + name.value + "' must be initialized because it is const, auto or any");
             }
         }
         catch(const CompileError& e) {
@@ -385,11 +415,10 @@ void SemanticAnalyser::visit(VariableDecl& d) {
 
         if(redefined) continue;
 
-        Symbol *s = new Symbol(name.value, SymbolType::VARIABLE, t->is_constant, t->clone(), &d);
+        Symbol *s = new Symbol(name.value, SymbolType::VARIABLE, declared_type->is_constant, declared_type->clone(), &d);
         manager.insert(s);
         vd->symbol = s;
     }
-//    std::cout << "declared variable(s)' resolved type = " << checker.to_string(t) << "\n";
 }
 
 void SemanticAnalyser::check_fn_return_types(Type *ret_type, const Token& fn_name) {
