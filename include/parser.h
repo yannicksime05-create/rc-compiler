@@ -128,23 +128,11 @@ class Parser {
         error(msg);
     }
 
-    bool starts_statement() {
-        switch(current().type) {
-            case TT::KW_IF:     case TT::KW_SWITCH: case TT::KW_WHILE:
-            case TT::KW_DO:     case TT::KW_FOR:    case TT::KW_RETURN:
-            case TT::KW_PRINT:  case TT::KW_BREAK:  case TT::KW_CONTINUE:
-            case TT::LBRACE:
-                return true;
-            default:
-                return false;
-        }
-    }
-
     bool starts_declaration() {
         switch(current().type) {
             case TT::KW_CONST: return true;
             default:
-                if( is_primitive_type(pos) || is(TT::IDENTIFIER) ) return true;
+                if( is_primitive_type(pos) ) return true;
 
                 if( is(TT::IDENTIFIER) && peek().type == TT::IDENTIFIER )
                     return true;
