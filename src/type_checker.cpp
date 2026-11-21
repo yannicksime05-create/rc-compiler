@@ -137,6 +137,17 @@ bool TypeChecker::is_void(const Type *t) {
     return bt && bt->builtin == BT::VOID;
 }
 
+bool TypeChecker::have_same_signedness(const Type *a, const Type *b, bool check_only_integral) {
+    if(!a || !b) return false;
+    const BuiltinType *l = to_builtin(a), *r = to_builtin(b);
+
+    if( check_only_integral && (!is_integral(l) || !is_integral(r)) ) return false;
+
+    if( !check_only_integral && (!is_numeric(l) || !is_numeric(r)) ) return false;
+
+    return is_unsigned(l) == is_unsigned(r);
+}
+
 
 Conversion TypeChecker::classify_conversion(const Type *from, const Type *to) {
     if(!from || !to) return Conversion::INVALID;
@@ -260,14 +271,13 @@ Type *TypeChecker::resolve_type_name(Token& t) {
 }
 
 BuiltinType *TypeChecker::promote(const Type *left, const Type *right) {
-    if(!left || !right)                         return nullptr;
-    if(!is_numeric(left) || !is_numeric(right)) return nullptr;
+//    if(!left || !right)                         return nullptr;
+//    if(!is_numeric(left) || !is_numeric(right)) return nullptr;
+//
+//    bool left_is_unsigned = is_unsigned(left), right_is_unsigned = is_unsigned(right);
+//    if(left_is_unsigned != right_is_unsigned) return nullptr;
 
-    bool left_is_unsigned = is_unsigned(left), right_is_unsigned = is_unsigned(right);
-    if(left_is_unsigned != right_is_unsigned) {
-        std::cerr << "Error: mixing signed and unsigned types!";
-        return nullptr;
-    }
+    if( !have_same_signedness(left, right) ) return nullptr;
 
     const BuiltinType *lbt = to_builtin(left), *rbt = to_builtin(right);
 
@@ -276,71 +286,71 @@ BuiltinType *TypeChecker::promote(const Type *left, const Type *right) {
 
 Type *TypeChecker::resolve_binary(const Type *left, const Type *right, TokenType op) {
     if(!left || !right) return nullptr;
+    const Type *l = is_auto(left) ? to_auto(left)->resolved : left, *r = is_auto(right) ? to_auto(right)->resolved : right;
 
     switch(op) {
         case TT::PLUS: {
             // string + (string | char | numeric)  → string
-            if( is_string(left) && (is_string(right) || is_numeric(right) || is_char(right)) ) return left->clone();
+            if( is_string(l) && (is_string(r) || is_numeric(r) || is_char(r)) ) return l->clone();
 
-            return promote(left, right);
+            return promote(l, r);
         }
         case TT::MINUS: {
             // string - string → string (trim)
-            if( is_string(left) && is_string(right) ) return left->clone();
+            if( is_string(l) && is_string(r) ) return l->clone();
 
-            return promote(left, right);
+            return promote(l, r);
         }
         case TT::STAR: {
             // string * integral → string (repeat)
-            if( is_string(left) && is_integral(right) ) return left->clone();
+            if( is_string(l) && is_integral(r) ) return l->clone();
 
-            return promote(left, right);
+            return promote(l, r);
         }
         case TT::SLASH: {
             // string / (string | integral) → array of strings (split)
-            if( is_string(left) && (is_string(right) || is_integral(right)) ) {
+            if( is_string(l) && (is_string(r) || is_integral(r)) ) {
 //                return new ArrayType(new BuiltinType(BT::STRING), -1);
 
                 // TODO: requires dynamic array support
                 return nullptr;
             }
 
-            return promote(left, right);
+            return promote(l, r);
         }
         case TT::MOD: {
-            if( !is_integral(left) || !is_integral(right) ) return nullptr;
+            if( have_same_signedness(l, r, true) ) return l->clone();
 
-            return left->clone();
+            return nullptr;
         }
         // --- Comparison: < <= > >=
         case TT::LESS:
         case TT::LESS_EQUAL:
         case TT::GREATER:
         case TT::GREATER_EQUAL: {
-            bool valid = (is_numeric(left) && is_numeric(right)) ||
-                         (is_string(left)  && is_string(right))  ||
-                         (is_char(left)    && is_char(right));
+            bool valid = (is_char(l)    && is_char(r))   ||
+                         (is_string(l)  && is_string(r)) ||
+                          have_same_signedness(l, r);
 
             if(!valid) return nullptr;
             return new BuiltinType(BT::BOOL);
         }
         case TT::EQUAL:
         case TT::NOT_EQUAL: {
-            bool valid = (is_numeric(left) && is_numeric(right)) ||
-                         (is_string(left)  && is_string(right))  ||
-                         (is_char(left)    && is_char(right))    ||
-                         (is_bool(left)    && is_bool(right))    ||
-                         (is_array(left)   && is_array(right) && are_equals(left, right));
+            bool valid = (is_string(l)  && is_string(r))                      ||
+                         (is_char(l)    && is_char(r))                        ||
+                         (is_bool(l)    && is_bool(r))                        ||
+                         (is_array(l)   && is_array(r)   && are_equals(l, r)) ||
+                          have_same_signedness(l, r);
 
             if(!valid) return nullptr;
-
             return new BuiltinType(BT::BOOL);
         }
         // --- Logical: && ||
         case TT::AND:
         case TT::OR: {
             // accept bool and numeric (non-zero as truthy)
-            bool valid = ( is_bool(left) || is_numeric(left) ) && ( is_bool(right) || is_numeric(right) );
+            bool valid = ( is_bool(l) || is_numeric(l) ) && ( is_bool(r) || is_numeric(r) );
             if(!valid) return nullptr;
 
             return new BuiltinType(BT::BOOL);
@@ -351,9 +361,9 @@ Type *TypeChecker::resolve_binary(const Type *left, const Type *right, TokenType
         case TT::BIT_XOR:
         case TT::LEFT_SHIFT:
         case TT::RIGHT_SHIFT: {
-            if( !is_integral(left) || !is_integral(right) ) return nullptr;
+            if( !is_integral(l) || !is_integral(r) ) return nullptr;
 
-            return promote(left, right);
+            return promote(l, r);
         }
 
         default: return nullptr;
@@ -362,33 +372,34 @@ Type *TypeChecker::resolve_binary(const Type *left, const Type *right, TokenType
 
 Type *TypeChecker::resolve_unary(const Type *operand, TokenType op) {
     if(!operand) return nullptr;
+    const Type *op_type = is_auto(operand) ? to_auto(operand)->resolved : operand;
 
     switch(op) {
         // --- - +
         case TT::PLUS:
         case TT::MINUS: {
-            if( !is_numeric(operand) ) return nullptr;
+            if( !is_numeric(op_type) ) return nullptr;
 
-            return operand->clone();
+            return op_type->clone();
         }
         // --- !
         case TT::NOT: {
-            if( !is_bool(operand) && !is_numeric(operand) ) return nullptr;
+            if( !is_bool(op_type) && !is_numeric(op_type) ) return nullptr;
 
             return new BuiltinType(BT::BOOL);
         }
         // --- ++ --
         case TT::INCREMENT:
         case TT::DECREMENT: {
-            if( !is_numeric(operand) ) return nullptr;
+            if( !is_numeric(op_type) ) return nullptr;
 
-            return operand->clone();
+            return op_type->clone();
         }
         // --- ~
         case TT::BIT_NOT: {
-            if( !is_integral(operand) ) return nullptr;
+            if( !is_integral(op_type) ) return nullptr;
 
-            return operand->clone();
+            return op_type->clone();
         }
         default: return nullptr;
     }
@@ -396,43 +407,44 @@ Type *TypeChecker::resolve_unary(const Type *operand, TokenType op) {
 
 Type *TypeChecker::resolve_assignment(const Type *target, const Type *value, TokenType op) {
     if(!target || !value) return nullptr;
+    const Type *t = is_auto(target) ? to_auto(target)->resolved : target, *v = is_auto(value) ? to_auto(value)->resolved : value;
 
     switch(op) {
         case TT::ASSIGN: {
-            if( !is_assignable(value, target) ) return nullptr;
+            if( !is_assignable(v, t) ) return nullptr;
 
-            return target->clone();
+            return t->clone();
         }
         // numeric += numeric
         // string += (string | numeric | char)
         case TT::PLUS_ASSIGN: {
-            bool valid = ( is_numeric(target) && is_numeric(value) ) || ( is_string(target) && (is_string(value) || is_numeric(value) || is_char(value)) );
+            bool valid = have_same_signedness(t, v) || ( is_string(t) && (is_string(v) || is_numeric(v) || is_char(v)) );
             if(!valid) return nullptr;
 
-            return target->clone();
+            return t->clone();
         }
         case TT::MINUS_ASSIGN: {
-            bool valid = ( is_numeric(target) && is_numeric(value) ) || ( is_string(target) && is_string(value) );
+            bool valid = have_same_signedness(t, v) || ( is_string(t) && is_string(v) );
             if(!valid) return nullptr;
 
-            return target->clone();
+            return t->clone();
         }
         case TT::STAR_ASSIGN: {
-            bool valid = ( is_numeric(target) && is_numeric(value) ) || ( is_string(target) && is_integral(value) );
+            bool valid = have_same_signedness(t, v) || ( is_string(t) && is_integral(v) );
             if(!valid) return nullptr;
 
-            return target->clone();
+            return t->clone();
         }
         // string /= (string | integral) → array of strings
         case TT::SLASH_ASSIGN: {
-            if( is_string(target) && (is_string(value) || is_integral(value)) ) {
+            if( is_string(t) && (is_string(v) || is_integral(v)) ) {
 //                return new ArrayType(new BuiltinType(BT::STRING), -1);
 
                 // TODO: requires dynamic array support
                 return nullptr;
             }
 
-            if( is_numeric(target) && is_numeric(value) ) return target->clone();
+            if( have_same_signedness(t, v) ) return t->clone();
 
             return nullptr;
         }
@@ -442,10 +454,11 @@ Type *TypeChecker::resolve_assignment(const Type *target, const Type *value, Tok
         case TT::BIT_XOR_ASSIGN:
         case TT::LEFT_SHIFT_ASSIGN:
         case TT::RIGHT_SHIFT_ASSIGN: {
-            bool valid = is_integral(target) && is_integral(value);
-            if(!valid) return nullptr;
+//            bool valid = is_integral(t) && is_integral(v);
+//            if(!valid) return nullptr;
+            if( !have_same_signedness(t, v, true) ) return nullptr;
 
-            return target->clone();
+            return t->clone();
         }
         default: return nullptr;
     }

@@ -57,6 +57,8 @@ public:
     bool is_bool(const Type *t);
     bool is_void(const Type *t);
 
+    bool have_same_signedness(const Type *a, const Type *b, bool check_only_integral = false);
+
     // --- Type compatibility
     Conversion classify_conversion(const Type *from, const Type *to);
     bool are_equals(const Type *a, const Type *b);
