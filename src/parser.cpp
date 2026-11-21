@@ -388,14 +388,18 @@ Stmt *Parser::parseStatement() {
         case TT::KW_BREAK:      return parse_break_statement();
         case TT::KW_CONTINUE:   return parse_continue_statement();
         default:
-            if(!is_compound_statement) throw ParseError(current().range, "declarations are not allowed in a single statement's body, wrap it inside '{ }'");
-            if( starts_declaration() ) return parse_declaration_statement();
+            if( starts_declaration() ) {
+                if(!is_compound_statement) throw ParseError(current().range, "declarations are not allowed in a single statement's body, wrap it inside '{ }'");
+
+                return parse_declaration_statement();
+            }
             return parse_expression_statement();
     }
 }
 
 /**
-*   This function is only used by control-flow statements except the for-statement
+*   This function is only used by control-flow statements and helps
+*   forbid declarations where a single statement is found
 */
 Stmt *Parser::parse_sub_statement() {
     // we are already inside a compound statement so
@@ -410,8 +414,8 @@ Stmt *Parser::parse_sub_statement() {
 
 CompoundStmt *Parser::parse_compound_statement() {
     expect(TT::LBRACE, "expected '{' to start compound statement");
-    is_compound_statement = true;
     Token s = previous();
+    is_compound_statement = true;
 
     std::vector<Stmt *> stmts;
     while( !is(TT::RBRACE) && !is(TT::END_OF_FILE) ) {
@@ -419,9 +423,14 @@ CompoundStmt *Parser::parse_compound_statement() {
             stmts.push_back(parseStatement());
         }
         catch(const CompileError& e) {
-            //Recover inside the block, so one bad statement doesn't throw away the rest of the function.
+            // Recover inside the block, so one bad statement doesn't throw away the rest of the function.
             diagnostic.error(e);
             synchronize();
+
+            // parse_sub_statement doesn't catch the error thrown by parseStatement, so
+            // when an error is effectively thrown, is_compound_statement is never set back to true (because of stack unwinding)
+            // so we need to set it back here.
+            is_compound_statement = true;
         }
     }
 
@@ -552,7 +561,7 @@ ForStmt *Parser::parse_for_statement() {
     Expr *incr = is(TT::RPAREN) ? nullptr : parseExpression();
     expect(TT::RPAREN, "expected ')' after for-loop increment");
 
-    Stmt *body = parseStatement();
+    Stmt *body = parse_sub_statement();
     return new ForStmt(kw, init, condition, incr, body);
 }
 
@@ -572,7 +581,7 @@ RangeForStmt *Parser::parse_rangefor_statement() {
     Expr *range = parseExpression();
     expect(TT::RPAREN, "expected ')' after range-for expression");
 
-    Stmt *body = parseStatement();
+    Stmt *body = parse_sub_statement();
 
     return new RangeForStmt(v, range, body);
 }
