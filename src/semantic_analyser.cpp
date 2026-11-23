@@ -103,9 +103,9 @@ void SemanticAnalyser::visit(IntNumberExpr& e) {
     std::string suffix;
 
     size_t i = raw.size() - 1, count = 2;
-    while(count > 0 && std::isalpha(raw[i])) {
-        char c = std::tolower(raw[i]);
-        if( !std::isxdigit(c) ) suffix = c + suffix;
+    char c;
+    while( count > 0 && ( c = std::tolower(raw[i]) ) && (c == 'u' || c == 'l' || c == 'o' || c == 's') ) {
+        suffix = c + suffix;
         --count;
         --i;
     }
@@ -304,6 +304,8 @@ void SemanticAnalyser::visit(MemberAccessExpr& e) {
     const Type *obj_type = e.object->resolved_type;
 
     if( checker.is_array(obj_type) && e.member.value == "length" ) e.resolved_type = new BuiltinType(BT::UINT64);
+
+    e.resolved_type = new UnknownType("no such member '" +e.member.value+ "'");
 }
 
 void SemanticAnalyser::visit(SubscriptExpr& e) {
